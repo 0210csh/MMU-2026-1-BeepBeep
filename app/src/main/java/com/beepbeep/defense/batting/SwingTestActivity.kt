@@ -1,0 +1,1030 @@
+package com.beepbeep.defense.batting
+
+// ── Android 프레임워크 import ──────────────────────────────────────────────
+import android.app.AlertDialog                  // 스윙 결과 그래프 다이얼로그 표시
+import android.hardware.Sensor                  // 센서 종류 상수 (TYPE_GYROSCOPE 등)
+import android.hardware.SensorEvent             // 센서 콜백에서 받는 이벤트 객체 (values 배열 포함)
+import android.hardware.SensorEventListener     // 센서 이벤트를 수신하기 위한 인터페이스
+import android.hardware.SensorManager           // 시스템 센서 서비스 접근 및 리스너 등록/해제
+import android.media.AudioAttributes            // AudioTrack 생성 시 오디오 용도 설정 (USAGE_MEDIA 등)
+import android.media.AudioFormat                // AudioTrack 포맷 설정 (샘플레이트, 채널, 인코딩)
+import android.media.AudioTrack                 // PCM 오디오를 직접 스트리밍하는 저수준 오디오 클래스
+import android.os.Bundle                        // Activity 상태 저장/복원에 쓰이는 키-값 묶음
+import android.os.SystemClock                   // elapsedRealtimeNanos(): 반응속도 측정용 고정밀 시계
+import android.speech.tts.TextToSpeech          // TTS 엔진 (SET·PITCH 발화)
+import android.speech.tts.UtteranceProgressListener // TTS 발화 완료 콜백을 받기 위한 추상 클래스
+import android.view.View                        // visibility(GONE/VISIBLE/INVISIBLE) 제어
+import android.widget.Button                    // 시작/다시하기 버튼 위젯
+import android.widget.FrameLayout               // 베이스 컨테이너 (클릭 영역)
+import android.widget.LinearLayout              // 결과 다이얼로그 내부 뷰 컨테이너
+import android.widget.ScrollView                // 결과 다이얼로그 스크롤 래퍼
+import android.widget.TextView                  // 상태·결과 텍스트뷰
+import android.widget.Toast                     // 오답 베이스 선택 시 짧은 안내 메시지
+import androidx.appcompat.app.AppCompatActivity
+import com.beepbeep.defense.R
+import kotlinx.coroutines.*
+import kotlin.math.*
+import kotlin.random.Random
+import java.util.Locale
+
+/**
+ * 타격 시뮬레이션 v2
+ *
+ * v1(BaseRunReactionActivity)과 흐름 동일.
+ * 차이점: pitchYPosition 이 랜덤이 아니라 개발자가 정해놓은
+ * BATTING_ANGLE_DEG 상수에서 결정된다.
+ * 사용자는 해당 각도에 맞게 폰을 기울여 스윙해야 한다.
+ *
+ * ── 개발자 설정값 ──
+ *   BATTING_ANGLE_DEG : 타격 요구 각도(도). 0° = 수평, +양수 = 위로, -음수 = 아래로.
+ *                       이 값만 바꾸면 공 높이와 요구 각도가 함께 변경된다.
+ */
+class SwingTestActivity : AppCompatActivity() {
+
+    // ═══════════════════════════════════════════════════
+    //  개발자 설정값 — 여기만 수정하면 됩니다
+    // ═══════════════════════════════════════════════════
+    private val BATTING_ANGLE_DEG = 0f
+    // 타격 요구 각도 (절대각도, 도).
+    //   0f  → 배트 수평 (중간 공)
+    //  +15f → 배트 끝이 약간 위 (높은 공)
+    //  -15f → 배트 끝이 약간 아래 (낮은 공)
+
+    // ── pitchYPosition: BATTING_ANGLE_DEG 에서 자동 계산 (수정 불필요) ──
+    private val pitchYPosition: Float =
+        ((BATTING_ANGLE_DEG / 43f) + 0.5f).coerceIn(0.1f, 0.9f)
+    // BallTrackView 에 전달하는 공 수직 위치값 (0.0~1.0).
+    // 0.0=아래, 0.5=중간, 1.0=위. BATTING_ANGLE_DEG 에서 선형 변환.
+
+    // ═══════════════════════════════════════════════════
+
+    // ── Views ───────────────────────────────────────────
+    private lateinit var tvStatus:             TextView
+    // R.id.tvV2Status: 현재 게임 상태("SET", "PITCH", "쳐!", 결과 등) 표시
+
+    private lateinit var tvResult:             TextView
+    // R.id.tvV2Result: 반응속도·각도 등 보조 결과 표시
+
+    private lateinit var btnStart:             Button
+    // R.id.btnV2Start: 시작/다시하기 버튼. 게임 중 비활성화
+
+    private lateinit var ballTrackView:        BallTrackView
+    // R.id.v2BallTrackView: 공 궤적·수비수·베이스 커스텀 뷰.
+    // setShowStrikeZone(false) 호출로 스트라이크존 UI 숨김
+
+    private lateinit var swingGraphView:       SwingGraphView
+    // R.id.v2SwingGraphView: 배트 각도 궤적 라이브 그래프 (시작 시 VISIBLE)
+
+    private lateinit var liveBallParabolaView: BallParabolaView
+    // R.id.v2LiveParabolaView: 공 포물선 궤적 라이브 그래프
+    // swingGraphView 바로 위에 표시. 게임 중 이동 공 애니메이션 포함
+
+    private lateinit var base1Container:       FrameLayout
+    // R.id.v2Base1Container: 1루 베이스 클릭 영역 (130×130dp)
+
+    private lateinit var base3Container:       FrameLayout
+    // R.id.v2Base3Container: 3루 베이스 클릭 영역 (130×130dp)
+
+    private lateinit var base1Glow:            View
+    // R.id.v2Base1Glow: 1루 활성화 시 빛나는 효과 레이어. 평소 INVISIBLE
+
+    private lateinit var base3Glow:            View
+    // R.id.v2Base3Glow: 3루 활성화 시 빛나는 효과 레이어. base1Glow 와 동일 구조
+
+    private lateinit var tvBase1Label:         TextView
+    private lateinit var tvBase3Label:         TextView
+
+    private lateinit var btnSwingPitchMinus:   Button
+    private lateinit var btnSwingPitchPlus:    Button
+    private lateinit var tvSwingPitchCount:    TextView
+    private lateinit var tvSwingPitchProgress: TextView
+
+    private var targetPitches  = 10
+    private var currentPitchNum = 0
+    private var successCount   = 0
+    private var isTraining     = false
+
+    // ── Sensors ─────────────────────────────────────────
+    private lateinit var sensorManager:        SensorManager
+    // 시스템 센서 서비스. onResume/onPause 에서 리스너 등록·해제
+
+    private var linearAccelSensor:             Sensor? = null
+    // TYPE_LINEAR_ACCELERATION (중력 제거 가속도). 미지원 시 TYPE_ACCELEROMETER 폴백
+
+    private var gyroscopeSensor:               Sensor? = null
+    // TYPE_GYROSCOPE (각속도). null 이면 자이로 없는 기기 → gyroMag=0 으로 처리
+
+    private var rotationSensor:                Sensor? = null
+    // TYPE_GAME_ROTATION_VECTOR: 피치각·방위각 추출용. 자기장 간섭 없음
+
+    private val rotMatrix   = FloatArray(9)
+    // 3×3 회전 행렬. SensorManager.getRotationMatrixFromVector() 결과를 저장
+
+    private val orientation = FloatArray(3)
+    // [0]=방위각, [1]=피치, [2]=롤 (라디안). SensorManager.getOrientation() 결과
+
+    private val gravity     = FloatArray(3)
+    // TYPE_ACCELEROMETER 폴백 시 저역통과 필터로 추정한 중력 벡터 [x, y, z]
+
+    private val LP_ALPHA    = 0.8f
+    // 저역통과 필터 계수. 0 에 가까울수록 빠르고, 1 에 가까울수록 안정적
+
+    @Volatile private var linearAccelMag:      Float = 0f
+    // 최신 선형 가속도 크기 (m/s²). 센서 스레드에서 갱신 → checkSwing() 에서 읽음
+
+    @Volatile private var gyroMag:             Float = 0f
+    // 최신 각속도 크기 (rad/s). 센서 스레드에서 갱신 → checkSwing() 에서 읽음
+
+    @Volatile private var currentPitchDeg:     Float = 0f
+    // 현재 기기 절대 피치각 (도). orientationListener 에서 갱신. 수평=0°, 아래=음수
+
+    // ── 임계값 ──────────────────────────────────────────
+    private val FOUL_ACCEL_THRESHOLD = 8f
+    // 스윙 시도 최소 가속도 임계값 (m/s²). 초과 시 스윙 동작으로 인식
+
+    private val HIT_ACCEL_THRESHOLD  = 10f
+    // 유효 타격 가속도 임계값 (m/s²). 초과 시 강한 스윙으로 판정
+
+    private val FOUL_GYRO_THRESHOLD  = 3f
+    // 스윙 시도 자이로 임계값 (rad/s). FOUL_ACCEL_THRESHOLD 와 OR 조건
+
+    private val HIT_GYRO_THRESHOLD   = 10f
+    // 유효 타격 자이로 임계값 (rad/s). HIT_ACCEL_THRESHOLD 와 OR 조건
+
+    private val PITCH_TOLERANCE      = 25f
+    // 각도 허용 오차 (도). 현재 HEIGHT_TOLERANCE 기반 판정을 사용하나 참고용으로 보존
+
+    // ── 물리 상수 (공·배트 3D 위치 계산) ──────────────────
+    private val PITCHER_DIST     = 18.44f
+    // 투수판 ~ 타석 거리 (m). 야구 공식 규격 (60피트 6인치)
+
+    private val PITCHER_HEIGHT   = 1.0f
+    // 투수 릴리즈 높이 (m). 공이 이 높이에서 출발함
+
+    private val BALL_ARC         = 0.3f
+    // 포물선 최고점 추가 높이 (m). 직선 궤적 대비 이 만큼 볼록하게 솟음
+
+    private val BATTER_HEIGHT    = 1.0f
+    // 타자 손(접촉점) 기준 높이 (m)
+
+    private val BAT_REACH        = 0.6f
+    // 배트 스윙 수직 도달 거리 (m). 피치각에 따라 접촉 높이가 결정됨
+
+    private val HEIGHT_TOLERANCE = 0.2f
+    // 높이 허용 오차 (m). |배트높이 - 공높이| < HEIGHT_TOLERANCE → HIT 판정
+
+    // ── 게임 상태 ────────────────────────────────────────
+    private var targetBase = 1
+    // 이번 라운드 목표 베이스 (1 또는 3). startGame() 에서 랜덤 선택
+
+    @Volatile private var hitWindowActive: Boolean = false
+    // true 인 600ms 구간에서만 스윙 감지. 센서 스레드 ↔ 코루틴 공유 → @Volatile 필수
+
+    @Volatile private var swingDetected:   Boolean = false
+    // 스윙 시도 감지 (≥ FOUL 임계값). 파울 판정의 1차 조건
+
+    @Volatile private var swingIsHit:      Boolean = false
+    // 유효 타격 (≥ HIT 임계값 + 높이 일치). true → "깡" 판정
+
+    @Volatile private var positionMatched: Boolean = false
+    // 스윙 시 공·배트 높이 일치 여부. |배트H - 접촉H| < HEIGHT_TOLERANCE 이면 true
+
+    @Volatile private var swingPitchDeg:   Float   = 0f
+    // 스윙 감지 순간의 피치각 (도). 결과 텍스트 "실제 각도" 표시용
+
+    @Volatile private var swingWasStrong:  Boolean = false
+    // 스윙이 HIT 임계값 이상이었는지. 파울 원인(힘 부족 vs 위치 미스) 구분용
+
+    @Volatile private var swingBatHeight:  Float   = Float.NaN
+    // 스윙 감지 순간의 배트 높이 (m). NaN=스윙 없음. 결과 그래프에서 배트 위치 표시용
+
+    private var isWaitingForInput = false
+    // 베이스 선택 대기 중 여부. true 인 동안만 onBasePressed() 처리
+
+    private var beepStartTime     = 0L
+    // 베이스 도착음 시작 시각 (elapsedRealtimeNanos, ns). 반응속도 측정 기준점
+
+    // ── 스윙 궤적 기록 ───────────────────────────────────
+    private val pitchHistory = ArrayList<Pair<Long, Float>>()
+    // (경과ms, 피치각도) 목록. orientationListener 에서 isRecording=true 인 동안 추가
+
+    @Volatile private var pitchRecordStart: Long    = 0L
+    // 기록 시작 시각 (System.currentTimeMillis() 기준). pitchHistory 경과ms 계산 기준
+
+    @Volatile private var hitTimeRelMs:     Long    = -1L
+    // 스윙 감지 순간의 기록 기준 경과시간 (ms). -1이면 스윙 없음
+
+    @Volatile private var isRecording:      Boolean = false
+    // true 인 동안 orientationListener 가 pitchHistory 에 데이터 추가
+
+    // ── 공 접근 진행률 (오디오 거리 감쇠 공유) ──────────
+    @Volatile private var ballApproachProgress: Float = 0f
+    // 0.0(투수) ~ 1.0(타자). 게임 루프에서 갱신 → beepBallJob 에서 읽어 볼륨·주파수 조정
+
+    @Volatile private var divProgress: Float = 0f
+    // 타격 후 DIVERGE(공 발산) 진행률. 0.0(타격 직후) ~ 1.0(베이스 도착).
+    // divBeepJob 에서 볼륨·패닝 계산에 사용
+
+    // ── 헤드트래킹 (방위각 기반 스테레오 패닝) ──────────
+    private var baseAzimuth: Float? = null
+    // 게임 시작 시점 방위각 기준값. null 이면 다음 센서 이벤트에서 초기화
+
+    @Volatile private var currentHeadingDeg: Float = 0f
+    // 현재 머리 방향 (기준 방위각 대비 상대 각도, 도). 베이스 도착음 스테레오 패닝에 사용
+
+    // ── Coroutines ───────────────────────────────────────
+    private val scope    = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    // 이 액티비티 전용 코루틴 스코프. Default 디스패처(백그라운드 스레드).
+    // onDestroy() 에서 scope.cancel() 로 모든 하위 코루틴 일괄 취소
+
+    private var gameJob:  Job? = null
+    // 게임 전체 흐름 코루틴. startGame() 에서 이전 gameJob 취소 후 새로 launch
+
+    private var audioJob: Job? = null
+    // 베이스 도착음 반복 재생 코루틴. startBaseBeep() 에서 launch, stopAudio() 에서 cancel
+
+    // ── TTS ─────────────────────────────────────────────
+    private var tts:      TextToSpeech? = null
+    // TTS 엔진. "깡"·"파울"·"스트라이크" 한국어, "SET"·"PITCH" 영어 발화
+
+    private var ttsReady: Boolean       = false
+    // TTS 초기화 완료 여부. false 이면 speakAndWait() 500ms 대기 후 스킵
+
+    // ── Audio ────────────────────────────────────────────
+    private var audioTrack: AudioTrack? = null
+    // PCM 스트리밍 오디오. tone() 으로 생성한 ShortArray 를 write() 로 직접 공급
+
+    // ─────────────────────────────────────────────────────
+    // 스윙 감지 리스너 (선형가속도 + 자이로)
+    // ─────────────────────────────────────────────────────
+    private val swingListener = object : SensorEventListener {
+    // onResume() 에서 linearAccelSensor, gyroscopeSensor 각각에 등록
+
+        override fun onSensorChanged(event: SensorEvent) {
+            when (event.sensor.type) {
+                Sensor.TYPE_LINEAR_ACCELERATION -> {
+                // 중력이 이미 제거된 순수 가속도. 스윙 동작 감지에 사용
+                    linearAccelMag = magnitude(event.values)
+                    checkSwing()
+                }
+                Sensor.TYPE_ACCELEROMETER -> {
+                // TYPE_LINEAR_ACCELERATION 미지원 기기 폴백.
+                // 저역통과 필터로 중력 성분을 추정·제거한 뒤 linearAccelMag 갱신
+                    gravity[0] = LP_ALPHA * gravity[0] + (1 - LP_ALPHA) * event.values[0]
+                    gravity[1] = LP_ALPHA * gravity[1] + (1 - LP_ALPHA) * event.values[1]
+                    gravity[2] = LP_ALPHA * gravity[2] + (1 - LP_ALPHA) * event.values[2]
+                    linearAccelMag = magnitude(floatArrayOf(
+                        event.values[0] - gravity[0],
+                        event.values[1] - gravity[1],
+                        event.values[2] - gravity[2]
+                    ))
+                    checkSwing()
+                }
+                Sensor.TYPE_GYROSCOPE -> {
+                    gyroMag = magnitude(event.values)
+                    // 각속도 벡터 크기만 갱신. checkSwing 은 가속도 이벤트에서 OR 조건으로 호출
+                }
+            }
+        }
+        override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 방향 감지 리스너 (피치각 + 방위각)
+    // ─────────────────────────────────────────────────────
+    private val orientationListener = object : SensorEventListener {
+    // TYPE_GAME_ROTATION_VECTOR 이벤트 수신. 피치각(스윙 위치 판정) +
+    // 방위각(헤드트래킹 패닝) + 배트 높이 라이브 업데이트 모두 처리
+
+        override fun onSensorChanged(event: SensorEvent) {
+            if (event.sensor.type != Sensor.TYPE_GAME_ROTATION_VECTOR) return
+
+            SensorManager.getRotationMatrixFromVector(rotMatrix, event.values)
+            SensorManager.getOrientation(rotMatrix, orientation)
+            // orientation[0]=방위각, orientation[1]=피치, orientation[2]=롤 (라디안)
+
+            currentPitchDeg = Math.toDegrees(orientation[1].toDouble()).toFloat()
+            // 절대 피치각 (도). 화면 수평=0°, 아래로 기울이면 음수
+
+            // ── 방위각 → 헤드트래킹 패닝 계산 ─────────────────
+            val azimuthDeg = Math.toDegrees(orientation[0].toDouble()).toFloat()
+            if (baseAzimuth == null) baseAzimuth = azimuthDeg
+            // 버튼 클릭 후 첫 이벤트에서 기준 방위각 저장
+            var rel = azimuthDeg - (baseAzimuth ?: azimuthDeg)
+            while (rel > 180f)  rel -= 360f
+            while (rel < -180f) rel += 360f
+            currentHeadingDeg = -rel
+            // -180~+180° 정규화 후 부호 반전 → 오른쪽=양수, 왼쪽=음수
+
+            // ── 배트 높이 라이브 업데이트 ──────────────────────
+            val batH = BATTER_HEIGHT + sin(currentPitchDeg * PI.toFloat() / 180f) * BAT_REACH
+            liveBallParabolaView.updateLiveBat(batH)
+            // updateLiveBat() 는 postInvalidate() 를 사용 → 센서 스레드에서 직접 호출 안전
+
+            // ── 스윙 궤적 기록 ──────────────────────────────────
+            if (isRecording) {
+                pitchHistory.add(Pair(System.currentTimeMillis() - pitchRecordStart, currentPitchDeg))
+                swingGraphView.postInvalidate()
+                // postInvalidate(): 센서 스레드 → UI 스레드 안전한 재그리기 요청
+            }
+        }
+        override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 스윙 판정
+    // ─────────────────────────────────────────────────────
+    private fun checkSwing() {
+    // 가속도 이벤트마다 호출. 3단계 판정:
+    //   isAnySwing    → swingDetected=true (파울 후보)
+    //   isStrongSwing → 높이 매칭 계산
+    //   높이 일치     → swingIsHit=true ("깡")
+
+        if (!hitWindowActive) return
+        // 타격 윈도우(600ms) 밖이면 모든 판정 무시
+
+        val accel = linearAccelMag
+        val gyro  = gyroMag
+
+        val isStrongSwing = accel > HIT_ACCEL_THRESHOLD || gyro > HIT_GYRO_THRESHOLD
+        // 강한 스윙 여부 (HIT 임계값 초과)
+
+        val isAnySwing    = accel > FOUL_ACCEL_THRESHOLD || gyro > FOUL_GYRO_THRESHOLD
+        // 약한 스윙 포함 여부 (FOUL 임계값 초과)
+
+        if (!swingDetected && isAnySwing) {
+            swingDetected  = true                    // 스윙 감지 플래그 설정 (중복 방지)
+            swingPitchDeg  = currentPitchDeg         // 스윙 순간 피치각 스냅샷
+            swingWasStrong = isStrongSwing           // 스윙 강도 기록 (파울 원인 구분용)
+
+            if (hitTimeRelMs < 0L) {
+                hitTimeRelMs = System.currentTimeMillis() - pitchRecordStart
+                // 스윙 감지 시각을 기록 시작점 기준 경과ms 로 저장
+                swingGraphView.setHitTime(hitTimeRelMs)
+                swingGraphView.postInvalidate()
+                // 배트 각도 그래프에 스윙 시점 마커 표시
+            }
+
+            if (isStrongSwing) {
+                // ── 높이 기반 3D 위치 매칭 ──────────────────────
+                val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
+                // 이번 라운드 공의 목표 접촉 높이 (m): 타자 기준 + 요구 각도에 따른 도달 높이
+
+                val batH     = BATTER_HEIGHT + sin(currentPitchDeg * PI.toFloat() / 180f) * BAT_REACH
+                // 스윙 순간 실제 배트 높이 (m): 타자 기준 + 현재 피치각에 따른 도달 높이
+
+                swingBatHeight  = batH
+                positionMatched = abs(batH - contactH) < HEIGHT_TOLERANCE
+                swingIsHit      = positionMatched
+                // |배트H - 공H| < HEIGHT_TOLERANCE(0.2m) → 정타 ("깡")
+                // 강한 스윙이지만 높이 미스 → swingIsHit=false → 파울
+            }
+            // 약한 스윙: swingDetected=true, swingIsHit=false → 파울
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // onCreate
+    // ─────────────────────────────────────────────────────
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_swing_test)
+        // res/layout/activity_swing_test.xml 로 화면 설정 (가로 모드 고정)
+
+        // ── 뷰 바인딩 (XML id → 코드 변수) ──────────────────
+        tvStatus              = findViewById(R.id.tvV2Status)
+        tvResult              = findViewById(R.id.tvV2Result)
+        btnStart              = findViewById(R.id.btnV2Start)
+        ballTrackView         = findViewById(R.id.v2BallTrackView)
+        swingGraphView        = findViewById(R.id.v2SwingGraphView)
+        liveBallParabolaView  = findViewById(R.id.v2LiveParabolaView)
+        base1Container        = findViewById(R.id.v2Base1Container)
+        base3Container        = findViewById(R.id.v2Base3Container)
+        base1Glow             = findViewById(R.id.v2Base1Glow)
+        base3Glow             = findViewById(R.id.v2Base3Glow)
+        tvBase1Label          = findViewById(R.id.v2TvBase1Label)
+        tvBase3Label          = findViewById(R.id.v2TvBase3Label)
+
+        btnSwingPitchMinus   = findViewById(R.id.btnSwingPitchMinus)
+        btnSwingPitchPlus    = findViewById(R.id.btnSwingPitchPlus)
+        tvSwingPitchCount    = findViewById(R.id.tvSwingPitchCount)
+        tvSwingPitchProgress = findViewById(R.id.tvSwingPitchProgress)
+
+        ballTrackView.setShowStrikeZone(false)
+
+        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+
+        // ── TTS 초기화 ────────────────────────────────────
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts?.language = Locale.KOREAN
+                // 기본 언어 한국어. "SET"·"PITCH" 발화 직전 영어로 전환
+                ttsReady = true
+            }
+        }
+
+        initAudioTrack()
+        // AudioTrack 인스턴스 생성 및 재생 상태 설정
+
+        btnSwingPitchMinus.setOnClickListener {
+            if (targetPitches > 1) {
+                targetPitches--
+                tvSwingPitchCount.text = targetPitches.toString()
+            }
+        }
+        btnSwingPitchPlus.setOnClickListener {
+            if (targetPitches < 30) {
+                targetPitches++
+                tvSwingPitchCount.text = targetPitches.toString()
+            }
+        }
+
+        btnStart.setOnClickListener {
+            baseAzimuth = null
+            isTraining = true
+            currentPitchNum = 1
+            successCount = 0
+            btnSwingPitchMinus.isEnabled = false
+            btnSwingPitchPlus.isEnabled = false
+            tvSwingPitchProgress.text = "1/${targetPitches}"
+            startGame()
+            resetAndShowLiveGraphs()
+        }
+
+        base1Container.setOnClickListener { onBasePressed(1) }
+        base3Container.setOnClickListener { onBasePressed(3) }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 게임 메인 루프
+    // ─────────────────────────────────────────────────────
+    private fun startGame() {
+        gameJob?.cancel()
+        // 이전 게임 코루틴이 남아있으면 취소 (다시하기 클릭 시 이전 흐름 중단)
+
+        // ── 모든 상태 초기화 ──────────────────────────────
+        tvResult.text      = ""
+        ballTrackView.reset()      // 공 위치·궤적·트레일 초기화
+        btnStart.isEnabled = false
+        isWaitingForInput  = false
+        swingDetected      = false
+        swingIsHit         = false
+        positionMatched    = false
+        swingPitchDeg      = 0f
+        swingWasStrong     = false
+        swingBatHeight     = Float.NaN
+        ballApproachProgress = 0f  // 비프볼 볼륨 기준 초기화
+        divProgress          = 0f  // DIVERGE 비프음 볼륨·패닝 기준 초기화
+        pitchHistory.clear()
+        hitTimeRelMs   = -1L
+        isRecording    = false
+        hitWindowActive = false
+        targetBase     = if (Random.nextBoolean()) 1 else 3
+        // 50% 확률로 1루 또는 3루 선택
+        resetBaseVisuals()
+
+        gameJob = scope.launch {
+        // 게임 전체 흐름을 단일 코루틴으로 관리 (자기 취소 버그 방지)
+
+            // ━━━ 1단계: SET 발화 ━━━
+            withContext(Dispatchers.Main) {
+                tvStatus.text = "SET"
+                tvStatus.setTextColor(0xFF93C5FD.toInt())  // 연파랑 #93C5FD
+                if (ttsReady) {
+                    tts?.setLanguage(Locale.ENGLISH)
+                    tts?.speak("SET", TextToSpeech.QUEUE_FLUSH, null, "tts_set")
+                    // "SET" fire-and-forget (완료 대기 안 함)
+                }
+            }
+            delay(1000)
+
+            // ━━━ 2단계: 공 접근 (2500ms) + PITCH 발화 ━━━
+            val approachMs  = 2500L   // 공이 투수에서 타자까지 날아오는 시간 (ms)
+            val pitchLeadMs = 700L    // "PITCH" 발화를 도착 몇ms 전에 시작할지 여유 시간
+            val tApproach   = System.currentTimeMillis()
+            var pitchStarted = false  // PITCH 발화 중복 실행 방지 플래그
+            var pitchJob: Job? = null // PITCH speakAndWait() 자식 코루틴
+
+            // ── 비프볼 소리: 거리 기반 볼륨 + 높이 기반 주파수 ──
+            val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
+            // 이 라운드 공의 목표 접촉 높이. beepBallJob 의 주파수 계산에 사용
+
+            val beepBallJob = launch {
+                val sr         = 44100
+                val onSamples  = sr * 200 / 1000   // 200ms 비프음 샘플 수
+                val offSamples = sr * 150 / 1000   // 420ms 무음 샘플 수 (18522 샘플)
+                while (isActive) {
+                    val p = ballApproachProgress
+                    val vol = (0.15f + 0.65f * p).coerceIn(0.15f, 0.80f)
+                    audioTrack?.write(tone(onSamples, 880f, 0f, vol), 0, onSamples * 2)
+                    if (!isActive) break
+                    audioTrack?.write(ShortArray(offSamples * 2), 0, offSamples * 2)
+                }
+            }
+
+            while (isActive) {
+            // 공 접근 애니메이션 루프 (~60fps). 취소 체크 포인트 포함
+                val elapsed  = System.currentTimeMillis() - tApproach
+                val progress = (elapsed.toFloat() / approachMs).coerceIn(0f, 1f)
+
+                ballApproachProgress = progress
+                // 비프볼 볼륨·주파수 계산을 위해 진행률을 @Volatile 변수로 공유
+
+                withContext(Dispatchers.Main) {
+                    ballTrackView.updateBall(0f, progress, BallPhase.APPROACH, pitchYPosition)
+                    // BallTrackView: panX=0(중앙), 공 접근 진행률, 단계=APPROACH
+                    liveBallParabolaView.setBallProgress(progress)
+                    // 라이브 포물선 그래프: 공 이동 위치 실시간 갱신 (노란 원 표시)
+                }
+
+                if (!pitchStarted && elapsed >= approachMs - pitchLeadMs) {
+                // 도착까지 pitchLeadMs(700ms) 이하 남은 시점에 "PITCH" 발화 시작
+                    pitchStarted = true
+                    pitchJob = launch {
+                        withContext(Dispatchers.Main) {
+                            tvStatus.text = "PITCH"
+                            tvStatus.setTextColor(0xFFFBBF24.toInt())  // 앰버 #FBBF24
+                        }
+                        speakAndWait("PITCH")
+                        // 발화 완료까지 코루틴 일시 중단 → 완료 직후 타격 윈도우 열림
+                    }
+                }
+                if (progress >= 1f) break
+                // 공 도착(progress=1.0) 시 접근 루프 탈출
+                delay(16)
+                // 약 60fps 갱신 간격
+            }
+
+            // 비프볼 소리 정지
+            beepBallJob.cancel()
+            beepBallJob.join()
+            audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
+            pitchJob?.join()
+            // PITCH 발화가 아직 진행 중이면 완료될 때까지 대기
+            // 이 join() 이후가 실제 타격 윈도우 시작 시점
+
+            // ━━━ 3단계: 타격 윈도우 (600ms) ━━━
+            swingDetected   = false
+            swingIsHit      = false
+            // 2단계 중 발생한 오탐 방지 — 두 플래그 초기화
+
+            hitWindowActive = true
+            // 이 시점부터 swingListener.checkSwing() 이 스윙 감지 시작
+
+            withContext(Dispatchers.Main) {
+                tvStatus.text = "쳐!"
+                tvStatus.setTextColor(0xFFFF6B35.toInt())  // 주황 #FF6B35
+            }
+
+            val deadline = System.currentTimeMillis() + 600L
+            // 타격 윈도우 종료 시각 (현재 + 600ms)
+            while (isActive && System.currentTimeMillis() < deadline) {
+                if (swingIsHit) break
+                // 정타 감지 즉시 탈출 → "깡" 피드백 지연 최소화
+                // swingDetected(파울)만인 경우는 더 강한 스윙 가능성 위해 600ms 끝까지 대기
+                delay(8)
+                // 8ms 마다 판정 확인 (≈125Hz 폴링)
+            }
+            hitWindowActive = false
+            // 타격 윈도우 닫음 → 이후 센서 이벤트는 무시
+
+            delay(150L)
+            // 팔로우스루 150ms 추가 기록 — 공 맞은 직후 배트 궤적도 그래프에 포함
+            isRecording = false
+            // 피치 기록 종료
+
+            // ━━━ 4단계: 결과 판정 ━━━
+            when {
+
+                // ── 4a: 정타 (깡) ─────────────────────────────
+                // 강한 스윙 + 높이 일치 → 공이 목표 베이스로 날아감
+                swingIsHit -> {
+                    // ── 깡 임팩트 사운드 (AudioTrack, 최대 볼륨) ─────────────────────────────
+                    // [볼륨 조절] vol=1.0f 값을 변경하면 깡 소리 크기가 바뀜
+                    // [음색 조절] 950f 값을 변경하면 깡 소리 주파수가 바뀜
+                    // [길이 조절] 150 (ms) 값을 변경하면 깡 소리 길이가 바뀜
+                    val impactSamples = 44100 * 150 / 1000
+                    audioTrack?.write(tone(impactSamples, 880f, 0f, 1.0f), 0, impactSamples * 2)
+
+                    withContext(Dispatchers.Main) {
+                        speakResult("깡")
+                        tvStatus.text = if (targetBase == 3) "3루 방향!" else "1루 방향!"
+                        tvStatus.setTextColor(0xFFFBBF24.toInt())
+                        tvResult.text = "실제 각도: %.0f°  /  필요 각도: %.0f°"
+                            .format(swingPitchDeg, BATTING_ANGLE_DEG)
+                        liveBallParabolaView.visibility = View.GONE
+                        // 공 발산 단계에서는 라이브 포물선 그래프 숨김
+                    }
+
+                    val divMs      = 1500L
+                    val tDiv       = System.currentTimeMillis()
+                    val targetPanX = if (targetBase == 3) -1f else 1f
+
+                    val divBeepJob = launch {
+                        val sr          = 44100
+                        val beepSamples = sr * 200 / 1000
+                        val silSamples  = sr * 150 / 1000
+                        while (isActive) {
+                            val vol = ((1f - divProgress) * 0.65f).coerceIn(0.05f, 0.65f)
+                            val pan = (targetPanX * divProgress).coerceIn(-1f, 1f)
+                            audioTrack?.write(tone(beepSamples, 880f, pan, vol), 0, beepSamples * 2)
+                            if (!isActive) break
+                            audioTrack?.write(ShortArray(silSamples * 2), 0, silSamples * 2)
+                        }
+                    }
+
+                    while (isActive) {
+                        val progress = ((System.currentTimeMillis() - tDiv).toFloat() / divMs)
+                            .coerceIn(0f, 1f)
+                        divProgress = progress
+                        withContext(Dispatchers.Main) {
+                            ballTrackView.updateBall(
+                                targetPanX * progress,
+                                1f - progress,
+                                BallPhase.DIVERGE
+                            )
+                        }
+                        if (progress >= 1f) break
+                        delay(16)
+                    }
+
+                    divBeepJob.cancel()
+                    divBeepJob.join()
+                    audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
+
+                    withContext(Dispatchers.Main) {
+                        ballTrackView.reset()
+                        if (targetBase == 3) activateBase3() else activateBase1()
+                        // 목표 베이스 글로우·라벨 색 활성화
+                        tvStatus.text = if (targetBase == 3) "3루로\n달려라!" else "1루로\n달려라!"
+                        tvStatus.setTextColor(0xFFFBBF24.toInt())
+                    }
+
+                    startBaseBeep()
+                    // 1100Hz 스테레오 도착음 시작 (헤드트래킹 방향 패닝)
+                    isWaitingForInput = true
+                    // 베이스 선택 대기 시작 — onBasePressed() 처리 활성화
+                }
+
+                // ── 4b: 파울 ──────────────────────────────────
+                swingDetected -> {
+                    withContext(Dispatchers.Main) {
+                        ballTrackView.reset()
+                        speakResult("파울")
+                        tvStatus.text = "파울!"
+                        tvStatus.setTextColor(0xFFFBBF24.toInt())
+                        tvResult.text = if (swingWasStrong) {
+                            "스트라이크 — 위치 불일치\n실제 각도: %.0f°  /  필요 각도: %.0f°"
+                                .format(swingPitchDeg, BATTING_ANGLE_DEG)
+                        } else {
+                            "스트라이크 — 힘 부족\n필요 각도: %.0f°".format(BATTING_ANGLE_DEG)
+                        }
+                        liveBallParabolaView.visibility = View.GONE
+                        if (!isTraining) {
+                            showSwingGraph()
+                            btnStart.isEnabled = true
+                            btnStart.text = "다시하기"
+                        }
+                    }
+                    if (isTraining) {
+                        delay(2000)
+                        withContext(Dispatchers.Main) { scheduleNextOrFinish(false) }
+                    }
+                }
+
+                // ── 4c: 스트라이크 ────────────────────────────
+                else -> {
+                    withContext(Dispatchers.Main) {
+                        ballTrackView.reset()
+                        speakResult("스트라이크")
+                        tvStatus.text = "스트라이크!"
+                        tvStatus.setTextColor(0xFFF87171.toInt())
+                        tvResult.text = "스윙하지 않았습니다\n필요 각도: %.0f°".format(BATTING_ANGLE_DEG)
+                        liveBallParabolaView.visibility = View.GONE
+                        if (!isTraining) {
+                            showSwingGraph()
+                            btnStart.isEnabled = true
+                            btnStart.text = "다시하기"
+                        }
+                    }
+                    if (isTraining) {
+                        delay(2000)
+                        withContext(Dispatchers.Main) { scheduleNextOrFinish(false) }
+                    }
+                }
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 베이스 도착음 — 베이스 선택 전까지 반복 재생 (헤드트래킹 스테레오 패닝)
+    // ─────────────────────────────────────────────────────
+    private fun startBaseBeep() {
+        val finalPan = if (targetBase == 3) -1.0f else 1.0f
+        // 3루=왼쪽(-1.0), 1루=오른쪽(+1.0). 베이스 방향의 기본 패닝값
+
+        audioJob?.cancel()
+        // 이전 오디오 잡이 있으면 취소
+
+        audioJob = scope.launch {
+        // 독립 코루틴으로 실행 → onBasePressed() 의 stopAudio() 에서 명시적 취소
+
+            val sr          = 44100
+            val beepSamples = sr * 200 / 1000   // 200ms 비프음 샘플 수
+            val silSamples  = sr * 0 / 1000   // 150ms 무음 샘플 수
+
+            while (isActive) {
+                val rAngle = finalPan * 90f + currentHeadingDeg
+                // 베이스 방향(±90°) + 현재 머리 방향 = 실제 음원 각도
+                val pan    = sin(Math.toRadians(rAngle.toDouble())).toFloat().coerceIn(-1f, 1f)
+                // 각도 → 스테레오 pan(-1~+1) 변환. sin 함수로 -90°~+90° 자연스럽게 매핑
+                audioTrack?.write(tone(beepSamples, 880f, pan, 1.0f), 0, beepSamples * 2)
+                // 1100Hz 200ms 비프음 스트리밍
+                if (!isActive) break
+                audioTrack?.write(ShortArray(silSamples * 2), 0, silSamples * 2)
+                // 150ms 무음 (비프음 간 간격)
+            }
+        }
+        beepStartTime = SystemClock.elapsedRealtimeNanos()
+        // 반응속도 측정 기준점 기록. onBasePressed() 에서 차이를 ms 로 계산
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 베이스 선택 처리
+    // ─────────────────────────────────────────────────────
+    private fun onBasePressed(pressedBase: Int) {
+    // base1Container / base3Container 클릭 시 호출
+
+        if (!isWaitingForInput) return
+        // 베이스 도착 전이거나 이미 처리된 경우 무시
+
+        isWaitingForInput = false
+        // 중복 입력 방지 (한 번 선택하면 더 이상 처리 안 함)
+
+        stopAudio()
+        gameJob?.cancel()
+        resetBaseVisuals()
+        ballTrackView.reset()
+
+        val success = pressedBase == targetBase
+        if (success) {
+            val ms = (SystemClock.elapsedRealtimeNanos() - beepStartTime) / 1_000_000L
+            tvStatus.text = "성공!"
+            tvStatus.setTextColor(0xFF4ADE80.toInt())
+            tvResult.text = "${ms} ms"
+        } else {
+            tvStatus.text = "알맞지 않은\n베이스 선택입니다"
+            tvStatus.setTextColor(0xFFF87171.toInt())
+            tvResult.text = ""
+            Toast.makeText(this, "알맞지 않은 베이스 선택입니다", Toast.LENGTH_SHORT).show()
+        }
+
+        if (isTraining) {
+            scope.launch {
+                delay(2000)
+                withContext(Dispatchers.Main) { scheduleNextOrFinish(success) }
+            }
+        } else {
+            showSwingGraph()
+            btnStart.isEnabled = true
+            btnStart.text = "다시하기"
+        }
+    }
+
+    private fun scheduleNextOrFinish(success: Boolean) {
+        if (success) successCount++
+        if (currentPitchNum >= targetPitches) {
+            finishTraining()
+        } else {
+            launchNextTrainingPitch()
+        }
+    }
+
+    private fun launchNextTrainingPitch() {
+        currentPitchNum++
+        tvSwingPitchProgress.text = "${currentPitchNum}/${targetPitches}"
+        startGame()
+        resetAndShowLiveGraphs()
+    }
+
+    private fun finishTraining() {
+        isTraining = false
+        tvStatus.text = "훈련 완료!"
+        tvStatus.setTextColor(0xFF4ADE80.toInt())
+        tvResult.text = "${targetPitches}번 중 ${successCount}번 성공"
+        tvSwingPitchProgress.text = ""
+        btnStart.isEnabled = true
+        btnStart.text = "다시 훈련"
+        btnSwingPitchMinus.isEnabled = true
+        btnSwingPitchPlus.isEnabled = true
+        speakResult("훈련 완료! ${successCount}번 성공!")
+    }
+
+    private fun resetAndShowLiveGraphs() {
+        pitchHistory.clear()
+        hitTimeRelMs     = -1L
+        pitchRecordStart = System.currentTimeMillis()
+        isRecording      = true
+        val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
+        liveBallParabolaView.setData(PITCHER_DIST, PITCHER_HEIGHT, contactH, BATTER_HEIGHT, BALL_ARC, false)
+        liveBallParabolaView.setLiveMode()
+        liveBallParabolaView.visibility = View.VISIBLE
+        swingGraphView.setLiveSource(pitchHistory, BATTING_ANGLE_DEG)
+        swingGraphView.visibility = View.VISIBLE
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 베이스 시각 활성화 / 초기화
+    // ─────────────────────────────────────────────────────
+    private fun activateBase1() {
+        base1Glow.visibility = View.VISIBLE
+        tvBase1Label.setTextColor(0xFF4ADE80.toInt())   // 초록 = 활성 베이스
+    }
+    private fun activateBase3() {
+        base3Glow.visibility = View.VISIBLE
+        tvBase3Label.setTextColor(0xFF4ADE80.toInt())
+    }
+    private fun resetBaseVisuals() {
+        base1Glow.visibility = View.INVISIBLE
+        base3Glow.visibility = View.INVISIBLE
+        tvBase1Label.setTextColor(0xFF94A3B8.toInt())   // 슬레이트 = 비활성
+        tvBase3Label.setTextColor(0xFF94A3B8.toInt())
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 스윙 결과 그래프 다이얼로그 (공 포물선 + 배트 각도 두 그래프 표시)
+    // ─────────────────────────────────────────────────────
+    private fun showSwingGraph() {
+        val history = ArrayList(pitchHistory)   // 스냅샷 (UI 스레드 안전 복사)
+        if (history.isEmpty()) return
+
+        val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
+        // 이 라운드 공의 목표 접촉 높이
+
+        val batH = when {
+            !swingBatHeight.isNaN() -> swingBatHeight
+            // 강한 스윙 → checkSwing() 에서 기록된 배트 높이 사용
+            swingDetected           -> BATTER_HEIGHT + sin(swingPitchDeg * PI.toFloat() / 180f) * BAT_REACH
+            // 약한 스윙 → swingPitchDeg 로 배트 높이 역산
+            else                    -> contactH
+            // 스윙 없음 → 배트를 목표 높이와 동일하게 표시
+        }
+
+        val heightPx = (300 * resources.displayMetrics.density).toInt()
+        // 그래프 뷰 높이 300dp → 픽셀 변환
+
+        val parabolaView = BallParabolaView(this)
+        parabolaView.setData(PITCHER_DIST, PITCHER_HEIGHT, contactH, batH, BALL_ARC, swingIsHit)
+        // 결과 다이얼로그용: liveMode=false → HIT/MISS 레이블·요약 표시
+
+        val graphView = SwingGraphView(this)
+        graphView.setData(history, hitTimeRelMs, BATTING_ANGLE_DEG)
+
+        val container = LinearLayout(this)
+        container.orientation = LinearLayout.VERTICAL
+        container.setBackgroundColor(0xFF0A1423.toInt())   // 앱 배경색 #0A1423
+        container.addView(parabolaView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
+        container.addView(graphView,    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
+        // 포물선 그래프(위) + 배트 각도 그래프(아래) 세로 배치
+
+        val scrollView = ScrollView(this)
+        scrollView.addView(container)
+        // 화면이 작은 기기에서 두 그래프 모두 스크롤하여 확인 가능
+
+        AlertDialog.Builder(this)
+            .setTitle("스윙 결과")
+            .setView(scrollView)
+            .setPositiveButton("확인", null)
+            .show()
+    }
+
+    // ─────────────────────────────────────────────────────
+    // TTS 발화
+    // ─────────────────────────────────────────────────────
+    private fun speakResult(text: String) {
+    // 결과 발화 (한국어, fire-and-forget). 완료 대기 불필요
+        if (!ttsReady) return
+        tts?.setLanguage(Locale.KOREAN)
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tts_result")
+        // QUEUE_FLUSH: 진행 중인 발화 즉시 중단 후 결과 발화
+    }
+
+    private suspend fun speakAndWait(text: String) {
+    // TTS 발화 + 완료까지 코루틴 suspend. "PITCH" 발화 타이밍 동기화용
+        if (!ttsReady) return
+        val deferred = CompletableDeferred<Unit>()
+        // 발화 완료 신호 전달용 Deferred. onDone 콜백에서 complete() 호출
+        withContext(Dispatchers.Main) {
+            tts?.setLanguage(Locale.ENGLISH)
+            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {}
+                override fun onDone(utteranceId: String?)  { deferred.complete(Unit) }
+                // 발화 완료 → deferred 완료 → await() 에서 코루틴 재개
+                override fun onError(utteranceId: String?) { deferred.complete(Unit) }
+                // 오류 시에도 complete() → 게임이 멈추지 않도록 처리
+            })
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tts_wait")
+        }
+        deferred.await()
+        // onDone / onError 콜백이 올 때까지 코루틴 일시 중단 (스레드 블록 없음)
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 오디오 중단
+    // ─────────────────────────────────────────────────────
+    private fun stopAudio() {
+        audioJob?.cancel()
+        // 베이스 도착음 반복 재생 코루틴 취소
+        audioTrack?.pause()
+        audioTrack?.flush()
+        audioTrack?.play()
+        // pause→flush→play: 버퍼에 남은 데이터 비우고 재생 상태로 복귀
+        // (다음 write() 호출을 위해 play() 상태 유지)
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 유틸리티
+    // ─────────────────────────────────────────────────────
+    private fun magnitude(v: FloatArray) = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2])
+    // 3차원 벡터 크기: √(x²+y²+z²). FloatArray[3] → Float
+
+    private fun tone(numSamples: Int, freq: Float, pan: Float, vol: Float): ShortArray {
+    // 스테레오 PCM 사인파 샘플 배열 생성
+    // numSamples: 모노 기준 샘플 수 (출력 배열 크기 = numSamples * 2, 스테레오 인터리브)
+    // freq: 주파수 (Hz) | pan: 위치 -1(좌)~+1(우) | vol: 음량 0.0~1.0
+        val out   = ShortArray(numSamples * 2)
+        val lGain = cos((pan.coerceIn(-1f, 1f) + 1f) * PI.toFloat() / 4f)
+        // 좌측 채널 게인: pan=-1 → 1.0, pan=0 → 0.707, pan=+1 → 0
+        val rGain = cos((1f - pan.coerceIn(-1f, 1f)) * PI.toFloat() / 4f)
+        // 우측 채널 게인: pan=+1 → 1.0, pan=0 → 0.707, pan=-1 → 0
+        // 코사인 패닝: lGain² + rGain² = 1 (파워 보존)
+        for (i in 0 until numSamples) {
+            val s = (sin(2 * PI * freq * i / 44100) * 32767 * vol).toInt()
+            // i번째 모노 샘플 값. 44100과 일치해야 정확한 주파수 생성
+            out[i * 2]     = (s * lGain).toInt().toShort()   // 짝수 인덱스: 좌측 채널
+            out[i * 2 + 1] = (s * rGain).toInt().toShort()   // 홀수 인덱스: 우측 채널
+        }
+        return out
+    }
+
+    private fun initAudioTrack() {
+    // AudioTrack 초기화. onCreate() 에서 한 번 호출. PCM 스트리밍 재생 준비
+        audioTrack?.stop(); audioTrack?.release()
+        // 이전 인스턴스 정리 (재초기화 시 메모리 누수 방지)
+        val sr     = 44100   // 샘플레이트 (Hz). tone() 함수와 동일한 값 사용 필수
+        val minBuf = AudioTrack.getMinBufferSize(sr, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT)
+        audioTrack = AudioTrack.Builder()
+            .setAudioAttributes(AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                // 미디어 재생 용도 분류 → 볼륨 채널 = 미디어 볼륨
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
+            .setAudioFormat(AudioFormat.Builder()
+                .setSampleRate(sr)
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                // 16비트 PCM: 샘플 하나 = Short(2바이트)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO).build())
+                // 스테레오: Left + Right 채널
+            .setBufferSizeInBytes(minBuf * 4)
+            // 최소 버퍼의 4배 → 언더런(소리 끊김) 방지
+            .setTransferMode(AudioTrack.MODE_STREAM).build()
+            // MODE_STREAM: write() 로 실시간 데이터 공급
+        audioTrack?.play()
+        // 즉시 재생 상태로 설정. write() 호출 시 바로 출력
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 센서 등록 / 해제
+    // ─────────────────────────────────────────────────────
+    override fun onResume() {
+    // 화면이 포그라운드로 돌아올 때. 배터리 절약을 위해 여기서 센서 등록
+        super.onResume()
+        linearAccelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
+            ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        // TYPE_LINEAR_ACCELERATION 우선. 미지원 기기에서 TYPE_ACCELEROMETER 폴백
+        gyroscopeSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+        rotationSensor  = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
+        linearAccelSensor?.let { sensorManager.registerListener(swingListener, it, SensorManager.SENSOR_DELAY_GAME) }
+        gyroscopeSensor?.let  { sensorManager.registerListener(swingListener, it, SensorManager.SENSOR_DELAY_GAME) }
+        rotationSensor?.let   { sensorManager.registerListener(orientationListener, it, SensorManager.SENSOR_DELAY_GAME) }
+        // SENSOR_DELAY_GAME ≈ 20ms 간격으로 센서 이벤트 수신
+    }
+
+    override fun onPause() {
+    // 화면이 백그라운드로 갈 때. 센서 해제로 배터리 절약
+        super.onPause()
+        sensorManager.unregisterListener(swingListener)
+        sensorManager.unregisterListener(orientationListener)
+        // 등록된 모든 센서에서 각 리스너 해제
+        gameJob?.cancel()
+        audioJob?.cancel()
+        // 백그라운드 진입 시 게임·오디오 코루틴 중단
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        tts?.stop(); tts?.shutdown()
+        audioTrack?.stop(); audioTrack?.release()
+        scope.cancel()
+        // 스코프 취소 → gameJob, audioJob, beepBallJob 등 모든 하위 코루틴 일괄 종료
+    }
+}
