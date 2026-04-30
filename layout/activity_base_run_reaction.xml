@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A1423">
+
+    <!-- ══════════════════════════════════════
+         왼쪽: 3루 베이스 (클릭 가능)
+    ══════════════════════════════════════ -->
+    <FrameLayout
+        android:id="@+id/base3Container"
+        android:layout_width="130dp"
+        android:layout_height="130dp"
+        android:layout_marginStart="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <View
+            android:id="@+id/base3Diamond"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center"
+            android:background="@drawable/base_diamond_normal"
+            android:rotation="45"/>
+
+        <View
+            android:id="@+id/base3Glow"
+            android:layout_width="118dp"
+            android:layout_height="118dp"
+            android:layout_gravity="center"
+            android:background="@drawable/base_diamond_active"
+            android:rotation="45"
+            android:visibility="invisible"/>
+
+        <TextView
+            android:id="@+id/tvBase3Label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="3루"
+            android:textColor="#94A3B8"
+            android:textSize="22sp"
+            android:textStyle="bold"/>
+    </FrameLayout>
+
+    <!-- ══════════════════════════════════════
+         오른쪽: 1루 베이스 (클릭 가능)
+    ══════════════════════════════════════ -->
+    <FrameLayout
+        android:id="@+id/base1Container"
+        android:layout_width="130dp"
+        android:layout_height="130dp"
+        android:layout_marginEnd="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <View
+            android:id="@+id/base1Diamond"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center"
+            android:background="@drawable/base_diamond_normal"
+            android:rotation="45"/>
+
+        <View
+            android:id="@+id/base1Glow"
+            android:layout_width="118dp"
+            android:layout_height="118dp"
+            android:layout_gravity="center"
+            android:background="@drawable/base_diamond_active"
+            android:rotation="45"
+            android:visibility="invisible"/>
+
+        <TextView
+            android:id="@+id/tvBase1Label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="1루"
+            android:textColor="#94A3B8"
+            android:textSize="22sp"
+            android:textStyle="bold"/>
+    </FrameLayout>
+
+    <!-- ══════════════════════════════════════
+         중앙: BallTrackView
+         (베이스 컨테이너 사이 공간 채움)
+    ══════════════════════════════════════ -->
+    <com.beepbeep.defense.batting.BallTrackView
+        android:id="@+id/ballTrackView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/base3Container"
+        app:layout_constraintEnd_toStartOf="@id/base1Container"/>
+
+    <!-- ══════════════════════════════════════
+         중앙 하단: 상태 + 결과 + 시작버튼
+         BallTrackView 아래에 배치
+    ══════════════════════════════════════ -->
+
+    <!-- 스윙 궤적 실시간 그래프 (시작 버튼 누른 순간부터 표시) -->
+    <com.beepbeep.defense.batting.SwingGraphView
+        android:id="@+id/swingGraphView"
+        android:layout_width="0dp"
+        android:layout_height="160dp"
+        android:visibility="gone"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:layout_marginBottom="2dp"
+        app:layout_constraintBottom_toTopOf="@id/tvStatus"
+        app:layout_constraintStart_toEndOf="@id/base3Container"
+        app:layout_constraintEnd_toStartOf="@id/base1Container"/>
+
+    <!-- 상태 메시지 -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="시작 버튼을 눌러주세요"
+        android:textColor="#93C5FD"
+        android:textSize="13sp"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.2"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintBottom_toTopOf="@id/tvResult"
+        app:layout_constraintStart_toEndOf="@id/base3Container"
+        app:layout_constraintEnd_toStartOf="@id/base1Container"
+        android:layout_marginBottom="2dp"/>
+
+    <!-- 반응속도 결과 -->
+    <TextView
+        android:id="@+id/tvResult"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#FACC15"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintBottom_toTopOf="@id/btnStart"
+        app:layout_constraintStart_toEndOf="@id/base3Container"
+        app:layout_constraintEnd_toStartOf="@id/base1Container"
+        android:layout_marginBottom="4dp"/>
+
+    <!-- 시작/다시하기 버튼 (하단 중앙, 항상 보임) -->
+    <Button
+        android:id="@+id/btnStart"
+        android:layout_width="130dp"
+        android:layout_height="44dp"
+        android:text="시작"
+        android:textSize="16sp"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#16A34A"
+        android:elevation="4dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/base3Container"
+        app:layout_constraintEnd_toStartOf="@id/base1Container"
+        android:layout_marginBottom="10dp"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
