@@ -53,65 +53,60 @@ app/src/main/
 │       ├── libfmod.so
 │       └── libopenal.so
 ├── java/com/beepbeep/defense/
-│   ├── MainActivity.kt               # 수비 시뮬레이션 액티비티
-│   ├── FieldView.kt                  # 경기장 시각화 커스텀 뷰
-│   ├── JoystickView.kt               # 조이스틱 커스텀 뷰
 │   ├── audio/
 │   │   ├── SpatialAudioEngine.kt     # 공간 오디오 엔진 (OpenAL + Resonance)
 │   │   └── ResonanceBridge.kt        # Resonance Audio JNI 래퍼
-│   ├── game/
-│   │   ├── GameEngine.kt             # 수비 시뮬레이션 게임 로직
-│   │   └── BallSimulator.kt          # 공 물리 시뮬레이터
 │   └── batting/
 │       ├── SwingTestActivity.kt      # 타격 훈련 메인 액티비티
 │       ├── BallParabolaView.kt       # 공 포물선 궤적 그래프
 │       ├── BallTrackView.kt          # 공 궤적 및 베이스 뷰
-│       ├── SwingGraphView.kt         # 스윙 각도 궤적 그래프
-│       └── BaseRunReactionActivity.kt# (레거시, 미사용)
-└── res/
-    ├── layout/
-    │   ├── activity_main.xml         # 수비 시뮬레이션 레이아웃
-    │   └── activity_swing_test.xml   # 타격 훈련 레이아웃
-    ├── drawable/                     # 베이스 이미지 등
-    └── values/                       # colors, strings, themes, dimens
+│       └── SwingGraphView.kt         # 스윙 각도 궤적 그래프
+└── res/layout/
+    └── activity_swing_test.xml       # 타격 훈련 레이아웃
 ```
 
 ---
 
-## 화면 구성
+## 주요 기능
 
-### 수비 시뮬레이션 (`MainActivity`)
-- 공간 오디오로 타구 방향을 듣고 수비수를 조이스틱으로 이동시켜 포구하는 훈련
-- 난이도 선택 (쉬움 / 보통 / 어려움)
-- 3루·중앙·1루 방향 수동 투구 / 스윙 테스트 화면 이동
-
-### 타격 훈련 (`SwingTestActivity`)
-- 설정한 투구 횟수만큼 자동 반복 훈련
-- 투구 횟수 설정 UI (−/+ 버튼, 1~30회, 기본 10회)
-- 훈련 완료 시 성공 횟수 TTS 안내
+| 기능 | 설명 |
+|---|---|
+| 투구 횟수 설정 | 훈련 시작 전 −/+ 버튼으로 투구 횟수 설정 (1~30회, 기본 10회) |
+| 자동 반복 훈련 | 매 투구 결과 후 2초 대기 → 자동으로 다음 투구 진행 |
+| 공 접근 비프음 | 투수에서 타자까지 2.5초간 볼륨 점진 증가 (880Hz, 공간 오디오) |
+| 타격 감지 | 선형 가속도계 + 자이로스코프로 스윙 강도 및 배트 피치각 판정 |
+| 정타 / 파울 / 스트라이크 | TTS 음성 결과 출력 |
+| 공 발산 비프음 | 정타 후 1루/3루 방향으로 스테레오 패닝 이동 |
+| 주루 방향 선택 | 정타 후 1루/3루 버튼 선택, 반응속도(ms) 측정 |
+| 구간별 각도 그래프 | READY→PITCH / PITCH→종료 구간 배트 피치각 궤적 표시 |
+| 훈련 결과 안내 | 완료 시 성공 횟수 TTS 음성 안내 |
 
 ---
 
-## 타격 훈련 흐름
+## 훈련 흐름
 
 ```
-[투구 횟수 설정] → [훈련 시작]
-        ↓
-   SET 발화 (1초 대기)
-        ↓
-   공 접근 — 비프음 볼륨 점진 증가 (2.5초)
-        ↓
-   READY 발화 (타자까지 10피트 지점)
-        ↓
-   PITCH 발화
-        ↓
-   타격 구간 활성화 (0.6초)
-        ↓
-   정타 / 파울 / 스트라이크 판정
-        ↓
-   [정타 시] 공 발산 → 베이스 부저음 → 1루/3루 선택 → 반응속도 표시
-        ↓
-   2초 후 자동으로 다음 투구 (목표 횟수 도달 시 훈련 완료)
+[투구 횟수 설정 (−/+)] → [훈련 시작]
+         ↓
+    SET 발화 (1초 대기)
+         ↓
+    공 접근 — 비프음 볼륨 점진 증가 (2.5초)
+         ↓
+    READY 발화 (타자까지 10피트 지점)
+         ↓
+    PITCH 발화
+         ↓
+    타격 구간 활성화 (0.6초)
+         ↓
+    ┌─────────────────────────────────┐
+    │  정타  │  파울  │  스트라이크  │
+    └─────────────────────────────────┘
+         ↓ (정타 시)
+    공 발산 → 베이스 부저음 → 1루/3루 선택 → 반응속도 표시
+         ↓
+    2초 후 자동으로 다음 투구
+         ↓
+    목표 횟수 도달 시 → 훈련 완료 (성공 횟수 TTS 안내)
 ```
 
 ---
@@ -132,9 +127,9 @@ app/src/main/
 
 | 구간 | 저장 방식 |
 |---|---|
-| SET 시점 | 단일 각도값 스냅샷 (`allSetAngles`) |
-| READY → PITCH | 시계열 기록 (`perPitchPhase2Data`) |
-| PITCH → 타격 윈도우 종료 | 시계열 기록 (`perPitchPhase3Data`) |
+| SET 시점 | 단일 각도값 스냅샷 |
+| READY → PITCH | 시계열 기록 (센서 콜백 기반, ~50Hz) |
+| PITCH → 타격 윈도우 종료 | 시계열 기록 (센서 콜백 기반, ~50Hz) |
 
 ---
 
@@ -153,4 +148,3 @@ app/src/main/
 - 스마트폰을 **가로 방향**으로 고정하여 사용합니다.
 - **이어폰 착용** 시 좌우 스테레오 패닝으로 베이스 방향을 청각으로 확인할 수 있습니다.
 - 타격 요구 각도(`BATTING_ANGLE_DEG`)는 `SwingTestActivity.kt` 상단에서 조정 가능합니다.
-- 수비 시뮬레이션 관련 코드(`MainActivity`, `GameEngine`, `BallSimulator`)는 별도 모듈로 분리되어 있으며 타격 훈련 코드와 독립적으로 동작합니다.
