@@ -22,6 +22,7 @@ import android.widget.TextView                  // 상태·결과 텍스트뷰
 import android.widget.Toast                     // 오답 베이스 선택 시 짧은 안내 메시지
 import androidx.appcompat.app.AppCompatActivity
 import com.beepbeep.defense.R
+import com.beepbeep.defense.audio.SpatialAudioEngine
 import kotlinx.coroutines.*
 import kotlin.math.*
 import kotlin.random.Random
@@ -103,6 +104,10 @@ class SwingTestActivity : AppCompatActivity() {
     private var currentPitchNum = 0
     private var successCount   = 0
     private var isTraining     = false
+    private var hitCount       = 0
+    private var foulCount      = 0
+    private var strikeCount    = 0
+    private val reactionTimes  = mutableListOf<Long>()
 
     // ── Sensors ─────────────────────────────────────────
     private lateinit var sensorManager:        SensorManager
@@ -138,11 +143,20 @@ class SwingTestActivity : AppCompatActivity() {
     @Volatile private var currentPitchDeg:     Float = 0f
     // 현재 기기 절대 피치각 (도). orientationListener 에서 갱신. 수평=0°, 아래=음수
 
+    private var setAngleThisPitch:   Float = 0f
+    private val readyToPitchHistory  = ArrayList<Pair<Long, Float>>()
+    private val pitchToEndHistory    = ArrayList<Pair<Long, Float>>()
+    private val allSetAngles          = mutableListOf<Float>()
+    private val perPitchPhase2Data   = mutableListOf<ArrayList<Pair<Long, Float>>>()
+    private val perPitchPhase3Data   = mutableListOf<ArrayList<Pair<Long, Float>>>()
+    @Volatile private var recordingPhase: Int = 0
+    @Volatile private var phaseRecordStartTime: Long = 0L
+
     // ── 임계값 ──────────────────────────────────────────
-    private val FOUL_ACCEL_THRESHOLD = 8f
+    private val FOUL_ACCEL_THRESHOLD = 1f
     // 스윙 시도 최소 가속도 임계값 (m/s²). 초과 시 스윙 동작으로 인식
 
-    private val HIT_ACCEL_THRESHOLD  = 10f
+    private val HIT_ACCEL_THRESHOLD  = 2f
     // 유효 타격 가속도 임계값 (m/s²). 초과 시 강한 스윙으로 판정
 
     private val FOUL_GYRO_THRESHOLD  = 3f
@@ -176,27 +190,29 @@ class SwingTestActivity : AppCompatActivity() {
     // ── 게임 상태 ────────────────────────────────────────
     private var targetBase = 1
     // 이번 라운드 목표 베이스 (1 또는 3). startGame() 에서 랜덤 선택
+    // [DB 저장 후보] 라운드별 목표 베이스 번호
 
     @Volatile private var hitWindowActive: Boolean = false
     // true 인 600ms 구간에서만 스윙 감지. 센서 스레드 ↔ 코루틴 공유 → @Volatile 필수
 
     @Volatile private var swingDetected:   Boolean = false
     // 스윙 시도 감지 (≥ FOUL 임계값). 파울 판정의 1차 조건
+    // [DB 저장 후보] 스윙 여부 (true=스윙, false=스트라이크)
 
     @Volatile private var swingIsHit:      Boolean = false
     // 유효 타격 (≥ HIT 임계값 + 높이 일치). true → "깡" 판정
-
-    @Volatile private var positionMatched: Boolean = false
-    // 스윙 시 공·배트 높이 일치 여부. |배트H - 접촉H| < HEIGHT_TOLERANCE 이면 true
+    // [DB 저장 후보] 정타 여부 (true=정타, false=파울/스트라이크)
 
     @Volatile private var swingPitchDeg:   Float   = 0f
     // 스윙 감지 순간의 피치각 (도). 결과 텍스트 "실제 각도" 표시용
+    // [DB 저장 후보] 스윙 순간 실제 배트 각도(°) → BATTING_ANGLE_DEG 과 비교해 각도 오차 계산 가능
 
     @Volatile private var swingWasStrong:  Boolean = false
     // 스윙이 HIT 임계값 이상이었는지. 파울 원인(힘 부족 vs 위치 미스) 구분용
 
     @Volatile private var swingBatHeight:  Float   = Float.NaN
     // 스윙 감지 순간의 배트 높이 (m). NaN=스윙 없음. 결과 그래프에서 배트 위치 표시용
+    // [DB 저장 후보] 스윙 순간 배트 높이(m) → contactH 와 비교해 높이 오차 계산 가능
 
     private var isWaitingForInput = false
     // 베이스 선택 대기 중 여부. true 인 동안만 onBasePressed() 처리
@@ -213,6 +229,7 @@ class SwingTestActivity : AppCompatActivity() {
 
     @Volatile private var hitTimeRelMs:     Long    = -1L
     // 스윙 감지 순간의 기록 기준 경과시간 (ms). -1이면 스윙 없음
+    // [DB 저장 후보] 투구 시작 ~ 스윙 감지까지 경과시간(ms) → 타이밍 오차 계산 가능
 
     @Volatile private var isRecording:      Boolean = false
     // true 인 동안 orientationListener 가 pitchHistory 에 데이터 추가
@@ -253,6 +270,8 @@ class SwingTestActivity : AppCompatActivity() {
     // ── Audio ────────────────────────────────────────────
     private var audioTrack: AudioTrack? = null
     // PCM 스트리밍 오디오. tone() 으로 생성한 ShortArray 를 write() 로 직접 공급
+
+    private lateinit var spatialAudio: SpatialAudioEngine
 
     // ─────────────────────────────────────────────────────
     // 스윙 감지 리스너 (선형가속도 + 자이로)
@@ -325,7 +344,13 @@ class SwingTestActivity : AppCompatActivity() {
             if (isRecording) {
                 pitchHistory.add(Pair(System.currentTimeMillis() - pitchRecordStart, currentPitchDeg))
                 swingGraphView.postInvalidate()
-                // postInvalidate(): 센서 스레드 → UI 스레드 안전한 재그리기 요청
+            }
+
+            // ── 구간별 각도 기록 (sensor 콜백에서 직접 기록 → 코루틴 지연 없음) ──
+            val phaseElapsed = System.currentTimeMillis() - phaseRecordStartTime
+            when (recordingPhase) {
+                2 -> readyToPitchHistory.add(Pair(phaseElapsed, currentPitchDeg))
+                3 -> pitchToEndHistory.add(Pair(phaseElapsed, currentPitchDeg))
             }
         }
         override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
@@ -335,52 +360,37 @@ class SwingTestActivity : AppCompatActivity() {
     // 스윙 판정
     // ─────────────────────────────────────────────────────
     private fun checkSwing() {
-    // 가속도 이벤트마다 호출. 3단계 판정:
-    //   isAnySwing    → swingDetected=true (파울 후보)
-    //   isStrongSwing → 높이 매칭 계산
-    //   높이 일치     → swingIsHit=true ("깡")
-
         if (!hitWindowActive) return
-        // 타격 윈도우(600ms) 밖이면 모든 판정 무시
 
         val accel = linearAccelMag
         val gyro  = gyroMag
 
         val isStrongSwing = accel > HIT_ACCEL_THRESHOLD || gyro > HIT_GYRO_THRESHOLD
-        // 강한 스윙 여부 (HIT 임계값 초과)
-
         val isAnySwing    = accel > FOUL_ACCEL_THRESHOLD || gyro > FOUL_GYRO_THRESHOLD
-        // 약한 스윙 포함 여부 (FOUL 임계값 초과)
 
         if (!swingDetected && isAnySwing) {
-            swingDetected  = true                    // 스윙 감지 플래그 설정 (중복 방지)
-            swingPitchDeg  = currentPitchDeg         // 스윙 순간 피치각 스냅샷
-            swingWasStrong = isStrongSwing           // 스윙 강도 기록 (파울 원인 구분용)
-
+            swingDetected = true
+            swingPitchDeg = currentPitchDeg
             if (hitTimeRelMs < 0L) {
                 hitTimeRelMs = System.currentTimeMillis() - pitchRecordStart
-                // 스윙 감지 시각을 기록 시작점 기준 경과ms 로 저장
                 swingGraphView.setHitTime(hitTimeRelMs)
                 swingGraphView.postInvalidate()
-                // 배트 각도 그래프에 스윙 시점 마커 표시
             }
-
-            if (isStrongSwing) {
-                // ── 높이 기반 3D 위치 매칭 ──────────────────────
-                val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
-                // 이번 라운드 공의 목표 접촉 높이 (m): 타자 기준 + 요구 각도에 따른 도달 높이
-
-                val batH     = BATTER_HEIGHT + sin(currentPitchDeg * PI.toFloat() / 180f) * BAT_REACH
-                // 스윙 순간 실제 배트 높이 (m): 타자 기준 + 현재 피치각에 따른 도달 높이
-
-                swingBatHeight  = batH
-                positionMatched = abs(batH - contactH) < HEIGHT_TOLERANCE
-                swingIsHit      = positionMatched
-                // |배트H - 공H| < HEIGHT_TOLERANCE(0.2m) → 정타 ("깡")
-                // 강한 스윙이지만 높이 미스 → swingIsHit=false → 파울
-            }
-            // 약한 스윙: swingDetected=true, swingIsHit=false → 파울
         }
+
+        if (!swingWasStrong && isStrongSwing) {
+            swingWasStrong = true
+            swingBatHeight = BATTER_HEIGHT + sin(currentPitchDeg * PI.toFloat() / 180f) * BAT_REACH
+            if (abs(currentPitchDeg - BATTING_ANGLE_DEG) <= PITCH_TOLERANCE) swingIsHit = true
+        }
+    }
+
+    private fun startPhaseRecording() {
+        phaseRecordStartTime = System.currentTimeMillis()
+    }
+
+    private fun stopPhaseRecording() {
+        recordingPhase = 0
     }
 
     // ─────────────────────────────────────────────────────
@@ -425,6 +435,8 @@ class SwingTestActivity : AppCompatActivity() {
 
         initAudioTrack()
         // AudioTrack 인스턴스 생성 및 재생 상태 설정
+        spatialAudio = SpatialAudioEngine(this)
+        spatialAudio.init()
 
         btnSwingPitchMinus.setOnClickListener {
             if (targetPitches > 1) {
@@ -444,6 +456,13 @@ class SwingTestActivity : AppCompatActivity() {
             isTraining = true
             currentPitchNum = 1
             successCount = 0
+            hitCount = 0
+            foulCount = 0
+            strikeCount = 0
+            reactionTimes.clear()
+            allSetAngles.clear()
+            perPitchPhase2Data.clear()
+            perPitchPhase3Data.clear()
             btnSwingPitchMinus.isEnabled = false
             btnSwingPitchPlus.isEnabled = false
             tvSwingPitchProgress.text = "1/${targetPitches}"
@@ -469,7 +488,10 @@ class SwingTestActivity : AppCompatActivity() {
         isWaitingForInput  = false
         swingDetected      = false
         swingIsHit         = false
-        positionMatched    = false
+        recordingPhase     = 0
+        setAngleThisPitch  = 0f
+        readyToPitchHistory.clear()
+        pitchToEndHistory.clear()
         swingPitchDeg      = 0f
         swingWasStrong     = false
         swingBatHeight     = Float.NaN
@@ -486,82 +508,76 @@ class SwingTestActivity : AppCompatActivity() {
         gameJob = scope.launch {
         // 게임 전체 흐름을 단일 코루틴으로 관리 (자기 취소 버그 방지)
 
-            // ━━━ 1단계: SET 발화 ━━━
+            // ━━━ 1단계: SET 발화 + 초기 각도 기록 ━━━
+            setAngleThisPitch = currentPitchDeg
+            allSetAngles.add(setAngleThisPitch)
             withContext(Dispatchers.Main) {
                 tvStatus.text = "SET"
-                tvStatus.setTextColor(0xFF93C5FD.toInt())  // 연파랑 #93C5FD
+                tvStatus.setTextColor(0xFF93C5FD.toInt())
                 if (ttsReady) {
                     tts?.setLanguage(Locale.ENGLISH)
                     tts?.speak("SET", TextToSpeech.QUEUE_FLUSH, null, "tts_set")
-                    // "SET" fire-and-forget (완료 대기 안 함)
                 }
             }
             delay(1000)
 
-            // ━━━ 2단계: 공 접근 (2500ms) + PITCH 발화 ━━━
-            val approachMs  = 2500L   // 공이 투수에서 타자까지 날아오는 시간 (ms)
-            val pitchLeadMs = 700L    // "PITCH" 발화를 도착 몇ms 전에 시작할지 여유 시간
-            val tApproach   = System.currentTimeMillis()
-            var pitchStarted = false  // PITCH 발화 중복 실행 방지 플래그
-            var pitchJob: Job? = null // PITCH speakAndWait() 자식 코루틴
+            // ━━━ 2단계: 공 접근 (2500ms) + READY (10피트) + PITCH 발화 ━━━
+            val approachMs    = 2500L
+            val readyDistM    = 10f * 0.3048f
+            val readyProgress = ((PITCHER_DIST - readyDistM) / PITCHER_DIST).coerceIn(0f, 1f)
+            val tApproach     = System.currentTimeMillis()
+            var readyStarted  = false
 
-            // ── 비프볼 소리: 거리 기반 볼륨 + 높이 기반 주파수 ──
             val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
-            // 이 라운드 공의 목표 접촉 높이. beepBallJob 의 주파수 계산에 사용
 
-            val beepBallJob = launch {
-                val sr         = 44100
-                val onSamples  = sr * 200 / 1000   // 200ms 비프음 샘플 수
-                val offSamples = sr * 150 / 1000   // 420ms 무음 샘플 수 (18522 샘플)
-                while (isActive) {
-                    val p = ballApproachProgress
-                    val vol = (0.15f + 0.65f * p).coerceIn(0.15f, 0.80f)
-                    audioTrack?.write(tone(onSamples, 880f, 0f, vol), 0, onSamples * 2)
-                    if (!isActive) break
-                    audioTrack?.write(ShortArray(offSamples * 2), 0, offSamples * 2)
-                }
-            }
+            spatialAudio.updateBallPosition(0f, 0f, -PITCHER_DIST)
+            spatialAudio.updateHeading(currentHeadingDeg)
+            spatialAudio.startBeep()
 
             while (isActive) {
-            // 공 접근 애니메이션 루프 (~60fps). 취소 체크 포인트 포함
                 val elapsed  = System.currentTimeMillis() - tApproach
                 val progress = (elapsed.toFloat() / approachMs).coerceIn(0f, 1f)
 
                 ballApproachProgress = progress
-                // 비프볼 볼륨·주파수 계산을 위해 진행률을 @Volatile 변수로 공유
+                val zPos = -(PITCHER_DIST * (1f - progress)).coerceAtLeast(0.5f)
+                spatialAudio.updateBallPosition(0f, 0f, zPos)
+                spatialAudio.updateHeading(currentHeadingDeg)
 
                 withContext(Dispatchers.Main) {
                     ballTrackView.updateBall(0f, progress, BallPhase.APPROACH, pitchYPosition)
-                    // BallTrackView: panX=0(중앙), 공 접근 진행률, 단계=APPROACH
                     liveBallParabolaView.setBallProgress(progress)
-                    // 라이브 포물선 그래프: 공 이동 위치 실시간 갱신 (노란 원 표시)
                 }
 
-                if (!pitchStarted && elapsed >= approachMs - pitchLeadMs) {
-                // 도착까지 pitchLeadMs(700ms) 이하 남은 시점에 "PITCH" 발화 시작
-                    pitchStarted = true
-                    pitchJob = launch {
-                        withContext(Dispatchers.Main) {
-                            tvStatus.text = "PITCH"
-                            tvStatus.setTextColor(0xFFFBBF24.toInt())  // 앰버 #FBBF24
+                if (!readyStarted && progress >= readyProgress) {
+                    readyStarted = true
+                    recordingPhase = 2
+                    startPhaseRecording()
+                    withContext(Dispatchers.Main) {
+                        tvStatus.text = "READY"
+                        tvStatus.setTextColor(0xFF93C5FD.toInt())
+                        if (ttsReady) {
+                            tts?.setLanguage(Locale.ENGLISH)
+                            tts?.speak("READY", TextToSpeech.QUEUE_FLUSH, null, "tts_ready")
                         }
-                        speakAndWait("PITCH")
-                        // 발화 완료까지 코루틴 일시 중단 → 완료 직후 타격 윈도우 열림
                     }
                 }
+
                 if (progress >= 1f) break
-                // 공 도착(progress=1.0) 시 접근 루프 탈출
                 delay(16)
-                // 약 60fps 갱신 간격
             }
 
-            // 비프볼 소리 정지
-            beepBallJob.cancel()
-            beepBallJob.join()
+            spatialAudio.stopBeep()
             audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
-            pitchJob?.join()
-            // PITCH 발화가 아직 진행 중이면 완료될 때까지 대기
-            // 이 join() 이후가 실제 타격 윈도우 시작 시점
+
+            stopPhaseRecording()
+            recordingPhase = 3
+            startPhaseRecording()
+
+            withContext(Dispatchers.Main) {
+                tvStatus.text = "PITCH"
+                tvStatus.setTextColor(0xFFFBBF24.toInt())
+            }
+            speakAndWait("PITCH")
 
             // ━━━ 3단계: 타격 윈도우 (600ms) ━━━
             swingDetected   = false
@@ -589,9 +605,10 @@ class SwingTestActivity : AppCompatActivity() {
             // 타격 윈도우 닫음 → 이후 센서 이벤트는 무시
 
             delay(150L)
-            // 팔로우스루 150ms 추가 기록 — 공 맞은 직후 배트 궤적도 그래프에 포함
             isRecording = false
-            // 피치 기록 종료
+            stopPhaseRecording()
+            if (readyToPitchHistory.isNotEmpty()) perPitchPhase2Data.add(ArrayList(readyToPitchHistory))
+            if (pitchToEndHistory.isNotEmpty())   perPitchPhase3Data.add(ArrayList(pitchToEndHistory))
 
             // ━━━ 4단계: 결과 판정 ━━━
             when {
@@ -620,23 +637,16 @@ class SwingTestActivity : AppCompatActivity() {
                     val tDiv       = System.currentTimeMillis()
                     val targetPanX = if (targetBase == 3) -1f else 1f
 
-                    val divBeepJob = launch {
-                        val sr          = 44100
-                        val beepSamples = sr * 200 / 1000
-                        val silSamples  = sr * 150 / 1000
-                        while (isActive) {
-                            val vol = ((1f - divProgress) * 0.65f).coerceIn(0.05f, 0.65f)
-                            val pan = (targetPanX * divProgress).coerceIn(-1f, 1f)
-                            audioTrack?.write(tone(beepSamples, 880f, pan, vol), 0, beepSamples * 2)
-                            if (!isActive) break
-                            audioTrack?.write(ShortArray(silSamples * 2), 0, silSamples * 2)
-                        }
-                    }
+                    spatialAudio.updateBallPosition(0f, 0f, -0.5f)
+                    spatialAudio.updateHeading(currentHeadingDeg)
+                    spatialAudio.startBeep()
 
                     while (isActive) {
                         val progress = ((System.currentTimeMillis() - tDiv).toFloat() / divMs)
                             .coerceIn(0f, 1f)
                         divProgress = progress
+                        spatialAudio.updateBallPosition(targetPanX * progress * 5f, 0f, -0.5f)
+                        spatialAudio.updateHeading(currentHeadingDeg)
                         withContext(Dispatchers.Main) {
                             ballTrackView.updateBall(
                                 targetPanX * progress,
@@ -648,8 +658,7 @@ class SwingTestActivity : AppCompatActivity() {
                         delay(16)
                     }
 
-                    divBeepJob.cancel()
-                    divBeepJob.join()
+                    spatialAudio.stopBeep()
                     audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
 
                     withContext(Dispatchers.Main) {
@@ -658,6 +667,7 @@ class SwingTestActivity : AppCompatActivity() {
                         // 목표 베이스 글로우·라벨 색 활성화
                         tvStatus.text = if (targetBase == 3) "3루로\n달려라!" else "1루로\n달려라!"
                         tvStatus.setTextColor(0xFFFBBF24.toInt())
+                        hitCount++
                     }
 
                     startBaseBeep()
@@ -671,6 +681,7 @@ class SwingTestActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         ballTrackView.reset()
                         speakResult("파울")
+                        foulCount++
                         tvStatus.text = "파울!"
                         tvStatus.setTextColor(0xFFFBBF24.toInt())
                         tvResult.text = if (swingWasStrong) {
@@ -697,6 +708,7 @@ class SwingTestActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         ballTrackView.reset()
                         speakResult("스트라이크")
+                        strikeCount++
                         tvStatus.text = "스트라이크!"
                         tvStatus.setTextColor(0xFFF87171.toInt())
                         tvResult.text = "스윙하지 않았습니다\n필요 각도: %.0f°".format(BATTING_ANGLE_DEG)
@@ -767,8 +779,11 @@ class SwingTestActivity : AppCompatActivity() {
         ballTrackView.reset()
 
         val success = pressedBase == targetBase
+        // [DB 저장 후보] 베이스 선택 정답 여부 (true=정답, false=오답)
         if (success) {
             val ms = (SystemClock.elapsedRealtimeNanos() - beepStartTime) / 1_000_000L
+            // [DB 저장 후보] 베이스 부저음 시작 ~ 버튼 선택까지 반응속도(ms)
+            reactionTimes.add(ms)
             tvStatus.text = "성공!"
             tvStatus.setTextColor(0xFF4ADE80.toInt())
             tvResult.text = "${ms} ms"
@@ -811,13 +826,141 @@ class SwingTestActivity : AppCompatActivity() {
         isTraining = false
         tvStatus.text = "훈련 완료!"
         tvStatus.setTextColor(0xFF4ADE80.toInt())
-        tvResult.text = "${targetPitches}번 중 ${successCount}번 성공"
+        tvResult.text = ""
         tvSwingPitchProgress.text = ""
         btnStart.isEnabled = true
         btnStart.text = "다시 훈련"
         btnSwingPitchMinus.isEnabled = true
         btnSwingPitchPlus.isEnabled = true
-        speakResult("훈련 완료! ${successCount}번 성공!")
+        speakResult("훈련 완료!")
+        showTrainingSummary()
+    }
+
+    private fun showTrainingSummary() {
+        val battingAvg     = if (targetPitches > 0) successCount.toFloat() / targetPitches else 0f
+        val avgReaction    = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
+        val baseCorrectPct = if (hitCount > 0) successCount.toFloat() / hitCount * 100f else 0f
+
+        val summaryText = buildString {
+            appendLine("총 타석         ${targetPitches}회")
+            appendLine()
+            appendLine("정타 (볼 맞힘)   ${hitCount}회")
+            appendLine("파울            ${foulCount}회")
+            appendLine("스트라이크      ${strikeCount}회")
+            appendLine()
+            appendLine("베이스 정답     ${successCount}회")
+            if (hitCount > 0) {
+                appendLine("베이스 정답률   ${"%.0f".format(baseCorrectPct)}%  (${successCount}/${hitCount})")
+            }
+            appendLine()
+            appendLine("타율            ${"%.3f".format(battingAvg)}  (${successCount}/${targetPitches})")
+            appendLine()
+            if (avgReaction >= 0L) {
+                appendLine("주루 반응속도 평균   ${avgReaction} ms")
+                if (reactionTimes.size > 1) {
+                    appendLine("  최소 ${reactionTimes.minOrNull()} ms  /  최대 ${reactionTimes.maxOrNull()} ms")
+                }
+            } else {
+                appendLine("주루 반응속도   기록 없음")
+            }
+            appendLine()
+            appendLine("── SET 초기 각도 ──")
+            allSetAngles.forEachIndexed { i, a ->
+                appendLine("  #${i + 1}: ${"%.1f".format(a)}°")
+            }
+        }
+
+        val heightPx  = (220 * resources.displayMetrics.density).toInt()
+        val totalData = maxOf(perPitchPhase2Data.size, perPitchPhase3Data.size)
+        var currentIdx = 0
+
+        val tv = TextView(this)
+        tv.text = summaryText
+        tv.textSize = 14f
+        tv.setTextColor(0xFFE2E8F0.toInt())
+        tv.typeface = android.graphics.Typeface.MONOSPACE
+        tv.setBackgroundColor(0xFF0A1423.toInt())
+        tv.setPadding(56, 40, 56, 24)
+        tv.setLineSpacing(0f, 1.3f)
+
+        val btnPrev = Button(this)
+        btnPrev.text = "◀"
+        btnPrev.textSize = 13f
+        btnPrev.setTextColor(0xFF64B4FF.toInt())
+
+        val tvPitchNum = TextView(this)
+        tvPitchNum.textSize = 14f
+        tvPitchNum.setTextColor(0xFFFFFFFF.toInt())
+        tvPitchNum.gravity = android.view.Gravity.CENTER
+        tvPitchNum.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+
+        val btnNext = Button(this)
+        btnNext.text = "▶"
+        btnNext.textSize = 13f
+        btnNext.setTextColor(0xFF64B4FF.toInt())
+
+        val navRow = LinearLayout(this)
+        navRow.orientation = LinearLayout.HORIZONTAL
+        navRow.gravity = android.view.Gravity.CENTER_VERTICAL
+        navRow.setPadding(40, 8, 40, 4)
+        navRow.addView(btnPrev)
+        navRow.addView(tvPitchNum)
+        navRow.addView(btnNext)
+
+        val tvLabel2 = TextView(this)
+        tvLabel2.text = "READY → PITCH 구간 배트 각도"
+        tvLabel2.textSize = 13f
+        tvLabel2.setTextColor(0xFF93C5FD.toInt())
+        tvLabel2.setPadding(56, 4, 56, 4)
+
+        val graph2 = SwingGraphView(this)
+
+        val tvLabel3 = TextView(this)
+        tvLabel3.text = "PITCH 이후 구간 배트 각도"
+        tvLabel3.textSize = 13f
+        tvLabel3.setTextColor(0xFFFBBF24.toInt())
+        tvLabel3.setPadding(56, 8, 56, 4)
+
+        val graph3 = SwingGraphView(this)
+
+        fun updateGraphs(idx: Int) {
+            tvPitchNum.text = "${idx + 1} / $totalData"
+            val p2 = if (idx < perPitchPhase2Data.size) perPitchPhase2Data[idx] else ArrayList()
+            val p3 = if (idx < perPitchPhase3Data.size) perPitchPhase3Data[idx] else ArrayList()
+            graph2.setData(p2, -1L, BATTING_ANGLE_DEG)
+            graph3.setData(p3, -1L, BATTING_ANGLE_DEG)
+            btnPrev.isEnabled = idx > 0
+            btnNext.isEnabled = idx < totalData - 1
+        }
+
+        if (totalData > 0) updateGraphs(0) else tvPitchNum.text = "0 / 0"
+
+        btnPrev.setOnClickListener {
+            if (currentIdx > 0) { currentIdx--; updateGraphs(currentIdx) }
+        }
+        btnNext.setOnClickListener {
+            if (currentIdx < totalData - 1) { currentIdx++; updateGraphs(currentIdx) }
+        }
+
+        val container = LinearLayout(this)
+        container.orientation = LinearLayout.VERTICAL
+        container.setBackgroundColor(0xFF0A1423.toInt())
+        container.addView(tv)
+        container.addView(navRow)
+        container.addView(tvLabel2)
+        container.addView(graph2, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
+        container.addView(tvLabel3)
+        container.addView(graph3, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
+
+        val scroll = ScrollView(this)
+        scroll.setBackgroundColor(0xFF0A1423.toInt())
+        scroll.addView(container)
+
+        AlertDialog.Builder(this)
+            .setTitle("훈련 종합 결과")
+            .setView(scroll)
+            .setPositiveButton("확인", null)
+            .show()
     }
 
     private fun resetAndShowLiveGraphs() {
@@ -1017,6 +1160,7 @@ class SwingTestActivity : AppCompatActivity() {
         // 등록된 모든 센서에서 각 리스너 해제
         gameJob?.cancel()
         audioJob?.cancel()
+        spatialAudio.stopBeep()
         // 백그라운드 진입 시 게임·오디오 코루틴 중단
     }
 
@@ -1024,6 +1168,7 @@ class SwingTestActivity : AppCompatActivity() {
         super.onDestroy()
         tts?.stop(); tts?.shutdown()
         audioTrack?.stop(); audioTrack?.release()
+        spatialAudio.release()
         scope.cancel()
         // 스코프 취소 → gameJob, audioJob, beepBallJob 등 모든 하위 코루틴 일괄 종료
     }
