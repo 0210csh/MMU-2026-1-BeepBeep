@@ -813,11 +813,13 @@ class SwingTestActivity : AppCompatActivity() {
             tvStatus.text = "성공!"
             tvStatus.setTextColor(0xFF4ADE80.toInt())
             tvResult.text = "${ms} ms"
+            speakResult("성공, 반응속도 ${ms}밀리초")
         } else {
             tvStatus.text = "알맞지 않은\n베이스 선택입니다"
             tvStatus.setTextColor(0xFFF87171.toInt())
             tvResult.text = ""
             Toast.makeText(this, "알맞지 않은 베이스 선택입니다", Toast.LENGTH_SHORT).show()
+            speakResult("베이스 선택이 틀렸습니다")
         }
         perPitchRecords.add(HashMap(currentPitchRecord))
 
@@ -859,7 +861,14 @@ class SwingTestActivity : AppCompatActivity() {
         btnStart.text = "다시 훈련"
         btnSwingPitchMinus.isEnabled = true
         btnSwingPitchPlus.isEnabled = true
-        speakResult("훈련 완료!")
+        val battingAvgPct = if (targetPitches > 0) (hitCount.toFloat() / targetPitches * 100).toInt() else 0
+        val avgReaction = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
+        val ttsText = buildString {
+            append("훈련 완료. ")
+            append("정타 ${hitCount}개, 타율 ${battingAvgPct}퍼센트. ")
+            if (avgReaction >= 0L) append("평균 반응속도 ${avgReaction}밀리초.")
+        }
+        speakResult(ttsText)
         showTrainingSummary()
     }
 
