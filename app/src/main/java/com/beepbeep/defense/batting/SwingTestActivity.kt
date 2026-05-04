@@ -109,6 +109,9 @@ class SwingTestActivity : AppCompatActivity() {
     private var strikeCount    = 0
     private val reactionTimes  = mutableListOf<Long>()
 
+    private val perPitchRecords    = mutableListOf<HashMap<String, Any?>>()
+    private val currentPitchRecord = HashMap<String, Any?>()
+
     // ── Sensors ─────────────────────────────────────────
     private lateinit var sensorManager:        SensorManager
     // 시스템 센서 서비스. onResume/onPause 에서 리스너 등록·해제
@@ -151,6 +154,8 @@ class SwingTestActivity : AppCompatActivity() {
     private val perPitchPhase3Data   = mutableListOf<ArrayList<Pair<Long, Float>>>()
     @Volatile private var recordingPhase: Int = 0
     @Volatile private var phaseRecordStartTime: Long = 0L
+    @Volatile private var hitTimePhase3Ms: Long = -1L
+    private val perPitchHitTimesPhase3 = mutableListOf<Long>()
 
     // ── 임계값 ──────────────────────────────────────────
     private val FOUL_ACCEL_THRESHOLD = 1f
@@ -373,6 +378,9 @@ class SwingTestActivity : AppCompatActivity() {
             swingPitchDeg = currentPitchDeg
             if (hitTimeRelMs < 0L) {
                 hitTimeRelMs = System.currentTimeMillis() - pitchRecordStart
+                if (recordingPhase == 3) {
+                    hitTimePhase3Ms = System.currentTimeMillis() - phaseRecordStartTime
+                }
                 swingGraphView.setHitTime(hitTimeRelMs)
                 swingGraphView.postInvalidate()
             }
@@ -463,6 +471,8 @@ class SwingTestActivity : AppCompatActivity() {
             allSetAngles.clear()
             perPitchPhase2Data.clear()
             perPitchPhase3Data.clear()
+            perPitchHitTimesPhase3.clear()
+            perPitchRecords.clear()
             btnSwingPitchMinus.isEnabled = false
             btnSwingPitchPlus.isEnabled = false
             tvSwingPitchProgress.text = "1/${targetPitches}"
@@ -495,6 +505,7 @@ class SwingTestActivity : AppCompatActivity() {
         swingPitchDeg      = 0f
         swingWasStrong     = false
         swingBatHeight     = Float.NaN
+        hitTimePhase3Ms    = -1L
         ballApproachProgress = 0f  // 비프볼 볼륨 기준 초기화
         divProgress          = 0f  // DIVERGE 비프음 볼륨·패닝 기준 초기화
         pitchHistory.clear()
@@ -504,6 +515,13 @@ class SwingTestActivity : AppCompatActivity() {
         targetBase     = if (Random.nextBoolean()) 1 else 3
         // 50% 확률로 1루 또는 3루 선택
         resetBaseVisuals()
+        currentPitchRecord.clear()
+        currentPitchRecord["투구번호"]     = currentPitchNum
+        currentPitchRecord["목표베이스"]   = targetBase
+        currentPitchRecord["배트각도"]     = null
+        currentPitchRecord["선택베이스"]   = null
+        currentPitchRecord["베이스정답여부"] = null
+        currentPitchRecord["주루반응속도"] = null
 
         gameJob = scope.launch {
         // 게임 전체 흐름을 단일 코루틴으로 관리 (자기 취소 버그 방지)
@@ -609,6 +627,7 @@ class SwingTestActivity : AppCompatActivity() {
             stopPhaseRecording()
             if (readyToPitchHistory.isNotEmpty()) perPitchPhase2Data.add(ArrayList(readyToPitchHistory))
             if (pitchToEndHistory.isNotEmpty())   perPitchPhase3Data.add(ArrayList(pitchToEndHistory))
+            perPitchHitTimesPhase3.add(hitTimePhase3Ms)
 
             // ━━━ 4단계: 결과 판정 ━━━
             when {
@@ -616,6 +635,7 @@ class SwingTestActivity : AppCompatActivity() {
                 // ── 4a: 정타 (깡) ─────────────────────────────
                 // 강한 스윙 + 높이 일치 → 공이 목표 베이스로 날아감
                 swingIsHit -> {
+                    currentPitchRecord["판정"] = "정타"
                     // ── 깡 임팩트 사운드 (AudioTrack, 최대 볼륨) ─────────────────────────────
                     // [볼륨 조절] vol=1.0f 값을 변경하면 깡 소리 크기가 바뀜
                     // [음색 조절] 950f 값을 변경하면 깡 소리 주파수가 바뀜
@@ -625,7 +645,7 @@ class SwingTestActivity : AppCompatActivity() {
 
                     withContext(Dispatchers.Main) {
                         speakResult("깡")
-                        tvStatus.text = if (targetBase == 3) "3루 방향!" else "1루 방향!"
+                        tvStatus.text = "소리 들어봐!"
                         tvStatus.setTextColor(0xFFFBBF24.toInt())
                         tvResult.text = "실제 각도: %.0f°  /  필요 각도: %.0f°"
                             .format(swingPitchDeg, BATTING_ANGLE_DEG)
@@ -663,9 +683,8 @@ class SwingTestActivity : AppCompatActivity() {
 
                     withContext(Dispatchers.Main) {
                         ballTrackView.reset()
-                        if (targetBase == 3) activateBase3() else activateBase1()
-                        // 목표 베이스 글로우·라벨 색 활성화
-                        tvStatus.text = if (targetBase == 3) "3루로\n달려라!" else "1루로\n달려라!"
+                        activateBothBases()
+                        tvStatus.text = "소리 따라\n달려라!"
                         tvStatus.setTextColor(0xFFFBBF24.toInt())
                         hitCount++
                     }
@@ -678,7 +697,9 @@ class SwingTestActivity : AppCompatActivity() {
 
                 // ── 4b: 파울 ──────────────────────────────────
                 swingDetected -> {
+                    currentPitchRecord["판정"] = "파울"
                     withContext(Dispatchers.Main) {
+                        perPitchRecords.add(HashMap(currentPitchRecord))
                         ballTrackView.reset()
                         speakResult("파울")
                         foulCount++
@@ -705,7 +726,9 @@ class SwingTestActivity : AppCompatActivity() {
 
                 // ── 4c: 스트라이크 ────────────────────────────
                 else -> {
+                    currentPitchRecord["판정"] = "스트라이크"
                     withContext(Dispatchers.Main) {
+                        perPitchRecords.add(HashMap(currentPitchRecord))
                         ballTrackView.reset()
                         speakResult("스트라이크")
                         strikeCount++
@@ -780,9 +803,12 @@ class SwingTestActivity : AppCompatActivity() {
 
         val success = pressedBase == targetBase
         // [DB 저장 후보] 베이스 선택 정답 여부 (true=정답, false=오답)
+        currentPitchRecord["선택베이스"]   = pressedBase
+        currentPitchRecord["베이스정답여부"] = success
         if (success) {
             val ms = (SystemClock.elapsedRealtimeNanos() - beepStartTime) / 1_000_000L
             // [DB 저장 후보] 베이스 부저음 시작 ~ 버튼 선택까지 반응속도(ms)
+            currentPitchRecord["주루반응속도"] = ms
             reactionTimes.add(ms)
             tvStatus.text = "성공!"
             tvStatus.setTextColor(0xFF4ADE80.toInt())
@@ -793,6 +819,7 @@ class SwingTestActivity : AppCompatActivity() {
             tvResult.text = ""
             Toast.makeText(this, "알맞지 않은 베이스 선택입니다", Toast.LENGTH_SHORT).show()
         }
+        perPitchRecords.add(HashMap(currentPitchRecord))
 
         if (isTraining) {
             scope.launch {
@@ -837,7 +864,7 @@ class SwingTestActivity : AppCompatActivity() {
     }
 
     private fun showTrainingSummary() {
-        val battingAvg     = if (targetPitches > 0) successCount.toFloat() / targetPitches else 0f
+        val battingAvg     = if (targetPitches > 0) hitCount.toFloat() / targetPitches else 0f
         val avgReaction    = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
         val baseCorrectPct = if (hitCount > 0) successCount.toFloat() / hitCount * 100f else 0f
 
@@ -853,7 +880,7 @@ class SwingTestActivity : AppCompatActivity() {
                 appendLine("베이스 정답률   ${"%.0f".format(baseCorrectPct)}%  (${successCount}/${hitCount})")
             }
             appendLine()
-            appendLine("타율            ${"%.3f".format(battingAvg)}  (${successCount}/${targetPitches})")
+            appendLine("타율            ${"%.3f".format(battingAvg)}  (${hitCount}/${targetPitches})")
             appendLine()
             if (avgReaction >= 0L) {
                 appendLine("주루 반응속도 평균   ${avgReaction} ms")
@@ -914,6 +941,7 @@ class SwingTestActivity : AppCompatActivity() {
         tvLabel2.setPadding(56, 4, 56, 4)
 
         val graph2 = SwingGraphView(this)
+        graph2.setShowSummary(false)
 
         val tvLabel3 = TextView(this)
         tvLabel3.text = "PITCH 이후 구간 배트 각도"
@@ -927,8 +955,9 @@ class SwingTestActivity : AppCompatActivity() {
             tvPitchNum.text = "${idx + 1} / $totalData"
             val p2 = if (idx < perPitchPhase2Data.size) perPitchPhase2Data[idx] else ArrayList()
             val p3 = if (idx < perPitchPhase3Data.size) perPitchPhase3Data[idx] else ArrayList()
+            val h3 = if (idx < perPitchHitTimesPhase3.size) perPitchHitTimesPhase3[idx] else -1L
             graph2.setData(p2, -1L, BATTING_ANGLE_DEG)
-            graph3.setData(p3, -1L, BATTING_ANGLE_DEG)
+            graph3.setData(p3, h3, BATTING_ANGLE_DEG)
             btnPrev.isEnabled = idx > 0
             btnNext.isEnabled = idx < totalData - 1
         }
@@ -985,6 +1014,12 @@ class SwingTestActivity : AppCompatActivity() {
     }
     private fun activateBase3() {
         base3Glow.visibility = View.VISIBLE
+        tvBase3Label.setTextColor(0xFF4ADE80.toInt())
+    }
+    private fun activateBothBases() {
+        base1Glow.visibility = View.VISIBLE
+        base3Glow.visibility = View.VISIBLE
+        tvBase1Label.setTextColor(0xFF4ADE80.toInt())
         tvBase3Label.setTextColor(0xFF4ADE80.toInt())
     }
     private fun resetBaseVisuals() {

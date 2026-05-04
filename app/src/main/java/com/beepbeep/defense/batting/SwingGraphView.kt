@@ -116,7 +116,14 @@ class SwingGraphView @JvmOverloads constructor(
         typeface = Typeface.DEFAULT_BOLD
     }
 
+    private var showSummary = true
+
     // ── 공개 API ─────────────────────────────────────────────
+
+    fun setShowSummary(show: Boolean) {
+        showSummary = show
+        invalidate()
+    }
 
     fun setLiveSource(history: ArrayList<Pair<Long, Float>>, reqPitch: Float) {
         pitchHistory  = history
@@ -244,17 +251,19 @@ class SwingGraphView @JvmOverloads constructor(
         canvas.drawText("스윙 궤적", padL + gW / 2f, padT - 12f, labelPaint)
 
         // ── 하단 요약 텍스트 ─────────────────────────────────
-        val diff = abs(hitActualPitch - requiredPitch)
-        val summaryText = if (hitTimeMs >= 0L) {
-            "실제 %.0f°  /  필요 %.0f°  /  오차 %.0f°".format(hitActualPitch, requiredPitch, diff)
-        } else {
-            "스윙 없음  /  필요 각도 %.0f°".format(requiredPitch)
+        if (showSummary) {
+            val diff = abs(hitActualPitch - requiredPitch)
+            val summaryText = if (hitTimeMs >= 0L) {
+                "실제 %.0f°  /  필요 %.0f°  /  허용오차 ±%.0f°".format(hitActualPitch, requiredPitch, TOLERANCE)
+            } else {
+                "스윙 없음  /  필요 각도 %.0f°".format(requiredPitch)
+            }
+            summaryPaint.color = when {
+                hitTimeMs < 0L   -> Color.argb(200, 248, 113, 113)
+                diff < TOLERANCE -> Color.argb(220, 74, 222, 128)
+                else             -> Color.argb(220, 251, 191, 36)
+            }
+            canvas.drawText(summaryText, padL + gW / 2f, padT + gH + 58f, summaryPaint)
         }
-        summaryPaint.color = when {
-            hitTimeMs < 0L         -> Color.argb(200, 248, 113, 113)  // 빨강 — 스윙 없음
-            diff < TOLERANCE       -> Color.argb(220, 74, 222, 128)   // 초록 — 범위 안
-            else                   -> Color.argb(220, 251, 191, 36)   // 노랑 — 범위 밖
-        }
-        canvas.drawText(summaryText, padL + gW / 2f, padT + gH + 58f, summaryPaint)
     }
 }
