@@ -512,6 +512,7 @@ class SwingTestActivity : AppCompatActivity() {
         hitTimeRelMs   = -1L
         isRecording    = false
         hitWindowActive = false
+        audioTrack?.play()
         targetBase     = if (Random.nextBoolean()) 1 else 3
         // 50% 확률로 1루 또는 3루 선택
         resetBaseVisuals()
@@ -805,6 +806,8 @@ class SwingTestActivity : AppCompatActivity() {
         // [DB 저장 후보] 베이스 선택 정답 여부 (true=정답, false=오답)
         currentPitchRecord["선택베이스"]   = pressedBase
         currentPitchRecord["베이스정답여부"] = success
+        audioTrack?.pause()
+        audioTrack?.flush()
         if (success) {
             val ms = (SystemClock.elapsedRealtimeNanos() - beepStartTime) / 1_000_000L
             // [DB 저장 후보] 베이스 부저음 시작 ~ 버튼 선택까지 반응속도(ms)
@@ -861,6 +864,8 @@ class SwingTestActivity : AppCompatActivity() {
         btnStart.text = "다시 훈련"
         btnSwingPitchMinus.isEnabled = true
         btnSwingPitchPlus.isEnabled = true
+        audioTrack?.pause()
+        audioTrack?.flush()
         val battingAvgPct = if (targetPitches > 0) (hitCount.toFloat() / targetPitches * 100).toInt() else 0
         val avgReaction = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
         val ttsText = buildString {
