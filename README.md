@@ -271,3 +271,104 @@ private val BATTING_ANGLE_DEG = 0f
 // +15f → 배트 끝이 약간 위 (높은 공)
 // -15f → 배트 끝이 약간 아래 (낮은 공)
 ```
+
+---
+
+## Git 브랜치 전략 (협업 가이드)
+
+### 브랜치 구조
+
+```
+main
+├── hyegwan                ← 최종 통합본 (항상 동작하는 버전)
+├── hyegwan-no-hw          ← 하드웨어 연결 전 순수 소프트웨어 버전 (보존용, 수정 금지)
+├── hyegwan-no-hw-ui       ← UI 담당자 작업 브랜치 (hyegwan-no-hw 기반)
+└── hyegwan-hw             ← 하드웨어 담당자 작업 브랜치
+```
+
+### 브랜치별 역할
+
+| 브랜치 | 담당 | 설명 |
+|---|---|---|
+| `hyegwan` | 공동 | 최종 통합본. 직접 수정하지 않고 merge로만 업데이트 |
+| `hyegwan-no-hw` | — | 하드웨어 연결 전 버전 보존. **절대 수정하지 않음** |
+| `hyegwan-no-hw-ui` | UI 담당자 | `hyegwan-no-hw` 기반으로 UI 작업 |
+| `hyegwan-hw` | 하드웨어 담당자 | 하드웨어 연결 코드 작업 |
+
+---
+
+### UI 담당자 — 처음 시작할 때
+
+```bash
+# 1. 저장소 클론
+git clone https://github.com/0210csh/MMU-2026-1-BeepBeep.git
+cd MMU-2026-1-BeepBeep
+
+# 2. no-hw 브랜치 가져오기
+git checkout hyegwan-no-hw
+
+# 3. UI 작업용 브랜치 생성
+git checkout -b hyegwan-no-hw-ui
+git push origin hyegwan-no-hw-ui
+```
+
+### UI 담당자 — 작업 후 업로드
+
+```bash
+git add <수정한 파일>
+git commit -m "feat: UI 수정 내용 설명"
+git push origin hyegwan-no-hw-ui
+```
+
+---
+
+### 하드웨어 담당자 — 처음 시작할 때
+
+```bash
+# 1. 저장소 클론
+git clone https://github.com/0210csh/MMU-2026-1-BeepBeep.git
+cd MMU-2026-1-BeepBeep
+
+# 2. hw 브랜치로 전환
+git checkout hyegwan-hw
+```
+
+### 하드웨어 담당자 — 작업 후 업로드
+
+```bash
+git add <수정한 파일>
+git commit -m "feat: 하드웨어 연결 내용 설명"
+git push origin hyegwan-hw
+```
+
+---
+
+### 브랜치 전환 방법
+
+```bash
+# 하드웨어 버전으로 전환
+git checkout hyegwan-hw
+
+# 하드웨어 없는 순수 버전으로 전환
+git checkout hyegwan-no-hw
+
+# 최종 통합본으로 전환
+git checkout hyegwan
+```
+
+> Android Studio 우측 하단의 브랜치 이름을 클릭해도 전환할 수 있습니다.
+
+---
+
+### 작업 완료 후 최종 통합
+
+각 브랜치 작업이 완료되면 GitHub에서 **Pull Request**를 생성합니다.  
+확인 후 `hyegwan` 브랜치로 merge합니다.
+
+```bash
+# 로컬에서 직접 통합할 경우
+git checkout hyegwan
+git merge hyegwan-hw        # 하드웨어 브랜치 통합
+git merge hyegwan-no-hw-ui  # UI 브랜치 통합
+git push origin hyegwan
+```
