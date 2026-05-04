@@ -315,7 +315,19 @@ git push origin hyegwan-no-hw-ui
 ### UI 담당자 — 작업 후 업로드
 
 ```bash
-git add <수정한 파일>
+# 수정된 파일 확인 (먼저 확인하는 습관 권장)
+git status
+
+# 파일 하나만 올릴 때
+git add app/src/main/java/com/beepbeep/defense/batting/SwingTestActivity.kt
+
+# 여러 파일 올릴 때
+git add app/src/main/java/com/beepbeep/defense/batting/SwingTestActivity.kt
+git add app/src/main/res/layout/activity_swing_test.xml
+
+# 수정한 파일 전부 한번에 올릴 때
+git add .
+
 git commit -m "feat: UI 수정 내용 설명"
 git push origin hyegwan-no-hw-ui
 ```
@@ -336,10 +348,36 @@ git checkout hyegwan-hw
 ### 하드웨어 담당자 — 작업 후 업로드
 
 ```bash
-git add <수정한 파일>
+# 수정된 파일 확인 (먼저 확인하는 습관 권장)
+git status
+
+# 파일 하나만 올릴 때
+git add app/src/main/java/com/beepbeep/defense/batting/SwingTestActivity.kt
+
+# 여러 파일 올릴 때
+git add app/src/main/java/com/beepbeep/defense/batting/SwingTestActivity.kt
+git add app/src/main/java/com/beepbeep/defense/audio/SpatialAudioEngine.kt
+
+# 수정한 파일 전부 한번에 올릴 때
+git add .
+
 git commit -m "feat: 하드웨어 연결 내용 설명"
 git push origin hyegwan-hw
 ```
+
+---
+
+### 업로드 전 확인 명령어
+
+```bash
+# 어떤 파일이 수정됐는지 목록 확인
+git status
+
+# 수정 내용 상세 확인
+git diff
+```
+
+> `git status`로 수정된 파일을 먼저 확인한 뒤 `git add` 하는 습관을 들이면 실수를 줄일 수 있습니다.
 
 ---
 
