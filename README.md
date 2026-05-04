@@ -195,6 +195,63 @@ users/
 
 ---
 
+## Firebase 코드 위치 상세 매핑
+
+### 세션 루트 필드
+
+| Firebase 필드 | 라인 | 코드 | 비고 |
+|---|---|---|---|
+| 생성일시 | — | `Timestamp.now()` | Firebase 업로드 시점에 생성 |
+| 목표투구수 | 103 | `var targetPitches = 10` | 버튼으로 조정된 최종값 |
+| 허용오차 | 173 | `private val PITCH_TOLERANCE = 25f` | 고정 상수 |
+
+### 종합결과
+
+| Firebase 필드 | 라인 | 코드 | 비고 |
+|---|---|---|---|
+| 정타수 | 107 / 689 | `var hitCount = 0` / `hitCount++` | 선언: 107, 증가: 689 |
+| 파울수 | 108 / 705 | `var foulCount = 0` / `foulCount++` | 선언: 108, 증가: 705 |
+| 스트라이크수 | 109 / 734 | `var strikeCount = 0` / `strikeCount++` | 선언: 109, 증가: 734 |
+| 타율 | 867 | `val battingAvg = hitCount.toFloat() / targetPitches` | 정타수 / 목표투구수 |
+| 베이스정답수 | 105 / 837 | `var successCount = 0` / `successCount++` | 선언: 105, 증가: 837 |
+| 베이스정답률 | 869 | `val baseCorrectPct = successCount.toFloat() / hitCount * 100f` | showTrainingSummary() 내부 |
+| 반응속도평균 | 868 | `val avgReaction = reactionTimes.average().toLong()` | showTrainingSummary() 내부 |
+| 반응속도최소 | 888 | `reactionTimes.minOrNull()` | showTrainingSummary() 내부 |
+| 반응속도최대 | 888 | `reactionTimes.maxOrNull()` | showTrainingSummary() 내부 |
+
+### 투구별기록
+
+| Firebase 필드 | 라인 | 코드 | 저장 시점 |
+|---|---|---|---|
+| 투구번호 | 519 | `currentPitchRecord["투구번호"] = currentPitchNum` | startGame() 시작 |
+| 판정 (정타) | 638 | `currentPitchRecord["판정"] = "정타"` | 타격 윈도우 종료 후 |
+| 판정 (파울) | 700 | `currentPitchRecord["판정"] = "파울"` | 타격 윈도우 종료 후 |
+| 판정 (스트라이크) | 729 | `currentPitchRecord["판정"] = "스트라이크"` | 타격 윈도우 종료 후 |
+| 목표베이스 | 515 / 520 | `targetBase = if (Random.nextBoolean()) 1 else 3` / `currentPitchRecord["목표베이스"] = targetBase` | 515: 결정, 520: 맵에 저장 |
+| 배트각도 | 521 | `currentPitchRecord["배트각도"] = null` | 현재 null, 추후 대체 예정 |
+| 선택베이스 | 807 | `currentPitchRecord["선택베이스"] = pressedBase` | onBasePressed() |
+| 베이스정답여부 | 804 / 808 | `val success = pressedBase == targetBase` / `currentPitchRecord["베이스정답여부"] = success` | 804: 계산, 808: 맵에 저장 |
+| 주루반응속도 | 809~811 | `val ms = (SystemClock.elapsedRealtimeNanos() - beepStartTime) / 1_000_000L` / `currentPitchRecord["주루반응속도"] = ms` | onBasePressed(), 정답일 때만 |
+
+### perPitchRecords 최종 저장 시점
+
+| 판정 | 라인 | 코드 |
+|---|---|---|
+| 파울 | 702 | `perPitchRecords.add(HashMap(currentPitchRecord))` |
+| 스트라이크 | 731 | `perPitchRecords.add(HashMap(currentPitchRecord))` |
+| 정타 (베이스 선택 완료 후) | 822 | `perPitchRecords.add(HashMap(currentPitchRecord))` |
+
+### Firebase 업로드 호출 위치
+
+| 라인 | 코드 | 설명 |
+|---|---|---|
+| 852~864 | `fun finishTraining()` | 이 함수 내 `showTrainingSummary()` 호출 직전에 업로드 함수 삽입 |
+| 863 | `showTrainingSummary()` | 이 줄 바로 위에 `uploadTrainingSession(...)` 호출 추가 |
+
+> `finishTraining()` 도달 시점에 `perPitchRecords`(112번 라인)와 종합 통계 변수 전부 확정 완료 상태입니다.
+
+---
+
 ## 네이티브 오디오 라이브러리
 
 | 라이브러리 | 용도 |
