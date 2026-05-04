@@ -398,6 +398,63 @@ git checkout hyegwan
 
 ---
 
+### HW 작업 중 SW를 수정해야 할 때
+
+`hyegwan-no-hw`는 보존용이므로 수정하지 않습니다.  
+SW 수정은 `hyegwan`에서 하고 `hyegwan-hw`로 가져오는 방식을 사용합니다.
+
+**1단계 — 현재 HW 작업 임시 저장**
+```bash
+git stash
+```
+
+**2단계 — hyegwan으로 이동해서 SW 수정**
+```bash
+git checkout hyegwan
+# SW 파일 수정 후
+git add .
+git commit -m "fix: SW 수정 내용"
+git push origin hyegwan
+```
+
+**3단계 — hyegwan-hw로 돌아와서 SW 수정 내용 가져오기**
+```bash
+git checkout hyegwan-hw
+git merge hyegwan
+```
+
+**4단계 — 임시 저장했던 HW 작업 복구**
+```bash
+git stash pop
+```
+
+전체 흐름 요약:
+```
+hyegwan-hw 작업 중
+       ↓
+git stash              (HW 작업 임시 저장)
+       ↓
+git checkout hyegwan
+       ↓
+SW 수정 → commit → push
+       ↓
+git checkout hyegwan-hw
+       ↓
+git merge hyegwan      (SW 수정 내용 가져오기)
+       ↓
+git stash pop          (HW 작업 복구)
+       ↓
+HW 작업 계속
+```
+
+| 명령어 | 역할 |
+|---|---|
+| `git stash` | 커밋 안 한 작업 임시 보관 |
+| `git stash pop` | 임시 보관한 작업 복구 |
+| `git merge hyegwan` | hyegwan의 변경사항을 현재 브랜치로 가져오기 |
+
+---
+
 ### 작업 완료 후 최종 통합
 
 각 브랜치 작업이 완료되면 GitHub에서 **Pull Request**를 생성합니다.  
