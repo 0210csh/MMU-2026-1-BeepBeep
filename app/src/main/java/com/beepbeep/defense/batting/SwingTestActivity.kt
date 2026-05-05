@@ -109,6 +109,8 @@ class SwingTestActivity : AppCompatActivity() {
     private lateinit var btnSwingPitchPlus:    Button
     private lateinit var tvSwingPitchCount:    TextView
     private lateinit var tvSwingPitchProgress: TextView
+    private lateinit var btnBleConnect:        Button
+    private lateinit var tvBleStatus:          TextView
 
     private var targetPitches  = 10
     private var currentPitchNum = 0
@@ -449,6 +451,8 @@ class SwingTestActivity : AppCompatActivity() {
         btnSwingPitchPlus    = findViewById(R.id.btnSwingPitchPlus)
         tvSwingPitchCount    = findViewById(R.id.tvSwingPitchCount)
         tvSwingPitchProgress = findViewById(R.id.tvSwingPitchProgress)
+        btnBleConnect        = findViewById(R.id.btnBleConnect)
+        tvBleStatus          = findViewById(R.id.tvBleStatus)
 
         ballTrackView.setShowStrikeZone(false)
 
@@ -470,7 +474,16 @@ class SwingTestActivity : AppCompatActivity() {
 
         bleManager = BleManager(this)
         bleManager.setCallback(bleCallback)
-        requestBlePermissions()
+
+        btnBleConnect.setOnClickListener {
+            if (bleConnected) {
+                bleManager.disconnect()
+            } else {
+                btnBleConnect.isEnabled = false
+                btnBleConnect.text = "연결 중..."
+                requestBlePermissions()
+            }
+        }
 
         btnSwingPitchMinus.setOnClickListener {
             if (targetPitches > 1) {
@@ -873,12 +886,18 @@ class SwingTestActivity : AppCompatActivity() {
     private val bleCallback = object : BleManager.Callback {
         override fun onConnected() {
             bleConnected = true
-            Toast.makeText(this@SwingTestActivity, "배트 센서 연결됨", Toast.LENGTH_SHORT).show()
+            btnBleConnect.isEnabled = true
+            btnBleConnect.text = "배트 센서 해제"
+            tvBleStatus.text = "● 연결됨"
+            tvBleStatus.setTextColor(0xFF4ADE80.toInt())
         }
 
         override fun onDisconnected() {
             bleConnected = false
-            Toast.makeText(this@SwingTestActivity, "배트 센서 연결 해제 — 폰 센서로 전환", Toast.LENGTH_SHORT).show()
+            btnBleConnect.isEnabled = true
+            btnBleConnect.text = "배트 센서 연결"
+            tvBleStatus.text = "● 미연결"
+            tvBleStatus.setTextColor(0xFFF87171.toInt())
         }
 
         override fun onPacket(packet: BleManager.SensorPacket) {
@@ -1308,8 +1327,6 @@ class SwingTestActivity : AppCompatActivity() {
         gyroscopeSensor?.let  { sensorManager.registerListener(swingListener, it, SensorManager.SENSOR_DELAY_GAME) }
         rotationSensor?.let   { sensorManager.registerListener(orientationListener, it, SensorManager.SENSOR_DELAY_GAME) }
         // SENSOR_DELAY_GAME ≈ 20ms 간격으로 센서 이벤트 수신
-        if (hasBlePermissions() && !bleConnected) bleManager.startScan()
-        // 권한이 있고 연결되지 않은 경우 BLE 스캔 재시작
     }
 
     override fun onPause() {
