@@ -9,7 +9,6 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
@@ -55,7 +54,10 @@ class BleManager(private val context: Context) {
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            if (result.device.name == DEVICE_NAME) {
+            val name = result.scanRecord?.deviceName
+                ?: result.device.name
+                ?: return
+            if (name == DEVICE_NAME) {
                 stopScan()
                 result.device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
             }
@@ -140,10 +142,11 @@ class BleManager(private val context: Context) {
     fun startScan() {
         if (scanning || gatt != null) return
         scanning = true
-        val filters  = listOf(ScanFilter.Builder().setDeviceName(DEVICE_NAME).build())
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
-        bluetoothAdapter?.bluetoothLeScanner?.startScan(filters, settings, scanCallback)
+        // 이름 필터 없이 전체 스캔 후 콜백에서 기기명 확인
+        // (ArduinoBLE가 이름을 Scan Response에 넣는 경우 필터에 안 걸릴 수 있음)
+        bluetoothAdapter?.bluetoothLeScanner?.startScan(null, settings, scanCallback)
     }
 
     fun stopScan() {

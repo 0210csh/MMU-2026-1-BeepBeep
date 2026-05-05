@@ -115,7 +115,9 @@ class BleTestActivity : AppCompatActivity() {
     private val scanCallback = object : ScanCallback() {
         @SuppressLint("MissingPermission")
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            val deviceName = result.device.name ?: "Unknown"
+            val deviceName = result.scanRecord?.deviceName
+                ?: result.device.name
+                ?: return
             if (deviceName == "SmartBat_Pro") {
                 stopBleScan()
                 connectToDevice(result.device)
@@ -169,31 +171,41 @@ class BleTestActivity : AppCompatActivity() {
             }
         }
 
+        // Android 12 이하
         @Suppress("DEPRECATION")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
             val fullPacket = characteristic.getStringValue(0) ?: return
+            parseAndDisplay(fullPacket)
+        }
 
-            runOnUiThread {
-                try {
-                    val sensors = fullPacket.split("#")
-                    if (sensors.size >= 2) {
-                        val hParts = sensors[0].split("|")
-                        if (hParts.size >= 3) {
-                            tvHEuler.text = "오일러 각 값 : ${hParts[0]}"
-                            tvHGyro.text = "자이로 스코프 값 : ${hParts[1]}"
-                            tvHAcc.text = "가속도 값 : ${hParts[2]}"
-                        }
+        // Android 13(API 33) 이상 — 구버전 콜백은 호출 안 됨
+        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+            parseAndDisplay(value.toString(Charsets.UTF_8))
+        }
+    }
 
-                        val tParts = sensors[1].split("|")
-                        if (tParts.size >= 3) {
-                            tvTEuler.text = "오일러 각 값 : ${tParts[0]}"
-                            tvTGyro.text = "자이로 스코프 값 : ${tParts[1]}"
-                            tvTAcc.text = "가속도 값 : ${tParts[2]}"
-                        }
+    private fun parseAndDisplay(fullPacket: String) {
+        runOnUiThread {
+            try {
+                val sensors = fullPacket.trim().split("#")
+                if (sensors.size >= 2) {
+                    val hParts = sensors[0].split("|")
+                    if (hParts.size >= 3) {
+                        tvHEuler.text = "오일러 각 값 : ${hParts[0]}"
+                        tvHGyro.text = "자이로 스코프 값 : ${hParts[1]}"
+                        tvHAcc.text = "가속도 값 : ${hParts[2]}"
                     }
-                } catch (e: Exception) {
-                    Log.e("PARSE_ERROR", "Data format error: $fullPacket")
+
+                    val tParts = sensors[1].split("|")
+                    if (tParts.size >= 3) {
+                        tvTEuler.text = "오일러 각 값 : ${tParts[0]}"
+                        tvTGyro.text = "자이로 스코프 값 : ${tParts[1]}"
+                        tvTAcc.text = "가속도 값 : ${tParts[2]}"
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e("PARSE_ERROR", "Data format error: $fullPacket")
             }
         }
     }
