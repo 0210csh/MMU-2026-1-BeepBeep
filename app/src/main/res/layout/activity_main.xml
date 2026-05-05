@@ -223,6 +223,15 @@
                 android:text="🏏 스윙 테스트"
                 android:textColor="#34D399"
                 android:layout_marginTop="4dp"/>
+
+            <Button
+                android:id="@+id/btnBleTest"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:text="📡 BLE 센서 테스트"
+                android:textColor="#60A5FA"
+                android:layout_marginTop="4dp"/>
         </LinearLayout>
         </ScrollView>
     </LinearLayout>

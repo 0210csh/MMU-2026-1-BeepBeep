@@ -36,6 +36,9 @@
         <activity
             android:name=".batting.SwingTestActivity"
             android:screenOrientation="userLandscape" />
+
+        <activity
+            android:name=".hardware.BleTestActivity" />
     </application>
 
 </manifest>

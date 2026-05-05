@@ -120,6 +120,13 @@ class MainActivity : AppCompatActivity() {
                 com.beepbeep.defense.batting.SwingTestActivity::class.java
             ))
         }
+
+        binding.btnBleTest.setOnClickListener {
+            startActivity(android.content.Intent(
+                this,
+                com.beepbeep.defense.hardware.BleTestActivity::class.java
+            ))
+        }
     }
 
     private fun getDifficulty() = when (binding.spinnerDifficulty.selectedItemPosition) {
