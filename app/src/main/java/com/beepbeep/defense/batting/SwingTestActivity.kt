@@ -159,9 +159,11 @@ class SwingTestActivity : AppCompatActivity() {
     // 현재 기기 절대 피치각 (도). orientationListener 에서 갱신. 수평=0°, 아래=음수
 
     private var setAngleThisPitch:   Float = 0f
-    private val readyToPitchHistory  = ArrayList<Pair<Long, Float>>()
-    private val pitchToEndHistory    = ArrayList<Pair<Long, Float>>()
+    private val setToReadyHistory    = ArrayList<Pair<Long, Float>>()  // phase1: SET→READY
+    private val readyToPitchHistory  = ArrayList<Pair<Long, Float>>()  // phase2: READY→PITCH
+    private val pitchToEndHistory    = ArrayList<Pair<Long, Float>>()  // phase3: PITCH→end
     private val allSetAngles          = mutableListOf<Float>()
+    private val perPitchPhase1Data   = mutableListOf<ArrayList<Pair<Long, Float>>>()
     private val perPitchPhase2Data   = mutableListOf<ArrayList<Pair<Long, Float>>>()
     private val perPitchPhase3Data   = mutableListOf<ArrayList<Pair<Long, Float>>>()
     @Volatile private var recordingPhase: Int = 0
@@ -378,6 +380,7 @@ class SwingTestActivity : AppCompatActivity() {
             // ── 구간별 각도 기록 (sensor 콜백에서 직접 기록 → 코루틴 지연 없음) ──
             val phaseElapsed = System.currentTimeMillis() - phaseRecordStartTime
             when (recordingPhase) {
+                1 -> setToReadyHistory.add(Pair(phaseElapsed, currentPitchDeg))
                 2 -> readyToPitchHistory.add(Pair(phaseElapsed, currentPitchDeg))
                 3 -> pitchToEndHistory.add(Pair(phaseElapsed, currentPitchDeg))
             }
@@ -508,6 +511,7 @@ class SwingTestActivity : AppCompatActivity() {
             strikeCount = 0
             reactionTimes.clear()
             allSetAngles.clear()
+            perPitchPhase1Data.clear()
             perPitchPhase2Data.clear()
             perPitchPhase3Data.clear()
             perPitchHitTimesPhase3.clear()
@@ -539,6 +543,7 @@ class SwingTestActivity : AppCompatActivity() {
         swingIsHit         = false
         recordingPhase     = 0
         setAngleThisPitch  = 0f
+        setToReadyHistory.clear()
         readyToPitchHistory.clear()
         pitchToEndHistory.clear()
         swingPitchDeg      = 0f
@@ -569,9 +574,9 @@ class SwingTestActivity : AppCompatActivity() {
             // ━━━ 1단계: SET 발화 + 초기 각도 기록 ━━━
             setAngleThisPitch = currentPitchDeg
             allSetAngles.add(setAngleThisPitch)
-            // BLE: SET 단계부터 측정 시작 + phase2 기록 시작 (READY 이전부터 그래프 확보)
+            // BLE: SET 단계부터 측정 시작 + phase1(SET→READY) 기록 시작
             if (bleConnected) bleManager.sendControl(1)
-            recordingPhase = 2
+            recordingPhase = 1
             startPhaseRecording()
             withContext(Dispatchers.Main) {
                 tvStatus.text = "SET"
@@ -612,6 +617,10 @@ class SwingTestActivity : AppCompatActivity() {
 
                 if (!readyStarted && progress >= readyProgress) {
                     readyStarted = true
+                    // phase1(SET→READY) 종료 → phase2(READY→PITCH) 시작
+                    stopPhaseRecording()
+                    recordingPhase = 2
+                    startPhaseRecording()
                     withContext(Dispatchers.Main) {
                         tvStatus.text = "READY"
                         tvStatus.setTextColor(0xFF93C5FD.toInt())
@@ -669,6 +678,7 @@ class SwingTestActivity : AppCompatActivity() {
             delay(150L)
             isRecording = false
             stopPhaseRecording()
+            if (setToReadyHistory.isNotEmpty())   perPitchPhase1Data.add(ArrayList(setToReadyHistory))
             if (readyToPitchHistory.isNotEmpty()) perPitchPhase2Data.add(ArrayList(readyToPitchHistory))
             if (pitchToEndHistory.isNotEmpty())   perPitchPhase3Data.add(ArrayList(pitchToEndHistory))
             perPitchHitTimesPhase3.add(hitTimePhase3Ms)
@@ -922,6 +932,7 @@ class SwingTestActivity : AppCompatActivity() {
             }
             val phaseElapsed = System.currentTimeMillis() - phaseRecordStartTime
             when (recordingPhase) {
+                1 -> setToReadyHistory.add(Pair(phaseElapsed, currentPitchDeg))
                 2 -> readyToPitchHistory.add(Pair(phaseElapsed, currentPitchDeg))
                 3 -> pitchToEndHistory.add(Pair(phaseElapsed, currentPitchDeg))
             }
@@ -1040,7 +1051,7 @@ class SwingTestActivity : AppCompatActivity() {
         }
 
         val heightPx  = (220 * resources.displayMetrics.density).toInt()
-        val totalData = maxOf(perPitchPhase2Data.size, perPitchPhase3Data.size)
+        val totalData = maxOf(perPitchPhase1Data.size, perPitchPhase2Data.size, perPitchPhase3Data.size)
         var currentIdx = 0
 
         val tv = TextView(this)
@@ -1076,11 +1087,20 @@ class SwingTestActivity : AppCompatActivity() {
         navRow.addView(tvPitchNum)
         navRow.addView(btnNext)
 
+        val tvLabel1 = TextView(this)
+        tvLabel1.text = "SET → READY 구간 배트 각도"
+        tvLabel1.textSize = 13f
+        tvLabel1.setTextColor(0xFF86EFAC.toInt())
+        tvLabel1.setPadding(56, 4, 56, 4)
+
+        val graph1 = SwingGraphView(this)
+        graph1.setShowSummary(false)
+
         val tvLabel2 = TextView(this)
-        tvLabel2.text = "SET → PITCH 구간 배트 각도"
+        tvLabel2.text = "READY → PITCH 구간 배트 각도"
         tvLabel2.textSize = 13f
         tvLabel2.setTextColor(0xFF93C5FD.toInt())
-        tvLabel2.setPadding(56, 4, 56, 4)
+        tvLabel2.setPadding(56, 8, 56, 4)
 
         val graph2 = SwingGraphView(this)
         graph2.setShowSummary(false)
@@ -1095,9 +1115,11 @@ class SwingTestActivity : AppCompatActivity() {
 
         fun updateGraphs(idx: Int) {
             tvPitchNum.text = "${idx + 1} / $totalData"
+            val p1 = if (idx < perPitchPhase1Data.size) perPitchPhase1Data[idx] else ArrayList()
             val p2 = if (idx < perPitchPhase2Data.size) perPitchPhase2Data[idx] else ArrayList()
             val p3 = if (idx < perPitchPhase3Data.size) perPitchPhase3Data[idx] else ArrayList()
             val h3 = if (idx < perPitchHitTimesPhase3.size) perPitchHitTimesPhase3[idx] else -1L
+            graph1.setData(p1, -1L, BATTING_ANGLE_DEG)
             graph2.setData(p2, -1L, BATTING_ANGLE_DEG)
             graph3.setData(p3, h3, BATTING_ANGLE_DEG)
             btnPrev.isEnabled = idx > 0
@@ -1118,6 +1140,8 @@ class SwingTestActivity : AppCompatActivity() {
         container.setBackgroundColor(0xFF0A1423.toInt())
         container.addView(tv)
         container.addView(navRow)
+        container.addView(tvLabel1)
+        container.addView(graph1, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
         container.addView(tvLabel2)
         container.addView(graph2, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
         container.addView(tvLabel3)
