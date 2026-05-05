@@ -1,7 +1,9 @@
 package com.beepbeep.defense.batting
 
 // ── Android 프레임워크 import ──────────────────────────────────────────────
+import android.Manifest
 import android.app.AlertDialog                  // 스윙 결과 그래프 다이얼로그 표시
+import android.content.pm.PackageManager
 import android.hardware.Sensor                  // 센서 종류 상수 (TYPE_GYROSCOPE 등)
 import android.hardware.SensorEvent             // 센서 콜백에서 받는 이벤트 객체 (values 배열 포함)
 import android.hardware.SensorEventListener     // 센서 이벤트를 수신하기 위한 인터페이스
@@ -9,6 +11,7 @@ import android.hardware.SensorManager           // 시스템 센서 서비스 �
 import android.media.AudioAttributes            // AudioTrack 생성 시 오디오 용도 설정 (USAGE_MEDIA 등)
 import android.media.AudioFormat                // AudioTrack 포맷 설정 (샘플레이트, 채널, 인코딩)
 import android.media.AudioTrack                 // PCM 오디오를 직접 스트리밍하는 저수준 오디오 클래스
+import android.os.Build
 import android.os.Bundle                        // Activity 상태 저장/복원에 쓰이는 키-값 묶음
 import android.os.SystemClock                   // elapsedRealtimeNanos(): 반응속도 측정용 고정밀 시계
 import android.speech.tts.TextToSpeech          // TTS 엔진 (SET·PITCH 발화)
@@ -21,8 +24,11 @@ import android.widget.ScrollView                // 결과 다이얼로그 스크
 import android.widget.TextView                  // 상태·결과 텍스트뷰
 import android.widget.Toast                     // 오답 베이스 선택 시 짧은 안내 메시지
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.beepbeep.defense.R
 import com.beepbeep.defense.audio.SpatialAudioEngine
+import com.beepbeep.defense.hardware.BleManager
 import kotlinx.coroutines.*
 import kotlin.math.*
 import kotlin.random.Random
@@ -41,6 +47,10 @@ import java.util.Locale
  *                       이 값만 바꾸면 공 높이와 요구 각도가 함께 변경된다.
  */
 class SwingTestActivity : AppCompatActivity() {
+
+    companion object {
+        private const val REQ_BLE_PERM = 100
+    }
 
     // ═══════════════════════════════════════════════════
     //  개발자 설정값 — 여기만 수정하면 됩니다
@@ -278,6 +288,13 @@ class SwingTestActivity : AppCompatActivity() {
 
     private lateinit var spatialAudio: SpatialAudioEngine
 
+    // ── Hardware BLE ─────────────────────────────────────
+    private lateinit var bleManager: BleManager
+    // Seeed XIAO nRF52840 + BNO055 배트 센서 BLE 관리자
+
+    @Volatile private var bleConnected = false
+    // BLE 연결 여부. true 이면 폰 센서 대신 BLE 센서 데이터 사용
+
     // ─────────────────────────────────────────────────────
     // 스윙 감지 리스너 (선형가속도 + 자이로)
     // ─────────────────────────────────────────────────────
@@ -285,6 +302,8 @@ class SwingTestActivity : AppCompatActivity() {
     // onResume() 에서 linearAccelSensor, gyroscopeSensor 각각에 등록
 
         override fun onSensorChanged(event: SensorEvent) {
+            if (bleConnected) return
+            // BLE 센서 연결 시 폰 센서 스윙 감지 비활성화 (BLE 데이터 우선)
             when (event.sensor.type) {
                 Sensor.TYPE_LINEAR_ACCELERATION -> {
                 // 중력이 이미 제거된 순수 가속도. 스윙 동작 감지에 사용
@@ -327,10 +346,7 @@ class SwingTestActivity : AppCompatActivity() {
             SensorManager.getOrientation(rotMatrix, orientation)
             // orientation[0]=방위각, orientation[1]=피치, orientation[2]=롤 (라디안)
 
-            currentPitchDeg = Math.toDegrees(orientation[1].toDouble()).toFloat()
-            // 절대 피치각 (도). 화면 수평=0°, 아래로 기울이면 음수
-
-            // ── 방위각 → 헤드트래킹 패닝 계산 ─────────────────
+            // ── 방위각 → 헤드트래킹 패닝 계산 (BLE 연결 여부와 무관하게 항상 계산) ──
             val azimuthDeg = Math.toDegrees(orientation[0].toDouble()).toFloat()
             if (baseAzimuth == null) baseAzimuth = azimuthDeg
             // 버튼 클릭 후 첫 이벤트에서 기준 방위각 저장
@@ -339,6 +355,12 @@ class SwingTestActivity : AppCompatActivity() {
             while (rel < -180f) rel += 360f
             currentHeadingDeg = -rel
             // -180~+180° 정규화 후 부호 반전 → 오른쪽=양수, 왼쪽=음수
+
+            if (bleConnected) return
+            // BLE 연결 시 피치각·배트 높이·기록은 BLE 콜백에서 담당
+
+            currentPitchDeg = Math.toDegrees(orientation[1].toDouble()).toFloat()
+            // 절대 피치각 (도). 화면 수평=0°, 아래로 기울이면 음수
 
             // ── 배트 높이 라이브 업데이트 ──────────────────────
             val batH = BATTER_HEIGHT + sin(currentPitchDeg * PI.toFloat() / 180f) * BAT_REACH
@@ -445,6 +467,10 @@ class SwingTestActivity : AppCompatActivity() {
         // AudioTrack 인스턴스 생성 및 재생 상태 설정
         spatialAudio = SpatialAudioEngine(this)
         spatialAudio.init()
+
+        bleManager = BleManager(this)
+        bleManager.setCallback(bleCallback)
+        requestBlePermissions()
 
         btnSwingPitchMinus.setOnClickListener {
             if (targetPitches > 1) {
@@ -605,6 +631,8 @@ class SwingTestActivity : AppCompatActivity() {
 
             hitWindowActive = true
             // 이 시점부터 swingListener.checkSwing() 이 스윙 감지 시작
+            if (bleConnected) bleManager.sendControl(1)
+            // BLE 배트 센서에 측정 시작 명령 전송 (100Hz, 최대 5초 자동 정지)
 
             withContext(Dispatchers.Main) {
                 tvStatus.text = "쳐!"
@@ -622,6 +650,8 @@ class SwingTestActivity : AppCompatActivity() {
             }
             hitWindowActive = false
             // 타격 윈도우 닫음 → 이후 센서 이벤트는 무시
+            if (bleConnected) bleManager.sendControl(0)
+            // BLE 배트 센서에 측정 정지 명령 전송
 
             delay(150L)
             isRecording = false
@@ -834,6 +864,84 @@ class SwingTestActivity : AppCompatActivity() {
             showSwingGraph()
             btnStart.isEnabled = true
             btnStart.text = "다시하기"
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // BLE 배트 센서 콜백
+    // ─────────────────────────────────────────────────────
+    private val bleCallback = object : BleManager.Callback {
+        override fun onConnected() {
+            bleConnected = true
+            Toast.makeText(this@SwingTestActivity, "배트 센서 연결됨", Toast.LENGTH_SHORT).show()
+        }
+
+        override fun onDisconnected() {
+            bleConnected = false
+            Toast.makeText(this@SwingTestActivity, "배트 센서 연결 해제 — 폰 센서로 전환", Toast.LENGTH_SHORT).show()
+        }
+
+        override fun onPacket(packet: BleManager.SensorPacket) {
+            // BLE 패킷에서 스윙 감지용 값 갱신
+            // handleEuler: [X=heading, Y=pitch, Z=roll] (도)
+            // handleGyro:  [x,y,z] (rad/s), handleAccel: [x,y,z] (m/s²)
+            linearAccelMag = magnitude(packet.handleAccel)
+            gyroMag        = magnitude(packet.handleGyro)
+            currentPitchDeg = packet.handleEuler[1]
+            // BNO055 VECTOR_EULER: Y축 = 피치각 (배트 기울기)
+            // 센서 장착 방향에 따라 [0] 또는 [2] 로 변경 필요할 수 있음
+            checkSwing()
+
+            // 배트 높이 라이브 업데이트
+            val batH = BATTER_HEIGHT + sin(currentPitchDeg * PI.toFloat() / 180f) * BAT_REACH
+            liveBallParabolaView.updateLiveBat(batH)
+
+            // 스윙 궤적 기록 (메인 스레드에서 실행 — BleManager가 mainHandler.post 사용)
+            if (isRecording) {
+                pitchHistory.add(Pair(System.currentTimeMillis() - pitchRecordStart, currentPitchDeg))
+                swingGraphView.postInvalidate()
+            }
+            val phaseElapsed = System.currentTimeMillis() - phaseRecordStartTime
+            when (recordingPhase) {
+                2 -> readyToPitchHistory.add(Pair(phaseElapsed, currentPitchDeg))
+                3 -> pitchToEndHistory.add(Pair(phaseElapsed, currentPitchDeg))
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // BLE 권한 요청
+    // ─────────────────────────────────────────────────────
+    private fun requestBlePermissions() {
+        val needed = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
+                needed.add(Manifest.permission.BLUETOOTH_CONNECT)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED)
+                needed.add(Manifest.permission.BLUETOOTH_SCAN)
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        if (needed.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQ_BLE_PERM)
+        } else {
+            bleManager.startScan()
+        }
+    }
+
+    private fun hasBlePermissions(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)    == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_BLE_PERM && grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+            bleManager.startScan()
         }
     }
 
@@ -1200,6 +1308,8 @@ class SwingTestActivity : AppCompatActivity() {
         gyroscopeSensor?.let  { sensorManager.registerListener(swingListener, it, SensorManager.SENSOR_DELAY_GAME) }
         rotationSensor?.let   { sensorManager.registerListener(orientationListener, it, SensorManager.SENSOR_DELAY_GAME) }
         // SENSOR_DELAY_GAME ≈ 20ms 간격으로 센서 이벤트 수신
+        if (hasBlePermissions() && !bleConnected) bleManager.startScan()
+        // 권한이 있고 연결되지 않은 경우 BLE 스캔 재시작
     }
 
     override fun onPause() {
@@ -1208,6 +1318,7 @@ class SwingTestActivity : AppCompatActivity() {
         sensorManager.unregisterListener(swingListener)
         sensorManager.unregisterListener(orientationListener)
         // 등록된 모든 센서에서 각 리스너 해제
+        bleManager.stopScan()
         gameJob?.cancel()
         audioJob?.cancel()
         spatialAudio.stopBeep()
@@ -1219,6 +1330,7 @@ class SwingTestActivity : AppCompatActivity() {
         tts?.stop(); tts?.shutdown()
         audioTrack?.stop(); audioTrack?.release()
         spatialAudio.release()
+        bleManager.disconnect()
         scope.cancel()
         // 스코프 취소 → gameJob, audioJob, beepBallJob 등 모든 하위 코루틴 일괄 종료
     }
