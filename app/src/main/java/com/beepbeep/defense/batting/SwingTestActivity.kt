@@ -569,6 +569,10 @@ class SwingTestActivity : AppCompatActivity() {
             // ━━━ 1단계: SET 발화 + 초기 각도 기록 ━━━
             setAngleThisPitch = currentPitchDeg
             allSetAngles.add(setAngleThisPitch)
+            // BLE: SET 단계부터 측정 시작 + phase2 기록 시작 (READY 이전부터 그래프 확보)
+            if (bleConnected) bleManager.sendControl(1)
+            recordingPhase = 2
+            startPhaseRecording()
             withContext(Dispatchers.Main) {
                 tvStatus.text = "SET"
                 tvStatus.setTextColor(0xFF93C5FD.toInt())
@@ -608,8 +612,6 @@ class SwingTestActivity : AppCompatActivity() {
 
                 if (!readyStarted && progress >= readyProgress) {
                     readyStarted = true
-                    recordingPhase = 2
-                    startPhaseRecording()
                     withContext(Dispatchers.Main) {
                         tvStatus.text = "READY"
                         tvStatus.setTextColor(0xFF93C5FD.toInt())
@@ -644,8 +646,6 @@ class SwingTestActivity : AppCompatActivity() {
 
             hitWindowActive = true
             // 이 시점부터 swingListener.checkSwing() 이 스윙 감지 시작
-            if (bleConnected) bleManager.sendControl(1)
-            // BLE 배트 센서에 측정 시작 명령 전송 (100Hz, 최대 5초 자동 정지)
 
             withContext(Dispatchers.Main) {
                 tvStatus.text = "쳐!"
@@ -1077,7 +1077,7 @@ class SwingTestActivity : AppCompatActivity() {
         navRow.addView(btnNext)
 
         val tvLabel2 = TextView(this)
-        tvLabel2.text = "READY → PITCH 구간 배트 각도"
+        tvLabel2.text = "SET → PITCH 구간 배트 각도"
         tvLabel2.textSize = 13f
         tvLabel2.setTextColor(0xFF93C5FD.toInt())
         tvLabel2.setPadding(56, 4, 56, 4)
