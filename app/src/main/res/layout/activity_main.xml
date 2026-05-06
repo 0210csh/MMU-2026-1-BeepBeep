@@ -91,7 +91,7 @@
             android:paddingStart="8dp"
             android:gravity="center">
 
-            <!-- 시작 버튼 행 -->
+            <!-- 시작 버튼 + 공 개수 입력 행 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -113,12 +113,54 @@
                     android:id="@+id/btnStart"
                     android:layout_width="0dp"
                     android:layout_weight="1"
-                    android:layout_height="48dp"
+                    android:layout_height="44dp"
                     android:text="▶ 시작"
-                    android:textSize="15sp"
+                    android:textSize="13sp"
                     android:textStyle="bold"
                     android:backgroundTint="#64B4FF"
                     android:textColor="#0D1117"/>
+
+                <!-- 공 개수 조절 (터치 또는 게임패드 L1/R1) -->
+                <Button
+                    android:id="@+id/btnBallCountDown"
+                    android:layout_width="32dp"
+                    android:layout_height="36dp"
+                    android:text="−"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D333B"
+                    android:padding="0dp"
+                    android:layout_marginStart="8dp"/>
+
+                <TextView
+                    android:id="@+id/tvBallCount"
+                    android:layout_width="32dp"
+                    android:layout_height="wrap_content"
+                    android:text="5"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:gravity="center"/>
+
+                <Button
+                    android:id="@+id/btnBallCountUp"
+                    android:layout_width="32dp"
+                    android:layout_height="36dp"
+                    android:text="+"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#2D333B"
+                    android:padding="0dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="개"
+                    android:textColor="#8B949E"
+                    android:textSize="12sp"
+                    android:layout_marginStart="2dp"/>
             </LinearLayout>
 
             <!-- CATCH 버튼 행 -->
@@ -152,33 +194,37 @@
                     android:enabled="false"/>
             </LinearLayout>
 
-            <!-- 리셋 버튼 행 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="[B]"
-                    android:textColor="#8B949E"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:fontFamily="monospace"
-                    android:layout_marginEnd="6dp"/>
-
-                <Button
-                    android:id="@+id/btnReset"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="36dp"
-                    android:text="리셋"
-                    android:textColor="#8B949E"/>
-            </LinearLayout>
         </LinearLayout>
+    </LinearLayout>
+
+
+    <!-- 테스트용: 컨트롤러 연결 시뮬레이션 스위치 (우측 하단 오버레이) -->
+    <LinearLayout
+        android:id="@+id/debugControllerLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#33FFFFFF"
+        android:paddingHorizontal="6dp"
+        android:paddingVertical="3dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/controlLayout"
+        android:layout_marginEnd="4dp"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🎮"
+            android:textSize="10sp"/>
+
+        <Switch
+            android:id="@+id/switchFakeController"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:scaleX="0.7"
+            android:scaleY="0.7"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
