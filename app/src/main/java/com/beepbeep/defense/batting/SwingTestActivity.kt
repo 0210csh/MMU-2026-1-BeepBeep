@@ -860,8 +860,84 @@ class SwingTestActivity : AppCompatActivity() {
         btnSwingPitchMinus.isEnabled = true
         btnSwingPitchPlus.isEnabled = true
         speakResult("훈련 완료!")
+
+        val battingAvg     = if (targetPitches > 0) hitCount.toFloat() / targetPitches else 0f
+        val avgReaction    = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
+        val baseCorrectPct = if (hitCount > 0) successCount.toFloat() / hitCount * 100f else 0f
+
+        // ── userId 한 번만 선언 ──────────────────────────
+        val userId = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
+
+        // ── Firebase 업로드 ──────────────────────────────
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val sessionId = System.currentTimeMillis().toString()
+
+        val sessionData = hashMapOf(
+            "생성일시"   to com.google.firebase.Timestamp.now(),
+            "목표투구수" to targetPitches,
+            "허용오차"   to PITCH_TOLERANCE,
+            "종합결과"   to hashMapOf(
+                "정타수"       to hitCount,
+                "파울수"       to foulCount,
+                "스트라이크수" to strikeCount,
+                "타율"         to battingAvg,
+                "베이스정답수" to successCount,
+                "베이스정답률" to baseCorrectPct,
+                "반응속도평균" to avgReaction,
+                "반응속도최소" to (reactionTimes.minOrNull() ?: -1L),
+                "반응속도최대" to (reactionTimes.maxOrNull() ?: -1L)
+            )
+        )
+
+        val sessionRef = db.collection("users")
+            .document(userId)
+            .collection("훈련기록")
+            .document(sessionId)
+
+        sessionRef.set(sessionData)
+            .addOnSuccessListener {
+                perPitchRecords.forEachIndexed { index, record ->
+                    sessionRef.collection("투구별기록")
+                        .document("${index + 1}번투구")
+                        .set(record)
+                }
+            }
+            .addOnFailureListener { e ->
+                android.util.Log.e("Firebase", "업로드 실패: ${e.message}")
+            }
+
+        // ── SharedPreferences 저장 ───────────────────────
+        val statsPref = getSharedPreferences("TrainingStats_$userId", MODE_PRIVATE)
+        val editor = statsPref.edit()
+
+// ── 최근 10판용 (훈련 선택 화면) ──
+        val count = statsPref.getInt("count", 0)
+        val newCount = minOf(count + 1, 10)
+        editor.putInt("count", newCount)
+        editor.putFloat("sum_batting_avg", statsPref.getFloat("sum_batting_avg", 0f) + battingAvg)
+        editor.putFloat("sum_base_correct_pct", statsPref.getFloat("sum_base_correct_pct", 0f) + baseCorrectPct)
+        editor.putFloat("sum_reaction", statsPref.getFloat("sum_reaction", 0f) + avgReaction.toFloat())
+        editor.putFloat("sum_hit", statsPref.getFloat("sum_hit", 0f) + hitCount.toFloat())
+        editor.putFloat("sum_foul", statsPref.getFloat("sum_foul", 0f) + foulCount.toFloat())
+        editor.putFloat("sum_strike", statsPref.getFloat("sum_strike", 0f) + strikeCount.toFloat())
+        editor.putFloat("sum_base_correct", statsPref.getFloat("sum_base_correct", 0f) + successCount.toFloat())
+
+// ── 전체 판수용 (내 기록 화면) ──
+        val totalCount = statsPref.getInt("total_count", 0) + 1
+        editor.putInt("total_count", totalCount)
+        editor.putFloat("total_sum_batting_avg", statsPref.getFloat("total_sum_batting_avg", 0f) + battingAvg)
+        editor.putFloat("total_sum_base_correct_pct", statsPref.getFloat("total_sum_base_correct_pct", 0f) + baseCorrectPct)
+        editor.putFloat("total_sum_reaction", statsPref.getFloat("total_sum_reaction", 0f) + avgReaction.toFloat())
+        editor.putFloat("total_sum_hit", statsPref.getFloat("total_sum_hit", 0f) + hitCount.toFloat())
+        editor.putFloat("total_sum_foul", statsPref.getFloat("total_sum_foul", 0f) + foulCount.toFloat())
+        editor.putFloat("total_sum_strike", statsPref.getFloat("total_sum_strike", 0f) + strikeCount.toFloat())
+        editor.putFloat("total_sum_base_correct", statsPref.getFloat("total_sum_base_correct", 0f) + successCount.toFloat())
+
+        editor.apply()
+
         showTrainingSummary()
     }
+
 
     private fun showTrainingSummary() {
         val battingAvg     = if (targetPitches > 0) hitCount.toFloat() / targetPitches else 0f
@@ -1176,6 +1252,7 @@ class SwingTestActivity : AppCompatActivity() {
     override fun onResume() {
     // 화면이 포그라운드로 돌아올 때. 배터리 절약을 위해 여기서 센서 등록
         super.onResume()
+        initAudioTrack()
         linearAccelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
             ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         // TYPE_LINEAR_ACCELERATION 우선. 미지원 기기에서 TYPE_ACCELEROMETER 폴백
@@ -1193,7 +1270,7 @@ class SwingTestActivity : AppCompatActivity() {
         sensorManager.unregisterListener(swingListener)
         sensorManager.unregisterListener(orientationListener)
         // 등록된 모든 센서에서 각 리스너 해제
-        gameJob?.cancel()
+        // gameJob?.cancel()
         audioJob?.cancel()
         spatialAudio.stopBeep()
         // 백그라운드 진입 시 게임·오디오 코루틴 중단
