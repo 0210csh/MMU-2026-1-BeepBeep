@@ -1,0 +1,24 @@
+[33mc94c46d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mjaseong[m[33m, [m[1;31morigin/jaseong[m[33m, [m[1;31morigin/hyegwan-no-hw[m[33m, [m[1;32mhyegwan-no-hw-ui[m[33m, [m[1;32mhyegwan-no-hw[m[33m)[m docs: README 중복 섹션 제거
+[33mf807229[m docs: Firebase 코드 위치 상세 매핑 섹션 추가
+[33m63bda82[m Update README.md
+[33m78d08ed[m feat: 양쪽 베이스 활성화, 데이터 수집 구조 추가, 타율 계산 수정
+[33m2b71c2d[m README 타격 훈련 부분만으로 재작성
+[33m23eefdb[m README 업데이트: 현재 프로젝트 구조 및 기능 반영
+[33m4c8a9ef[m SwingTest 투구 횟수 설정 UI 및 자동 반복 훈련 로직 구현, 구간별 배트 각도 기록 수정
+[33mff366ff[m Update README with full project documentation
+[33m5012e01[m Remove incorrectly placed root-level folders
+[33m958ebcc[m Add batting simulation project with build files
+[33me6cde62[m Remove source files, keep README only
+[33m35c1f0a[m Add batting simulation source files
+[33m0bca6b6[m Delete activity_main.xml
+[33m3089291[m Delete MainActivity.kt
+[33m5a887d5[m Delete AndroidManifest.xml
+[33m2af638a[m Delete BatSensorCode directory
+[33m08fdc45[m Add files via upload
+[33m8c91018[m Delete 배트 관련 코드
+[33mf25c2b9[m Add files via upload
+[33m944a8eb[m Add files via upload
+[33ma7e0700[m 배트 관련 코드
+[33m6b254dc[m Delete ㅁㄴㅇㄹ
+[33m40b3db6[m Create ㅁㄴㅇㄹ
+[33ma73f3bb[m Initial commit
