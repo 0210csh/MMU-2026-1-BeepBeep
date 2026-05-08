@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="상태: 연결 안 됨"
+            android:layout_gravity="center"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/btn_connect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="배트 센서 연결"
+            android:layout_marginTop="10dp"/>
+
+        <Button
+            android:id="@+id/btn_send_data"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="보드로 측정 신호 보내기"
+            android:layout_marginTop="20dp" />
+
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="\n[ 손잡이 센서 ]"
+            android:textColor="#FF0000"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView android:id="@+id/tv_h_euler" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_h_gyro" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_h_acc" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#AAAAAA" android:layout_marginVertical="10dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="[ 배트 끝 센서 ]"
+            android:textColor="#0000FF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView android:id="@+id/tv_t_euler" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_t_gyro" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_t_acc" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
+
+    </LinearLayout>
+</ScrollView>

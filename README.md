@@ -271,3 +271,199 @@ private val BATTING_ANGLE_DEG = 0f
 // +15f → 배트 끝이 약간 위 (높은 공)
 // -15f → 배트 끝이 약간 아래 (낮은 공)
 ```
+
+---
+
+## Git 브랜치 전략 (협업 가이드)
+
+### 브랜치 구조
+
+```
+main
+├── hyegwan                ← 최종 통합본 (항상 동작하는 버전)
+├── hyegwan-no-hw          ← 하드웨어 연결 전 순수 소프트웨어 버전 (보존용, 수정 금지)
+├── hyegwan-no-hw-ui       ← UI 담당자 작업 브랜치 (hyegwan-no-hw 기반)
+└── hyegwan-hw             ← 하드웨어 담당자 작업 브랜치
+```
+
+### 브랜치별 역할
+
+| 브랜치 | 담당 | 설명 |
+|---|---|---|
+| `hyegwan` | 공동 | 최종 통합본. 직접 수정하지 않고 merge로만 업데이트 |
+| `hyegwan-no-hw` | — | 하드웨어 연결 전 버전 보존. **절대 수정하지 않음** |
+| `hyegwan-no-hw-ui` | UI 담당자 | `hyegwan-no-hw` 기반으로 UI 작업 |
+| `hyegwan-hw` | 하드웨어 담당자 | 하드웨어 연결 코드 작업 |
+
+---
+
+### UI 담당자 — 처음 시작할 때
+
+```bash
+# 1. 저장소 클론
+git clone https://github.com/0210csh/MMU-2026-1-BeepBeep.git
+cd MMU-2026-1-BeepBeep
+
+# 2. no-hw 브랜치 가져오기
+git checkout hyegwan-no-hw
+
+# 3. UI 작업용 브랜치 생성
+git checkout -b hyegwan-no-hw-ui
+git push origin hyegwan-no-hw-ui
+```
+
+### UI 담당자 — 작업 후 업로드
+
+```bash
+# 수정된 파일 확인 (먼저 확인하는 습관 권장)
+git status
+
+# 파일 하나만 올릴 때
+git add app/src/main/java/com/beepbeep/defense/batting/SwingTestActivity.kt
+
+# 여러 파일 올릴 때
+git add app/src/main/java/com/beepbeep/defense/batting/SwingTestActivity.kt
+git add app/src/main/res/layout/activity_swing_test.xml
+
+# 수정한 파일 전부 한번에 올릴 때
+git add .
+
+git commit -m "feat: UI 수정 내용 설명"
+git push origin hyegwan-no-hw-ui
+```
+
+---
+
+### 하드웨어 담당자 — 처음 시작할 때
+
+```bash
+# 1. 저장소 클론
+git clone https://github.com/0210csh/MMU-2026-1-BeepBeep.git
+cd MMU-2026-1-BeepBeep
+
+# 2. hw 브랜치로 전환
+git checkout hyegwan-hw
+```
+
+### 하드웨어 담당자 — 작업 후 업로드
+
+```bash
+# 수정된 파일 확인 (먼저 확인하는 습관 권장)
+git status
+
+# 파일 하나만 올릴 때
+git add app/src/main/java/com/beepbeep/defense/batting/SwingTestActivity.kt
+
+# 여러 파일 올릴 때
+git add app/src/main/java/com/beepbeep/defense/batting/SwingTestActivity.kt
+git add app/src/main/java/com/beepbeep/defense/audio/SpatialAudioEngine.kt
+
+# 수정한 파일 전부 한번에 올릴 때
+git add .
+
+git commit -m "feat: 하드웨어 연결 내용 설명"
+git push origin hyegwan-hw
+```
+
+---
+
+### 업로드 전 확인 명령어
+
+```bash
+# 어떤 파일이 수정됐는지 목록 확인
+git status
+
+# 수정 내용 상세 확인
+git diff
+```
+
+> `git status`로 수정된 파일을 먼저 확인한 뒤 `git add` 하는 습관을 들이면 실수를 줄일 수 있습니다.
+
+---
+
+### 브랜치 전환 방법
+
+```bash
+# 하드웨어 버전으로 전환
+git checkout hyegwan-hw
+
+# 하드웨어 없는 순수 버전으로 전환
+git checkout hyegwan-no-hw
+
+# 최종 통합본으로 전환
+git checkout hyegwan
+```
+
+> Android Studio 우측 하단의 브랜치 이름을 클릭해도 전환할 수 있습니다.
+
+---
+
+### HW 작업 중 SW를 수정해야 할 때
+
+`hyegwan-no-hw`는 보존용이므로 수정하지 않습니다.  
+SW 수정은 `hyegwan`에서 하고 `hyegwan-hw`로 가져오는 방식을 사용합니다.
+
+**1단계 — 현재 HW 작업 임시 저장**
+```bash
+git stash
+```
+
+**2단계 — hyegwan으로 이동해서 SW 수정**
+```bash
+git checkout hyegwan
+# SW 파일 수정 후
+git add .
+git commit -m "fix: SW 수정 내용"
+git push origin hyegwan
+```
+
+**3단계 — hyegwan-hw로 돌아와서 SW 수정 내용 가져오기**
+```bash
+git checkout hyegwan-hw
+git merge hyegwan
+```
+
+**4단계 — 임시 저장했던 HW 작업 복구**
+```bash
+git stash pop
+```
+
+전체 흐름 요약:
+```
+hyegwan-hw 작업 중
+       ↓
+git stash              (HW 작업 임시 저장)
+       ↓
+git checkout hyegwan
+       ↓
+SW 수정 → commit → push
+       ↓
+git checkout hyegwan-hw
+       ↓
+git merge hyegwan      (SW 수정 내용 가져오기)
+       ↓
+git stash pop          (HW 작업 복구)
+       ↓
+HW 작업 계속
+```
+
+| 명령어 | 역할 |
+|---|---|
+| `git stash` | 커밋 안 한 작업 임시 보관 |
+| `git stash pop` | 임시 보관한 작업 복구 |
+| `git merge hyegwan` | hyegwan의 변경사항을 현재 브랜치로 가져오기 |
+
+---
+
+### 작업 완료 후 최종 통합
+
+각 브랜치 작업이 완료되면 GitHub에서 **Pull Request**를 생성합니다.  
+확인 후 `hyegwan` 브랜치로 merge합니다.
+
+```bash
+# 로컬에서 직접 통합할 경우
+git checkout hyegwan
+git merge hyegwan-hw        # 하드웨어 브랜치 통합
+git merge hyegwan-no-hw-ui  # UI 브랜치 통합
+git push origin hyegwan
+```

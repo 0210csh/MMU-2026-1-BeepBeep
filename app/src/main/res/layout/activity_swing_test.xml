@@ -156,9 +156,47 @@
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="4dp"
-        app:layout_constraintBottom_toTopOf="@id/pitchControlLayout"
+        app:layout_constraintBottom_toTopOf="@id/bleControlLayout"
         app:layout_constraintStart_toEndOf="@id/v2Base3Container"
         app:layout_constraintEnd_toStartOf="@id/v2Base1Container"/>
+
+    <!-- BLE 연결 버튼 + 상태 표시 -->
+    <LinearLayout
+        android:id="@+id/bleControlLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="2dp"
+        app:layout_constraintBottom_toTopOf="@id/pitchControlLayout"
+        app:layout_constraintStart_toEndOf="@id/v2Base3Container"
+        app:layout_constraintEnd_toStartOf="@id/v2Base1Container">
+
+        <Button
+            android:id="@+id/btnBleConnect"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:text="배트 센서 연결"
+            android:textColor="#64B4FF"
+            android:textSize="11sp"
+            android:padding="4dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"/>
+
+        <TextView
+            android:id="@+id/tvBleStatus"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="● 미연결"
+            android:textColor="#F87171"
+            android:textSize="11sp"
+            android:layout_marginStart="8dp"
+            android:gravity="start"/>
+    </LinearLayout>
 
     <!-- 투구 횟수 설정 + 진행 표시 -->
     <LinearLayout
