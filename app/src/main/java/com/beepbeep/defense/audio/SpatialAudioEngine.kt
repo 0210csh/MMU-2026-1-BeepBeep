@@ -101,9 +101,10 @@ class SpatialAudioEngine(private val context: Context) {
                 val dt            = FRAMES.toFloat() / SAMPLE_RATE
                 val vel           = (prevHorizDist - horizDist) / dt.coerceAtLeast(0.001f)
 
-                // ── 앞/뒤 주파수 구분 ─────────────────────────────────
-                // ballZ > 0 = 수비수 뒤에 공이 있음 → 낮은 음(660Hz)으로 구분
-                val baseFreq = if (ballZ > 0f) BEEP_FREQ_BACK else BEEP_FREQ_FRONT
+                // ── 앞/뒤 주파수 구분 (±4m 구간에서 선형 보간) ──────────
+                // ballZ < -4m: 880Hz(앞) / ballZ > +4m: 660Hz(뒤) / 사이: 부드럽게 전환
+                val t        = ((ballZ + 4f) / 8f).coerceIn(0f, 1f)
+                val baseFreq = BEEP_FREQ_FRONT * (1f - t) + BEEP_FREQ_BACK * t
                 val doppFreq = baseFreq * (SPEED_OF_SOUND / (SPEED_OF_SOUND - vel.coerceIn(-150f, 80f)))
 
                 // ── 비프 ON ───────────────────────────────────────────
