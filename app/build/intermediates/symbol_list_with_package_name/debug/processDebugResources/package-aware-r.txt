@@ -83,6 +83,7 @@ animator mtrl_fab_hide_motion_spec
 animator mtrl_fab_show_motion_spec
 animator mtrl_fab_transformation_sheet_collapse_spec
 animator mtrl_fab_transformation_sheet_expand_spec
+array ball_counts
 array difficulty_levels
 attr SharedValue
 attr SharedValueId
@@ -3949,6 +3950,7 @@ id customPanel
 id cut
 id dark
 id date_picker_actions
+id debugControllerLayout
 id decelerate
 id decelerateAndComplete
 id decor_content_parent
@@ -4287,6 +4289,7 @@ id submenuarrow
 id submit_area
 id supportScrollUp
 id swingGraphView
+id switchFakeController
 id tabMode
 id tag_accessibility_actions
 id tag_accessibility_clickable_spans
@@ -4706,7 +4709,6 @@ string fab_transformation_sheet_behavior
 string fallback_menu_item_copy_link
 string fallback_menu_item_open_in_browser
 string fallback_menu_item_share_link
-string first_fragment_label
 string gcm_defaultSenderId
 string google_api_key
 string google_app_id
@@ -4715,7 +4717,6 @@ string google_storage_bucket
 string hide_bottom_view_on_scroll_behavior
 string icon_content_description
 string item_view_role_description
-string lorem_ipsum
 string m3_exceed_max_badge_text_suffix
 string m3_loading_indicator_content_description
 string m3_ref_typeface_brand_medium
@@ -4823,19 +4824,16 @@ string mtrl_timepicker_cancel
 string mtrl_timepicker_confirm
 string nav_rail_collapsed_a11y_label
 string nav_rail_expanded_a11y_label
-string next
 string password_toggle_content_description
 string path_password_eye
 string path_password_eye_mask_strike_through
 string path_password_eye_mask_visible
 string path_password_strike_through
-string previous
 string project_id
 string search_menu_title
 string searchbar_scrolling_view_behavior
 string searchview_clear_text_content_description
 string searchview_navigation_content_description
-string second_fragment_label
 string side_sheet_accessibility_pane_title
 string side_sheet_behavior
 string status_bar_notification_info_overflow

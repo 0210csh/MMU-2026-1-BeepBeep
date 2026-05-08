@@ -9,29 +9,29 @@
 9        android:targetSdkVersion="36" />
 10
 11    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
-11-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:4:5-84
-11-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:4:22-82
+11-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:5:5-84
+11-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:5:22-82
 12    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-12-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:5:5-79
-12-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:5:22-77
+12-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:6:5-79
+12-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:6:22-77
 13    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-13-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:6:5-70
-13-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:6:22-68
+13-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:7:5-70
+13-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:7:22-68
 14    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-14-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:7:5-75
-14-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:7:22-73
+14-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:8:5-75
+14-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:8:22-73
 15    <uses-permission
-15-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:8:5-10:30
+15-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:9:5-11:30
 16        android:name="android.permission.BLUETOOTH_SCAN"
-16-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:8:22-70
+16-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:9:22-70
 17        android:usesPermissionFlags="neverForLocation" />
-17-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:9:9-55
+17-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:10:9-55
 18    <uses-permission
-18-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:11:5-12:37
+18-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:12:5-13:37
 19        android:name="android.permission.ACCESS_FINE_LOCATION"
-19-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:11:22-76
+19-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:12:22-76
 20        android:maxSdkVersion="30" />
-20-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:12:9-35
+20-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:13:9-35
 21    <uses-permission android:name="android.permission.INTERNET" />
 21-->[com.google.firebase:firebase-auth:22.3.0] C:\Users\ufidf\.gradle\caches\8.13\transforms\3c9dc50339d4b84b30b943eb06466f85\transformed\firebase-auth-22.3.0\AndroidManifest.xml:25:5-67
 21-->[com.google.firebase:firebase-auth:22.3.0] C:\Users\ufidf\.gradle\caches\8.13\transforms\3c9dc50339d4b84b30b943eb06466f85\transformed\firebase-auth-22.3.0\AndroidManifest.xml:25:22-64
@@ -51,83 +51,83 @@
 28-->[androidx.core:core:1.17.0] C:\Users\ufidf\.gradle\caches\8.13\transforms\4ffeb89150fbe7e42ab29985197b97e5\transformed\core-1.17.0\AndroidManifest.xml:26:22-94
 29
 30    <application
-30-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:14:5-55:19
+30-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:15:5-56:19
 31        android:allowBackup="true"
-31-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:15:9-35
+31-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:16:9-35
 32        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
 32-->[androidx.core:core:1.17.0] C:\Users\ufidf\.gradle\caches\8.13\transforms\4ffeb89150fbe7e42ab29985197b97e5\transformed\core-1.17.0\AndroidManifest.xml:28:18-86
 33        android:dataExtractionRules="@xml/data_extraction_rules"
-33-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:16:9-65
+33-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:17:9-65
 34        android:debuggable="true"
 35        android:extractNativeLibs="false"
 36        android:fullBackupContent="@xml/backup_rules"
-36-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:17:9-54
+36-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:18:9-54
 37        android:icon="@mipmap/ic_launcher"
-37-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:18:9-43
+37-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:19:9-43
 38        android:label="@string/app_name"
-38-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:19:9-41
+38-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:20:9-41
 39        android:roundIcon="@mipmap/ic_launcher_round"
-39-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:20:9-54
+39-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:21:9-54
 40        android:supportsRtl="true"
-40-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:21:9-35
+40-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:22:9-35
 41        android:testOnly="true"
 42        android:theme="@style/Theme.BeepDefense" >
-42-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:22:9-49
+42-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:23:9-49
 43        <activity
-43-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:24:9-31:20
+43-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:25:9-32:20
 44            android:name="com.beepbeep.defense.LoginActivity"
-44-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:25:13-42
+44-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:26:13-42
 45            android:exported="true" >
-45-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:26:13-36
+45-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:27:13-36
 46            <intent-filter>
-46-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:27:13-30:29
+46-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:28:13-31:29
 47                <action android:name="android.intent.action.MAIN" />
-47-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:28:17-69
-47-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:28:25-66
+47-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:29:17-69
+47-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:29:25-66
 48
 49                <category android:name="android.intent.category.LAUNCHER" />
-49-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:29:17-77
-49-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:29:27-74
+49-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:30:17-77
+49-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:30:27-74
 50            </intent-filter>
 51        </activity>
 52        <activity android:name="com.beepbeep.defense.SignupActivity" />
-52-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:33:9-52
-52-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:33:19-49
+52-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:34:9-52
+52-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:34:19-49
 53        <activity android:name="com.beepbeep.defense.HomeActivity" />
-53-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:34:9-50
-53-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:34:19-47
+53-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:35:9-50
+53-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:35:19-47
 54        <activity android:name="com.beepbeep.defense.RecordActivity" />
-54-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:35:9-52
-54-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:35:19-49
+54-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:36:9-52
+54-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:36:19-49
 55        <activity android:name="com.beepbeep.defense.TrainingActivity" />
-55-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:36:9-54
-55-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:36:19-51
+55-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:37:9-54
+55-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:37:19-51
 56        <activity android:name="com.beepbeep.defense.SettingActivity" />
-56-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:37:9-53
-56-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:37:19-50
+56-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:38:9-53
+56-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:38:19-50
 57        <activity
-57-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:39:9-42:56
+57-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:40:9-43:56
 58            android:name="com.beepbeep.defense.MainActivity"
-58-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:40:13-41
+58-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:41:13-41
 59            android:exported="false"
-59-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:41:13-37
+59-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:42:13-37
 60            android:theme="@style/Theme.BeepDefense" />
-60-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:42:13-53
+60-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:43:13-53
 61        <activity
-61-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:44:9-46:57
+61-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:45:9-47:57
 62            android:name="com.beepbeep.defense.batting.BaseRunReactionActivity"
-62-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:45:13-60
+62-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:46:13-60
 63            android:screenOrientation="userLandscape" />
-63-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:46:13-54
+63-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:47:13-54
 64        <activity
-64-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:48:9-50:57
+64-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:49:9-51:57
 65            android:name="com.beepbeep.defense.batting.SwingTestActivity"
-65-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:49:13-54
+65-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:50:13-54
 66            android:screenOrientation="userLandscape" />
-66-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:50:13-54
+66-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:51:13-54
 67        <activity android:name="com.beepbeep.defense.hardware.BleTestActivity" />
-67-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:52:9-53:56
-67-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:53:13-53
+67-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:53:9-54:56
+67-->C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\src\main\AndroidManifest.xml:54:13-53
 68
 69        <service
 69-->[com.google.firebase:firebase-auth-ktx:22.3.0] C:\Users\ufidf\.gradle\caches\8.13\transforms\4669504bbbad1cf940d917913fbe8144\transformed\firebase-auth-ktx-22.3.0\AndroidManifest.xml:8:9-14:19

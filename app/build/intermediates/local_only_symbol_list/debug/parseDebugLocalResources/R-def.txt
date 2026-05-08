@@ -1,5 +1,6 @@
 R_DEF: Internal format may change without notice
 local
+array ball_counts
 array difficulty_levels
 color accent_pink
 color bg_black
@@ -103,6 +104,7 @@ id cardMyRecord
 id cb_auto_login
 id contentHome
 id controlLayout
+id debugControllerLayout
 id et_id
 id et_login_id
 id et_login_pw
@@ -139,6 +141,7 @@ id rl_def_record
 id spinnerDifficulty
 id statsGrid
 id swingGraphView
+id switchFakeController
 id tvBase1Label
 id tvBase3Label
 id tvBleStatus
@@ -205,17 +208,12 @@ mipmap ic_launcher
 mipmap ic_launcher_round
 string action_settings
 string app_name
-string first_fragment_label
 string gcm_defaultSenderId
 string google_api_key
 string google_app_id
 string google_crash_reporting_api_key
 string google_storage_bucket
-string lorem_ipsum
-string next
-string previous
 string project_id
-string second_fragment_label
 style Base.Theme.BeepDefense
 style Theme.BeepDefense
 xml backup_rules

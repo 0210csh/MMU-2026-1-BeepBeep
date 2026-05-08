@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -58,6 +59,9 @@ public final class ActivityMainBinding implements ViewBinding {
   public final LinearLayout controlLayout;
 
   @NonNull
+  public final LinearLayout debugControllerLayout;
+
+  @NonNull
   public final FieldView fieldView;
 
   @NonNull
@@ -68,6 +72,9 @@ public final class ActivityMainBinding implements ViewBinding {
 
   @NonNull
   public final Spinner spinnerDifficulty;
+
+  @NonNull
+  public final Switch switchFakeController;
 
   @NonNull
   public final TextView tvDebug;
@@ -85,9 +92,10 @@ public final class ActivityMainBinding implements ViewBinding {
       @NonNull Button btnCatch, @NonNull Button btnCenter, @NonNull Button btnLeft,
       @NonNull Button btnPitchMinus, @NonNull Button btnPitchPlus, @NonNull Button btnReset,
       @NonNull Button btnRight, @NonNull Button btnStartTraining, @NonNull Button btnSwingTest,
-      @NonNull LinearLayout controlLayout, @NonNull FieldView fieldView,
-      @NonNull LinearLayout headerLayout, @NonNull JoystickView joystickView,
-      @NonNull Spinner spinnerDifficulty, @NonNull TextView tvDebug, @NonNull TextView tvPhase,
+      @NonNull LinearLayout controlLayout, @NonNull LinearLayout debugControllerLayout,
+      @NonNull FieldView fieldView, @NonNull LinearLayout headerLayout,
+      @NonNull JoystickView joystickView, @NonNull Spinner spinnerDifficulty,
+      @NonNull Switch switchFakeController, @NonNull TextView tvDebug, @NonNull TextView tvPhase,
       @NonNull TextView tvPitchCount, @NonNull TextView tvScore) {
     this.rootView = rootView;
     this.btnBleTest = btnBleTest;
@@ -101,10 +109,12 @@ public final class ActivityMainBinding implements ViewBinding {
     this.btnStartTraining = btnStartTraining;
     this.btnSwingTest = btnSwingTest;
     this.controlLayout = controlLayout;
+    this.debugControllerLayout = debugControllerLayout;
     this.fieldView = fieldView;
     this.headerLayout = headerLayout;
     this.joystickView = joystickView;
     this.spinnerDifficulty = spinnerDifficulty;
+    this.switchFakeController = switchFakeController;
     this.tvDebug = tvDebug;
     this.tvPhase = tvPhase;
     this.tvPitchCount = tvPitchCount;
@@ -204,6 +214,12 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.debugControllerLayout;
+      LinearLayout debugControllerLayout = ViewBindings.findChildViewById(rootView, id);
+      if (debugControllerLayout == null) {
+        break missingId;
+      }
+
       id = R.id.fieldView;
       FieldView fieldView = ViewBindings.findChildViewById(rootView, id);
       if (fieldView == null) {
@@ -225,6 +241,12 @@ public final class ActivityMainBinding implements ViewBinding {
       id = R.id.spinnerDifficulty;
       Spinner spinnerDifficulty = ViewBindings.findChildViewById(rootView, id);
       if (spinnerDifficulty == null) {
+        break missingId;
+      }
+
+      id = R.id.switchFakeController;
+      Switch switchFakeController = ViewBindings.findChildViewById(rootView, id);
+      if (switchFakeController == null) {
         break missingId;
       }
 
@@ -254,8 +276,8 @@ public final class ActivityMainBinding implements ViewBinding {
 
       return new ActivityMainBinding((ConstraintLayout) rootView, btnBleTest, btnCatch, btnCenter,
           btnLeft, btnPitchMinus, btnPitchPlus, btnReset, btnRight, btnStartTraining, btnSwingTest,
-          controlLayout, fieldView, headerLayout, joystickView, spinnerDifficulty, tvDebug, tvPhase,
-          tvPitchCount, tvScore);
+          controlLayout, debugControllerLayout, fieldView, headerLayout, joystickView,
+          spinnerDifficulty, switchFakeController, tvDebug, tvPhase, tvPitchCount, tvScore);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

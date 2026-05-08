@@ -1,46 +1,42 @@
 [
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-mergeDebugResources-41:\\layout\\activity_home.xml",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_home.xml"
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_base_run_reaction.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_base_run_reaction.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-mergeDebugResources-41:\\layout\\activity_training.xml",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_training.xml"
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_record.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_record.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-mergeDebugResources-41:\\layout\\activity_signup.xml",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_signup.xml"
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_signup.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_signup.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-mergeDebugResources-41:\\layout\\activity_record.xml",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_record.xml"
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/setting.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/setting.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-mergeDebugResources-41:\\layout\\setting.xml",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\setting.xml"
-    },
-    {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-mergeDebugResources-41:\\layout\\activity_ble_test.xml",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_ble_test.xml"
-    },
-    {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-mergeDebugResources-41:\\layout\\activity_base_run_reaction.xml",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_base_run_reaction.xml"
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_training.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_training.xml"
     },
     {
         "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_login.xml",
         "source": "com.beepbeep.defense.app-main-44:/layout/activity_login.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-mergeDebugResources-41:\\layout\\activity_login.xml",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_login.xml"
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_main.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_main.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-mergeDebugResources-41:\\layout\\activity_swing_test.xml",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_swing_test.xml"
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_swing_test.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_swing_test.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-mergeDebugResources-41:\\layout\\activity_main.xml",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_main.xml"
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_home.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_home.xml"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_ble_test.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_ble_test.xml"
     }
 ]
