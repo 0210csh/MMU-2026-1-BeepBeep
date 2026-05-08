@@ -90,7 +90,7 @@ class SpatialAudioEngine(private val context: Context) {
             // 100ms ON / 200ms OFF (현실의 비프음 공과 동일한 고정 패턴)
             val chunksOn   = (SAMPLE_RATE * 0.10f / FRAMES).toInt().coerceAtLeast(2)
             val chunksOff  = (SAMPLE_RATE * 0.20f / FRAMES).toInt().coerceAtLeast(1)
-            val fadeChunks = 1
+            val fadeChunks = 2   // ~5.8ms 페이드 (클릭 노이즈 방지)
 
             var smoothedGain = 1f
 
@@ -139,13 +139,21 @@ class SpatialAudioEngine(private val context: Context) {
                 }
 
                 // ── 무음 OFF ─────────────────────────────────────────
+                // gain=0이지만 nativeProcessChunk를 계속 호출해 C++ 위상 연속성 유지
+                // → 다음 ON 구간 시작 시 파형이 어긋나지 않아 딱 소리(클릭) 방지
                 ResonanceBridge.nativeSetGain(0f)
+                var offPan = computePan()
                 repeat(chunksOff) {
                     if (!isActive) return@repeat
                     val r = Math.toRadians(currentHeadingDeg.toDouble())
                     ResonanceBridge.nativeSetHeadRotation(
                         0f, sin(r / 2).toFloat(), 0f, cos(r / 2).toFloat())
-                    audioTrack?.write(silenceBuf, 0, silenceBuf.size)
+                    val newPan = computePan()
+                    val ok = ResonanceBridge.nativeProcessChunk(
+                        doppFreq, 0f, 0f, offPan, newPan, stereoOut)
+                    if (ok) audioTrack?.write(stereoOut, 0, stereoOut.size)
+                    else    audioTrack?.write(silenceBuf, 0, silenceBuf.size)
+                    offPan = newPan
                 }
 
                 prevBallX = ballX; prevBallZ = ballZ
