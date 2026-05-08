@@ -26,6 +26,12 @@ public final class ActivityMainBinding implements ViewBinding {
   private final ConstraintLayout rootView;
 
   @NonNull
+  public final Button btnBallCountDown;
+
+  @NonNull
+  public final Button btnBallCountUp;
+
+  @NonNull
   public final Button btnBleTest;
 
   @NonNull
@@ -48,6 +54,9 @@ public final class ActivityMainBinding implements ViewBinding {
 
   @NonNull
   public final Button btnRight;
+
+  @NonNull
+  public final Button btnStart;
 
   @NonNull
   public final Button btnStartTraining;
@@ -77,6 +86,9 @@ public final class ActivityMainBinding implements ViewBinding {
   public final Switch switchFakeController;
 
   @NonNull
+  public final TextView tvBallCount;
+
+  @NonNull
   public final TextView tvDebug;
 
   @NonNull
@@ -88,16 +100,20 @@ public final class ActivityMainBinding implements ViewBinding {
   @NonNull
   public final TextView tvScore;
 
-  private ActivityMainBinding(@NonNull ConstraintLayout rootView, @NonNull Button btnBleTest,
-      @NonNull Button btnCatch, @NonNull Button btnCenter, @NonNull Button btnLeft,
-      @NonNull Button btnPitchMinus, @NonNull Button btnPitchPlus, @NonNull Button btnReset,
-      @NonNull Button btnRight, @NonNull Button btnStartTraining, @NonNull Button btnSwingTest,
+  private ActivityMainBinding(@NonNull ConstraintLayout rootView, @NonNull Button btnBallCountDown,
+      @NonNull Button btnBallCountUp, @NonNull Button btnBleTest, @NonNull Button btnCatch,
+      @NonNull Button btnCenter, @NonNull Button btnLeft, @NonNull Button btnPitchMinus,
+      @NonNull Button btnPitchPlus, @NonNull Button btnReset, @NonNull Button btnRight,
+      @NonNull Button btnStart, @NonNull Button btnStartTraining, @NonNull Button btnSwingTest,
       @NonNull LinearLayout controlLayout, @NonNull LinearLayout debugControllerLayout,
       @NonNull FieldView fieldView, @NonNull LinearLayout headerLayout,
       @NonNull JoystickView joystickView, @NonNull Spinner spinnerDifficulty,
-      @NonNull Switch switchFakeController, @NonNull TextView tvDebug, @NonNull TextView tvPhase,
-      @NonNull TextView tvPitchCount, @NonNull TextView tvScore) {
+      @NonNull Switch switchFakeController, @NonNull TextView tvBallCount,
+      @NonNull TextView tvDebug, @NonNull TextView tvPhase, @NonNull TextView tvPitchCount,
+      @NonNull TextView tvScore) {
     this.rootView = rootView;
+    this.btnBallCountDown = btnBallCountDown;
+    this.btnBallCountUp = btnBallCountUp;
     this.btnBleTest = btnBleTest;
     this.btnCatch = btnCatch;
     this.btnCenter = btnCenter;
@@ -106,6 +122,7 @@ public final class ActivityMainBinding implements ViewBinding {
     this.btnPitchPlus = btnPitchPlus;
     this.btnReset = btnReset;
     this.btnRight = btnRight;
+    this.btnStart = btnStart;
     this.btnStartTraining = btnStartTraining;
     this.btnSwingTest = btnSwingTest;
     this.controlLayout = controlLayout;
@@ -115,6 +132,7 @@ public final class ActivityMainBinding implements ViewBinding {
     this.joystickView = joystickView;
     this.spinnerDifficulty = spinnerDifficulty;
     this.switchFakeController = switchFakeController;
+    this.tvBallCount = tvBallCount;
     this.tvDebug = tvDebug;
     this.tvPhase = tvPhase;
     this.tvPitchCount = tvPitchCount;
@@ -148,6 +166,18 @@ public final class ActivityMainBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
+      id = R.id.btnBallCountDown;
+      Button btnBallCountDown = ViewBindings.findChildViewById(rootView, id);
+      if (btnBallCountDown == null) {
+        break missingId;
+      }
+
+      id = R.id.btnBallCountUp;
+      Button btnBallCountUp = ViewBindings.findChildViewById(rootView, id);
+      if (btnBallCountUp == null) {
+        break missingId;
+      }
+
       id = R.id.btnBleTest;
       Button btnBleTest = ViewBindings.findChildViewById(rootView, id);
       if (btnBleTest == null) {
@@ -193,6 +223,12 @@ public final class ActivityMainBinding implements ViewBinding {
       id = R.id.btnRight;
       Button btnRight = ViewBindings.findChildViewById(rootView, id);
       if (btnRight == null) {
+        break missingId;
+      }
+
+      id = R.id.btnStart;
+      Button btnStart = ViewBindings.findChildViewById(rootView, id);
+      if (btnStart == null) {
         break missingId;
       }
 
@@ -250,6 +286,12 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.tvBallCount;
+      TextView tvBallCount = ViewBindings.findChildViewById(rootView, id);
+      if (tvBallCount == null) {
+        break missingId;
+      }
+
       id = R.id.tvDebug;
       TextView tvDebug = ViewBindings.findChildViewById(rootView, id);
       if (tvDebug == null) {
@@ -274,10 +316,11 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ActivityMainBinding((ConstraintLayout) rootView, btnBleTest, btnCatch, btnCenter,
-          btnLeft, btnPitchMinus, btnPitchPlus, btnReset, btnRight, btnStartTraining, btnSwingTest,
-          controlLayout, debugControllerLayout, fieldView, headerLayout, joystickView,
-          spinnerDifficulty, switchFakeController, tvDebug, tvPhase, tvPitchCount, tvScore);
+      return new ActivityMainBinding((ConstraintLayout) rootView, btnBallCountDown, btnBallCountUp,
+          btnBleTest, btnCatch, btnCenter, btnLeft, btnPitchMinus, btnPitchPlus, btnReset, btnRight,
+          btnStart, btnStartTraining, btnSwingTest, controlLayout, debugControllerLayout, fieldView,
+          headerLayout, joystickView, spinnerDifficulty, switchFakeController, tvBallCount, tvDebug,
+          tvPhase, tvPitchCount, tvScore);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

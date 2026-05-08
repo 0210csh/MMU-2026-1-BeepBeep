@@ -66,7 +66,7 @@
         android:background="#161B22"
         app:layout_constraintBottom_toTopOf="@id/controlLayout"/>
 
-    <!-- ✅ 팀원 추가: 컨트롤러 디버그 스위치 (우측 하단 오버레이) -->
+    <!-- 컨트롤러 디버그 스위치 -->
     <LinearLayout
         android:id="@+id/debugControllerLayout"
         android:layout_width="wrap_content"
@@ -188,6 +188,7 @@
                         android:layout_marginStart="8dp"/>
                 </LinearLayout>
 
+                <!-- 좌/중/우 버튼 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -225,6 +226,7 @@
                         android:textSize="11sp"/>
                 </LinearLayout>
 
+                <!-- CATCH 버튼 -->
                 <Button
                     android:id="@+id/btnCatch"
                     android:layout_width="match_parent"
@@ -236,6 +238,7 @@
                     android:textColor="#0D1117"
                     android:enabled="false"/>
 
+                <!-- 리셋 -->
                 <Button
                     android:id="@+id/btnReset"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -245,6 +248,7 @@
                     android:textColor="#8B949E"
                     android:layout_marginTop="4dp"/>
 
+                <!-- 스윙 테스트 -->
                 <Button
                     android:id="@+id/btnSwingTest"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -254,6 +258,7 @@
                     android:textColor="#34D399"
                     android:layout_marginTop="4dp"/>
 
+                <!-- BLE 테스트 -->
                 <Button
                     android:id="@+id/btnBleTest"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -262,6 +267,77 @@
                     android:text="📡 BLE 센서 테스트"
                     android:textColor="#60A5FA"
                     android:layout_marginTop="4dp"/>
+
+                <!-- ✅ 팀원 코드: 게임패드 시작 버튼 -->
+                <Button
+                    android:id="@+id/btnStart"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:text="▶ 시작 (게임패드)"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:backgroundTint="#64B4FF"
+                    android:textColor="#0D1117"
+                    android:layout_marginTop="4dp"/>
+
+                <!-- ✅ 팀원 코드: 공 개수 조절 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="공 개수"
+                        android:textColor="#8B949E"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="6dp"/>
+
+                    <Button
+                        android:id="@+id/btnBallCountDown"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:text="−"
+                        android:textSize="16sp"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2D333B"
+                        android:padding="0dp"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"/>
+
+                    <TextView
+                        android:id="@+id/tvBallCount"
+                        android:layout_width="44dp"
+                        android:layout_height="wrap_content"
+                        android:text="5"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:gravity="center"/>
+
+                    <Button
+                        android:id="@+id/btnBallCountUp"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:text="+"
+                        android:textSize="16sp"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#2D333B"
+                        android:padding="0dp"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="개"
+                        android:textColor="#8B949E"
+                        android:textSize="12sp"
+                        android:layout_marginStart="4dp"/>
+                </LinearLayout>
 
             </LinearLayout>
         </ScrollView>

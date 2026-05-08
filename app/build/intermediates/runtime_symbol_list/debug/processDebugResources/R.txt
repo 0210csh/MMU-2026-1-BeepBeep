@@ -3879,6 +3879,8 @@ int id browser_actions_menu_item_text 0x7f090076
 int id browser_actions_menu_items 0x7f090077
 int id browser_actions_menu_view 0x7f090078
 int id btnBack 0x7f090079
+int id btnBallCountDown 0x7f090295
+int id btnBallCountUp 0x7f090296
 int id btnBleConnect 0x7f09007a
 int id btnBleTest 0x7f09007b
 int id btnCatch 0x7f09007c
@@ -4341,6 +4343,7 @@ int id transition_position 0x7f090244
 int id transition_scene_layoutid_cache 0x7f090245
 int id transition_transform 0x7f090246
 int id triangle 0x7f090247
+int id tvBallCount 0x7f090297
 int id tvBase1Label 0x7f090248
 int id tvBase3Label 0x7f090249
 int id tvBleStatus 0x7f09024a

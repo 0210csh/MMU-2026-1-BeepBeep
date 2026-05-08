@@ -75,6 +75,8 @@ id base3Diamond
 id base3Glow
 id bleControlLayout
 id btnBack
+id btnBallCountDown
+id btnBallCountUp
 id btnBleConnect
 id btnBleTest
 id btnCatch
@@ -142,6 +144,7 @@ id spinnerDifficulty
 id statsGrid
 id swingGraphView
 id switchFakeController
+id tvBallCount
 id tvBase1Label
 id tvBase3Label
 id tvBleStatus
