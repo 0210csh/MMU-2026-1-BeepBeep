@@ -87,8 +87,9 @@ class SpatialAudioEngine(private val context: Context) {
             val stereoOut  = ShortArray(FRAMES * 2)
             val silenceBuf = ShortArray(FRAMES * 2)
 
-            // ON 길이 고정 (100ms), OFF 길이는 거리에 따라 매 사이클 재계산
+            // 100ms ON / 200ms OFF (현실의 비프음 공과 동일한 고정 패턴)
             val chunksOn   = (SAMPLE_RATE * 0.10f / FRAMES).toInt().coerceAtLeast(2)
+            val chunksOff  = (SAMPLE_RATE * 0.20f / FRAMES).toInt().coerceAtLeast(1)
             val fadeChunks = 1
 
             var smoothedGain = 1f
@@ -104,15 +105,6 @@ class SpatialAudioEngine(private val context: Context) {
                 // ballZ > 0 = 수비수 뒤에 공이 있음 → 낮은 음(660Hz)으로 구분
                 val baseFreq = if (ballZ > 0f) BEEP_FREQ_BACK else BEEP_FREQ_FRONT
                 val doppFreq = baseFreq * (SPEED_OF_SOUND / (SPEED_OF_SOUND - vel.coerceIn(-150f, 80f)))
-
-                // ── 거리 기반 OFF 간격 (가까울수록 빠른 비프) ─────────
-                // 3m 이내(포구 범위): 매우 빠름 / 8m 이내: 빠름 / 15m 이내: 보통 / 이상: 느림
-                val chunksOff = when {
-                    horizDist <= 3f  -> (SAMPLE_RATE * 0.03f / FRAMES).toInt().coerceAtLeast(1)
-                    horizDist <= 8f  -> (SAMPLE_RATE * 0.08f / FRAMES).toInt().coerceAtLeast(1)
-                    horizDist <= 15f -> (SAMPLE_RATE * 0.15f / FRAMES).toInt().coerceAtLeast(1)
-                    else             -> (SAMPLE_RATE * 0.25f / FRAMES).toInt().coerceAtLeast(1)
-                }
 
                 // ── 비프 ON ───────────────────────────────────────────
                 var prevFade = 0f
