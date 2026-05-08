@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D1117">
+
+    <!-- 상단 점수/상태 -->
+    <LinearLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tvScore"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="성공: 0 / 0"
+            android:textColor="#50DC64"
+            android:textSize="15sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvPhase"
+            android:layout_width="0dp"
+            android:layout_weight="2"
+            android:layout_height="wrap_content"
+            android:text="시작 버튼을 누르세요"
+            android:textColor="#64B4FF"
+            android:textSize="15sp"
+            android:gravity="center"/>
+
+        <Spinner
+            android:id="@+id/spinnerDifficulty"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:entries="@array/difficulty_levels"/>
+    </LinearLayout>
+
+    <!-- 경기장 시각화 -->
+    <com.beepbeep.defense.FieldView
+        android:id="@+id/fieldView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/headerLayout"
+        app:layout_constraintBottom_toTopOf="@id/tvDebug"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- 디버그 텍스트 -->
+    <TextView
+        android:id="@+id/tvDebug"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="6dp"
+        android:text="준비 완료"
+        android:textColor="#8B949E"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:background="#161B22"
+        app:layout_constraintBottom_toTopOf="@id/controlLayout"/>
+
+    <!-- 하단 컨트롤 -->
+    <LinearLayout
+        android:id="@+id/controlLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center_vertical"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- ✅ 조이스틱으로 교체 -->
+        <com.beepbeep.defense.JoystickView
+            android:id="@+id/joystickView"
+            android:layout_width="150dp"
+            android:layout_height="150dp"/>
+
+        <!-- 버튼들 -->
+        <ScrollView
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:fillViewport="false">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="8dp"
+            android:gravity="center">
+
+            <!-- 훈련 설정 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="투구 횟수"
+                    android:textColor="#8B949E"
+                    android:textSize="11sp"
+                    android:layout_marginEnd="6dp"/>
+
+                <Button
+                    android:id="@+id/btnPitchMinus"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:text="−"
+                    android:textColor="#64B4FF"
+                    android:textSize="16sp"
+                    android:padding="0dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"/>
+
+                <TextView
+                    android:id="@+id/tvPitchCount"
+                    android:layout_width="44dp"
+                    android:layout_height="wrap_content"
+                    android:text="10"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:gravity="center"/>
+
+                <Button
+                    android:id="@+id/btnPitchPlus"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:text="+"
+                    android:textColor="#64B4FF"
+                    android:textSize="16sp"
+                    android:padding="0dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"/>
+
+                <Button
+                    android:id="@+id/btnStartTraining"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="36dp"
+                    android:text="▶ 훈련 시작"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:backgroundTint="#F59E0B"
+                    android:textColor="#0D1117"
+                    android:layout_marginStart="8dp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="6dp">
+
+                <Button
+                    android:id="@+id/btnLeft"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="← 3루"
+                    android:textColor="#64B4FF"
+                    android:textSize="11sp"
+                    android:layout_marginEnd="4dp"/>
+
+                <Button
+                    android:id="@+id/btnCenter"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="중앙"
+                    android:textColor="#64B4FF"
+                    android:textSize="11sp"
+                    android:layout_marginEnd="4dp"/>
+
+                <Button
+                    android:id="@+id/btnRight"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="1루 →"
+                    android:textColor="#64B4FF"
+                    android:textSize="11sp"/>
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnCatch"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="🤜 CATCH!"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:backgroundTint="#50DC64"
+                android:textColor="#0D1117"
+                android:enabled="false"/>
+
+            <Button
+                android:id="@+id/btnReset"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:text="리셋"
+                android:textColor="#8B949E"
+                android:layout_marginTop="4dp"/>
+
+            <Button
+                android:id="@+id/btnSwingTest"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:text="🏏 스윙 테스트"
+                android:textColor="#34D399"
+                android:layout_marginTop="4dp"/>
+
+            <Button
+                android:id="@+id/btnBleTest"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:text="📡 BLE 센서 테스트"
+                android:textColor="#60A5FA"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

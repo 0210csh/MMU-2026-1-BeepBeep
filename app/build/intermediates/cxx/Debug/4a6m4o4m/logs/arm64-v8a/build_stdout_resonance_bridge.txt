@@ -1,0 +1,2 @@
+ninja: Entering directory `C:\Users\ufidf\AndroidStudioProjects\MyApplication5\MMU-2026-1-BeepBeep\app\.cxx\Debug\4a6m4o4m\arm64-v8a'
+ninja: no work to do.
