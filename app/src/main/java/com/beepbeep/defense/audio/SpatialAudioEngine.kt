@@ -25,11 +25,10 @@ class SpatialAudioEngine(private val context: Context) {
     @Volatile private var prevBallZ = -5f
 
     companion object {
-        private const val SAMPLE_RATE     = 44100
-        private const val FRAMES          = 128
-        private const val SPEED_OF_SOUND  = 343f
-        private const val BEEP_FREQ_FRONT = 880f   // 공이 앞에 있을 때 (정상)
-        private const val BEEP_FREQ_BACK  = 660f   // 공이 뒤에 있을 때 (낮은 음)
+        private const val SAMPLE_RATE    = 44100
+        private const val FRAMES         = 128
+        private const val SPEED_OF_SOUND = 343f
+        private const val BEEP_FREQ      = 880f    // 고정 주파수 — 앞/뒤 구분은 HRTF에 위임
     }
 
     fun init() {
@@ -101,11 +100,8 @@ class SpatialAudioEngine(private val context: Context) {
                 val dt            = FRAMES.toFloat() / SAMPLE_RATE
                 val vel           = (prevHorizDist - horizDist) / dt.coerceAtLeast(0.001f)
 
-                // ── 앞/뒤 주파수 구분 (±4m 구간에서 선형 보간) ──────────
-                // ballZ < -4m: 880Hz(앞) / ballZ > +4m: 660Hz(뒤) / 사이: 부드럽게 전환
-                val t        = ((ballZ + 4f) / 8f).coerceIn(0f, 1f)
-                val baseFreq = BEEP_FREQ_FRONT * (1f - t) + BEEP_FREQ_BACK * t
-                val doppFreq = baseFreq * (SPEED_OF_SOUND / (SPEED_OF_SOUND - vel.coerceIn(-150f, 80f)))
+                // 도플러만 적용 — 앞/뒤 방향 구분은 Resonance Audio HRTF가 담당
+                val doppFreq = BEEP_FREQ * (SPEED_OF_SOUND / (SPEED_OF_SOUND - vel.coerceIn(-150f, 80f)))
 
                 // ── 비프 ON ───────────────────────────────────────────
                 var prevFade = 0f
