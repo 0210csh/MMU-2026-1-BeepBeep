@@ -16,17 +16,17 @@ class SpatialAudioEngine(private val context: Context) {
     private var beepJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    @Volatile var  ballX = 0f
-    @Volatile var  ballY = 0f
-    @Volatile var  ballZ = -5f
-    @Volatile var  currentHeadingDeg = 0f
+    @Volatile var ballX = 0f
+    @Volatile var ballY = 0f
+    @Volatile var ballZ = -5f
+    @Volatile var currentHeadingDeg = 0f
 
     @Volatile private var prevBallX = 0f
     @Volatile private var prevBallZ = -5f
 
     companion object {
         private const val SAMPLE_RATE    = 44100
-        private const val FRAMES         = 512
+        private const val FRAMES         = 128  // ✅ 팀원: 저지연
         private const val SPEED_OF_SOUND = 343f
         private const val BEEP_FREQ      = 880f
     }
@@ -51,28 +51,31 @@ class SpatialAudioEngine(private val context: Context) {
                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                 .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
                 .build())
-            .setBufferSizeInBytes(minBuf * 6)
+            .setBufferSizeInBytes(minBuf * 1)  // ✅ 팀원: 버퍼 축소
             .setTransferMode(AudioTrack.MODE_STREAM)
+            .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)  // ✅ 팀원: 저지연
             .build()
         audioTrack?.play()
     }
 
+    // ✅ 팀원: Resonance API 호출은 오디오 루프에서만 → 스레드 안전
     fun updateBallPosition(x: Float, y: Float, z: Float) {
         ballX = x; ballY = y; ballZ = z
-        ResonanceBridge.nativeSetSourcePosition(x, y, z)
     }
 
     fun updateHeading(deg: Float) {
         currentHeadingDeg = deg
-        val rad = Math.toRadians(deg.toDouble())
-        ResonanceBridge.nativeSetHeadRotation(
-            0f, sin(rad / 2).toFloat(), 0f, cos(rad / 2).toFloat())
     }
 
     private fun computePan(): Float {
-        val h    = Math.toRadians(currentHeadingDeg.toDouble())
-        val relX = (ballX * cos(h) - ballZ * sin(h)).toFloat()
-        return (relX / 5f).coerceIn(-1f, 1f)
+        val h     = Math.toRadians(currentHeadingDeg.toDouble())
+        // ✅ 팀원: safeZ — ballZ≈0이면 atan2가 튀는 걸 방지
+        val sz    = if (abs(ballZ) < 0.5f) (if (ballZ >= 0f) 0.5f else -0.5f) else ballZ
+        val relX  = (ballX * cos(h) - sz * sin(h)).toFloat()
+        val relZ  = (ballX * sin(h) + sz * cos(h)).toFloat()
+        // ✅ 팀원: atan2 기반 방위각 → sin 기반보다 측면 구분력 향상
+        val azimuth = atan2(relX, -relZ)
+        return (azimuth / (PI.toFloat() / 2f)).coerceIn(-1f, 1f)
     }
 
     fun startBeep() {
@@ -83,20 +86,22 @@ class SpatialAudioEngine(private val context: Context) {
             val stereoOut  = ShortArray(FRAMES * 2)
             val silenceBuf = ShortArray(FRAMES * 2)
 
-            val chunksOn  = (SAMPLE_RATE * 0.10f / FRAMES).toInt().coerceAtLeast(2)
-            val chunksOff = (SAMPLE_RATE * 0.20f / FRAMES).toInt().coerceAtLeast(1)
+            // 100ms ON / 200ms OFF
+            val chunksOn   = (SAMPLE_RATE * 0.10f / FRAMES).toInt().coerceAtLeast(2)
+            val chunksOff  = (SAMPLE_RATE * 0.20f / FRAMES).toInt().coerceAtLeast(1)
             val fadeChunks = 1
 
             var smoothedGain = 1f
 
             while (isActive) {
+                // ── 도플러 계산 ───────────────────────────────────────
                 val horizDist     = sqrt(ballX*ballX + ballZ*ballZ).coerceAtLeast(0.5f)
                 val prevHorizDist = sqrt(prevBallX*prevBallX + prevBallZ*prevBallZ).coerceAtLeast(0.5f)
                 val dt            = FRAMES.toFloat() / SAMPLE_RATE
                 val vel           = (prevHorizDist - horizDist) / dt.coerceAtLeast(0.001f)
                 val doppFreq      = BEEP_FREQ * (SPEED_OF_SOUND / (SPEED_OF_SOUND - vel.coerceIn(-150f, 80f)))
 
-                ResonanceBridge.nativeSetGain(smoothedGain)
+                // ── 비프 ON ───────────────────────────────────────────
                 var prevFade = 0f
                 var prevPan  = computePan()
                 repeat(chunksOn) { i ->
@@ -105,7 +110,10 @@ class SpatialAudioEngine(private val context: Context) {
                     val r = Math.toRadians(currentHeadingDeg.toDouble())
                     ResonanceBridge.nativeSetHeadRotation(
                         0f, sin(r / 2).toFloat(), 0f, cos(r / 2).toFloat())
-                    ResonanceBridge.nativeSetSourcePosition(ballX, ballY, ballZ)
+
+                    // ✅ 팀원: safeZ 적용
+                    val safeZ = if (abs(ballZ) < 0.5f) (if (ballZ >= 0f) 0.5f else -0.5f) else ballZ
+                    ResonanceBridge.nativeSetSourcePosition(ballX, ballY, safeZ)
 
                     val curHoriz = sqrt(ballX*ballX + ballZ*ballZ).coerceAtLeast(0.5f)
                     val ratio    = (4f / curHoriz).coerceAtMost(1f)
@@ -114,7 +122,7 @@ class SpatialAudioEngine(private val context: Context) {
 
                     val fadeIn  = if (i < fadeChunks) (i + 1).toFloat() / fadeChunks else 1f
                     val fadeOut = if (i >= chunksOn - fadeChunks)
-                                      (chunksOn - i - 1).toFloat() / fadeChunks else 1f
+                        (chunksOn - i - 1).toFloat() / fadeChunks else 1f
                     val curFade = 0.8f * fadeIn * fadeOut.coerceAtLeast(0f)
                     val curPan  = computePan()
 
@@ -125,6 +133,7 @@ class SpatialAudioEngine(private val context: Context) {
                     prevPan  = curPan
                 }
 
+                // ── 무음 OFF ─────────────────────────────────────────
                 ResonanceBridge.nativeSetGain(0f)
                 repeat(chunksOff) {
                     if (!isActive) return@repeat

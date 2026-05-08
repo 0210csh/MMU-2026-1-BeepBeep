@@ -35,15 +35,21 @@ class BallSimulator {
         isFlying = true
 
         val (xMin, xMax) = when (direction) {
-            HitDirection.LEFT   -> Pair(-35f, -8f)
-            HitDirection.CENTER -> Pair(-10f, 10f)
-            HitDirection.RIGHT  -> Pair(8f, 35f)
+            HitDirection.LEFT   -> Pair(-38f, -10f)
+            HitDirection.CENTER -> Pair(-12f, 12f)
+            HitDirection.RIGHT  -> Pair(10f, 38f)
         }
 
         targetX = Random.nextFloat() * (xMax - xMin) + xMin
         targetZ = Random.nextFloat() * 20f * difficulty + 20f
         maxHeight = 8f - difficulty * 4f
         totalTime = 5000f - difficulty * 2500f
+    }
+
+    // ✅ 팀원 코드 추가: 랜덤 방향 발사
+    fun launchRandom(difficulty: Float = 0.5f) {
+        val dir = HitDirection.entries.random()
+        launch(dir, difficulty)
     }
 
     fun update(deltaMs: Float): Boolean {

@@ -4,7 +4,11 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.hardware.input.InputManager
 import android.os.Bundle
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -14,16 +18,39 @@ import com.beepbeep.defense.game.GamePhase
 import com.beepbeep.defense.game.HitDirection
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var gameEngine: GameEngine
     private lateinit var sensorManager: SensorManager
+    private lateinit var inputManager: InputManager
+
+    private val inputDeviceListener = object : InputManager.InputDeviceListener {
+        override fun onInputDeviceAdded(deviceId: Int) {}
+        override fun onInputDeviceChanged(deviceId: Int) {}
+        override fun onInputDeviceRemoved(deviceId: Int) {
+            if (!isGamepadConnected()) {
+                gameEngine.speakControllerDisconnected()
+            }
+        }
+    }
 
     private val rotMatrix = FloatArray(9)
     private val orientation = FloatArray(3)
     private var baseAzimuth: Float? = null
+    private var controllerCheckedOnStart = false
+    private var smoothedHeading = 0f
+    private var prevAmplified   = 0f
+    private var headingVelocity = 0f
+    private var signedVelocity  = 0f
+
+    // ✅ 내 코드 유지: 훈련 시스템
+    private var pitchCount = 10
+    private var ballCount = 5
+
+    private val HEADING_SENSITIVITY = 2.0f
 
     private val orientationListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
@@ -37,7 +64,25 @@ class MainActivity : AppCompatActivity() {
             while (rel > 180f)  rel -= 360f
             while (rel < -180f) rel += 360f
 
-            gameEngine.updateHeadingDirectly(-rel)
+            // ✅ 팀원 코드: 감도 + 스무딩 적용
+            val amplified = (-rel * HEADING_SENSITIVITY).coerceIn(-180f, 180f)
+            val instantVel       = abs(amplified - prevAmplified)
+            val instantSignedVel = amplified - prevAmplified
+            headingVelocity = headingVelocity * 0.4f + instantVel       * 0.6f
+            signedVelocity  = signedVelocity  * 0.3f + instantSignedVel * 0.7f
+            prevAmplified   = amplified
+
+            val factor = when {
+                headingVelocity > 1.2f -> 1.00f
+                headingVelocity > 0.5f -> 0.80f
+                headingVelocity > 0.1f -> 0.30f
+                else                   -> 0.08f
+            }
+            smoothedHeading += (amplified - smoothedHeading) * factor
+
+            val predictionScale = (headingVelocity / 1.2f).coerceIn(0f, 1f)
+            val predicted = (smoothedHeading + signedVelocity * 12f * predictionScale).coerceIn(-180f, 180f)
+            gameEngine.updateHeadingDirectly(predicted)
         }
         override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
     }
@@ -60,13 +105,19 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        gameEngine = GameEngine(this)
+        gameEngine   = GameEngine(this)
+        inputManager = getSystemService(InputManager::class.java)
         gameEngine.init()
 
         sensorManager = getSystemService(SensorManager::class.java)
 
         gameEngine.onHeadingChanged = { deg ->
             runOnUiThread { binding.fieldView.updateHeading(deg) }
+        }
+
+        // ✅ 팀원 코드: 세션 완료 콜백
+        gameEngine.onSessionComplete = { result ->
+            runOnUiThread { showSessionResultDialog(result) }
         }
 
         setupButtons()
@@ -77,16 +128,22 @@ class MainActivity : AppCompatActivity() {
         val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
             ?: sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
             ?: return
-        sensorManager.registerListener(orientationListener, sensor, SensorManager.SENSOR_DELAY_GAME)
+        sensorManager.registerListener(orientationListener, sensor, SensorManager.SENSOR_DELAY_FASTEST)
     }
 
-    private var pitchCount = 10  // ✅ 내 코드 유지
+    private fun isGamepadConnected(): Boolean {
+        if (binding.switchFakeController.isChecked) return true
+        return InputDevice.getDeviceIds().any { id ->
+            val dev = InputDevice.getDevice(id) ?: return@any false
+            (dev.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+        }
+    }
 
     private fun setupButtons() {
+        // ✅ 내 코드 유지: 훈련 버튼들
         binding.btnLeft.setOnClickListener   { gameEngine.launchBall(HitDirection.LEFT,   getDifficulty()) }
         binding.btnCenter.setOnClickListener { gameEngine.launchBall(HitDirection.CENTER, getDifficulty()) }
         binding.btnRight.setOnClickListener  { gameEngine.launchBall(HitDirection.RIGHT,  getDifficulty()) }
-        binding.btnCatch.setOnClickListener  { gameEngine.onCatchPressed() }
         binding.btnReset.setOnClickListener  {
             gameEngine.resetToIdle()
             baseAzimuth = null
@@ -109,19 +166,41 @@ class MainActivity : AppCompatActivity() {
             baseAzimuth = null
         }
 
+        // ✅ 팀원 코드: 게임패드 시작 버튼
+        binding.btnStart.setOnClickListener {
+            if (!isGamepadConnected()) {
+                gameEngine.speakControllerWarning()
+                return@setOnClickListener
+            }
+            val state = gameEngine.state.value
+            if (state.phase == GamePhase.IDLE) {
+                baseAzimuth = null
+                if (gameEngine.isSessionComplete() || state.totalAttempts == 0) {
+                    gameEngine.startSession(getBallCount(), getDifficulty())
+                } else {
+                    gameEngine.launchRandom(getDifficulty())
+                }
+            }
+        }
+
+        binding.btnCatch.setOnClickListener { gameEngine.onCatchPressed() }
+
+        // ✅ 팀원 코드: 공 개수 조절
+        binding.btnBallCountDown.setOnClickListener { adjustBallCount(-1) }
+        binding.btnBallCountUp.setOnClickListener   { adjustBallCount(+1) }
+
         binding.joystickView.onMove = { dx, dz ->
             gameEngine.joystickDx = dx
             gameEngine.joystickDz = -dz
         }
 
+        // ✅ 내 코드 유지: 스윙/BLE 테스트 버튼
         binding.btnSwingTest.setOnClickListener {
             startActivity(android.content.Intent(
                 this,
                 com.beepbeep.defense.batting.SwingTestActivity::class.java
             ))
         }
-
-        // ✅ 팀원 코드 추가: BleTest 버튼
         binding.btnBleTest.setOnClickListener {
             startActivity(android.content.Intent(
                 this,
@@ -130,9 +209,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun adjustBallCount(delta: Int) {
+        ballCount = (ballCount + delta).coerceIn(1, 20)
+        binding.tvBallCount.text = ballCount.toString()
+    }
+
     private fun getDifficulty() = when (binding.spinnerDifficulty.selectedItemPosition) {
         0 -> 0.3f; 1 -> 0.5f; 2 -> 0.8f; else -> 0.5f
     }
+
+    private fun getBallCount(): Int = ballCount
 
     private fun observeGameState() {
         lifecycleScope.launch {
@@ -141,8 +227,11 @@ class MainActivity : AppCompatActivity() {
                     ball = state.ball, defX = state.defenderX,
                     defZ = state.defenderZ, isFlying = state.phase == GamePhase.LAUNCHED
                 )
+                // ✅ 내 코드: 훈련 모드 점수 표시
                 binding.tvScore.text = if (state.isTrainingMode || state.phase == GamePhase.TRAINING_COMPLETE) {
                     "투구 ${state.currentPitchNum}/${state.targetPitches} | 성공 ${state.score}"
+                } else if (state.targetBallCount > 0) {
+                    "성공: ${state.score} / ${state.totalAttempts} (목표 ${state.targetBallCount}회)"
                 } else {
                     "성공: ${state.score} / ${state.totalAttempts}"
                 }
@@ -150,13 +239,22 @@ class MainActivity : AppCompatActivity() {
                     GamePhase.IDLE              -> "🎯 시작 버튼을 누르세요"
                     GamePhase.LAUNCHED          -> "🔊 비프음 방향으로 이동!"
                     GamePhase.LANDED            -> "📍 착지! CATCH 누르세요!"
-                    GamePhase.CAUGHT            -> "✅ 포구 성공!"
+                    GamePhase.CAUGHT            -> {
+                        val t = state.catchTimeMs?.let { "%.1f".format(it / 1000.0) }
+                        if (t != null) "✅ 포구 성공!  ${t}s" else "✅ 포구 성공!"
+                    }
                     GamePhase.RESULT            -> "❌ 포구 실패"
                     GamePhase.TRAINING_COMPLETE -> "🏆 훈련 완료!"
                 }
+
+                val startEnabled = state.phase == GamePhase.IDLE
+                binding.btnStart.isEnabled = startEnabled
+                binding.btnStart.alpha = if (startEnabled) 1f else 0.5f
+
                 val catchEnabled = state.phase == GamePhase.LAUNCHED || state.phase == GamePhase.LANDED
                 binding.btnCatch.isEnabled = catchEnabled
                 binding.btnCatch.alpha = if (catchEnabled) 1f else 0.4f
+
                 val inTraining = state.isTrainingMode
                 binding.btnLeft.isEnabled = !inTraining
                 binding.btnCenter.isEnabled = !inTraining
@@ -164,6 +262,14 @@ class MainActivity : AppCompatActivity() {
                 binding.btnStartTraining.isEnabled = !inTraining
                 binding.btnPitchMinus.isEnabled = !inTraining
                 binding.btnPitchPlus.isEnabled = !inTraining
+
+                val ballCountEditable = state.totalAttempts == 0 && state.phase == GamePhase.IDLE
+                binding.btnBallCountDown.isEnabled = ballCountEditable
+                binding.btnBallCountUp.isEnabled   = ballCountEditable
+                binding.tvBallCount.alpha = if (ballCountEditable) 1f else 0.4f
+                binding.btnBallCountDown.alpha = if (ballCountEditable) 1f else 0.4f
+                binding.btnBallCountUp.alpha   = if (ballCountEditable) 1f else 0.4f
+
                 binding.tvDebug.text = state.debugInfo
             }
         }
@@ -172,11 +278,95 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         registerOrientationSensor()
+        inputManager.registerInputDeviceListener(inputDeviceListener, null)
+        if (!controllerCheckedOnStart) {
+            controllerCheckedOnStart = true
+            if (!isGamepadConnected()) {
+                gameEngine.speakControllerWarning()
+            }
+        }
     }
 
     override fun onPause() {
         super.onPause()
         sensorManager.unregisterListener(orientationListener)
+        inputManager.unregisterInputDeviceListener(inputDeviceListener)
+    }
+
+    // ✅ 팀원 코드: 게임패드 아날로그 스틱
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (event.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+            && event.action == MotionEvent.ACTION_MOVE) {
+            val lx = getCenteredAxis(event, MotionEvent.AXIS_X)
+            val ly = getCenteredAxis(event, MotionEvent.AXIS_Y)
+            val rx = getCenteredAxis(event, MotionEvent.AXIS_Z)
+            val ry = getCenteredAxis(event, MotionEvent.AXIS_RZ)
+            val dx = if (abs(lx) > 0.01f) lx else rx
+            val dy = if (abs(ly) > 0.01f) ly else ry
+            gameEngine.joystickDx = dx
+            gameEngine.joystickDz = dy
+            binding.joystickView.setExternalInput(dx, -dy)
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    private fun getCenteredAxis(event: MotionEvent, axis: Int): Float {
+        val device = event.device ?: return 0f
+        val range = device.getMotionRange(axis, event.source) ?: return 0f
+        val value = event.getAxisValue(axis)
+        return if (abs(value) > range.flat.coerceAtLeast(0.15f)) value else 0f
+    }
+
+    // ✅ 팀원 코드: 게임패드 버튼
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_A -> { gameEngine.onCatchPressed(); return true }
+                    KeyEvent.KEYCODE_BUTTON_B -> { gameEngine.fullReset(); baseAzimuth = null; return true }
+                    KeyEvent.KEYCODE_BUTTON_X -> {
+                        val st = gameEngine.state.value
+                        if (st.phase == GamePhase.IDLE) {
+                            if (gameEngine.isSessionComplete() || st.totalAttempts == 0)
+                                gameEngine.startSession(getBallCount(), getDifficulty())
+                            else
+                                gameEngine.launchRandom(getDifficulty())
+                        }
+                        return true
+                    }
+                    KeyEvent.KEYCODE_BUTTON_L1 -> { adjustBallCount(-1); return true }
+                    KeyEvent.KEYCODE_BUTTON_R1 -> { adjustBallCount(+1); return true }
+                }
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    // ✅ 팀원 코드: 세션 결과 다이얼로그
+    private fun showSessionResultDialog(result: com.beepbeep.defense.game.SessionResult) {
+        val rate = if (result.target > 0) result.success * 100 / result.target else 0
+        fun fmtTime(ms: Long?) = if (ms != null) "%.1f초".format(ms / 1000.0) else "-"
+
+        val msg = buildString {
+            appendLine("━━━━━━━━━━━━━━━━")
+            appendLine("🎯  총  시도     ${result.target}회")
+            appendLine("✅  포구 성공    ${result.success}회")
+            appendLine("❌  포구 실패    ${result.miss}회")
+            appendLine("📊  성공률       ${rate}%")
+            appendLine("━━━━━━━━━━━━━━━━")
+            appendLine("⏱  평균 시간    ${fmtTime(result.avgTimeMs)}")
+            appendLine("🏆  최단 시간    ${fmtTime(result.bestTimeMs)}")
+            appendLine("🐢  최장 시간    ${fmtTime(result.worstTimeMs)}")
+            append(    "━━━━━━━━━━━━━━━━")
+        }
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle("🏅 훈련 결과")
+            .setMessage(msg)
+            .setPositiveButton("확인", null)
+            .show()
     }
 
     override fun onDestroy() {

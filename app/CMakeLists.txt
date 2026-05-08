@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.22.1)
 project("beepdefense")
 
+# =============================================================================
+# 1. Resonance Audio JNI 브릿지 (메인 3D 오디오 엔진)
+# =============================================================================
 add_library(resonance_bridge SHARED
         src/main/cpp/resonance_bridge.cpp)
 

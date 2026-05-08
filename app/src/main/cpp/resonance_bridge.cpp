@@ -31,6 +31,10 @@ Java_com_beepbeep_defense_audio_ResonanceBridge_nativeInit(
         LOGE("CreateSoundObjectSource failed"); return JNI_FALSE;
     }
 
+<<<<<<< HEAD
+=======
+    // 거리 감쇠는 Kotlin 쪽 gain 으로 직접 제어
+>>>>>>> origin/hyeon_audio
     gApi->SetSourceDistanceModel(gSourceId, kNone, 0.0f, 500.0f);
 
     LOGI("Resonance Audio init OK  rate=%d  frames=%d", sampleRate, framesPerBuffer);
@@ -69,6 +73,10 @@ Java_com_beepbeep_defense_audio_ResonanceBridge_nativeProcessChunk(
 
     const int frames = gFramesPerBuffer;
 
+<<<<<<< HEAD
+=======
+    // 1) 모노 비프 생성 — gain 샘플 단위 보간
+>>>>>>> origin/hyeon_audio
     auto* mono = new int16[frames];
     for (int i = 0; i < frames; i++) {
         float t    = (frames > 1) ? (float)i / (float)(frames - 1) : 1.0f;
@@ -78,17 +86,36 @@ Java_com_beepbeep_defense_audio_ResonanceBridge_nativeProcessChunk(
         if (gBeepPhase >= 2.0 * M_PI) gBeepPhase -= 2.0 * M_PI;
     }
 
+<<<<<<< HEAD
     gApi->SetInterleavedBuffer(gSourceId, mono, 1, (size_t)frames);
     delete[] mono;
 
     jshort* out = env->GetShortArrayElements(outStereo, nullptr);
     bool ok = gApi->FillInterleavedOutputBuffer(2, (size_t)frames, (int16*)out);
 
+=======
+    // 2) Resonance Audio 에 모노 입력
+    gApi->SetInterleavedBuffer(gSourceId, mono, 1, (size_t)frames);
+    delete[] mono;
+
+    // 3) 공간화 스테레오 출력
+    jshort* out = env->GetShortArrayElements(outStereo, nullptr);
+    bool ok = gApi->FillInterleavedOutputBuffer(2, (size_t)frames, (int16*)out);
+
+    // 4) pan 샘플 단위 보간 적용 (등전력 패닝)
+    //    pan: -1=완전 왼쪽, 0=중앙, +1=완전 오른쪽
+    //    HRTF만으론 약한 880Hz 좌우 차이를 직접 L/R 진폭으로 강화
+>>>>>>> origin/hyeon_audio
     if (ok) {
         for (int i = 0; i < frames; i++) {
             float t   = (frames > 1) ? (float)i / (float)(frames - 1) : 1.0f;
             float pan = startPan + (endPan - startPan) * t;
+<<<<<<< HEAD
             float angle    = (pan + 1.0f) * 0.5f * (float)M_PI_2;
+=======
+            // 등전력 패닝: 중앙에서 양쪽 모두 -3dB (0.707)
+            float angle    = (pan + 1.0f) * 0.5f * (float)M_PI_2;  // 0 ~ π/2
+>>>>>>> origin/hyeon_audio
             float lScale   = cosf(angle);
             float rScale   = sinf(angle);
             int   li = i * 2,  ri = i * 2 + 1;

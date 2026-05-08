@@ -56,6 +56,13 @@ class JoystickView @JvmOverloads constructor(
         canvas.drawCircle(knobX, knobY, radius * 0.35f, knobPaint)
     }
 
+    // ✅ 팀원 코드 추가: 게임패드 아날로그 스틱 연동
+    fun setExternalInput(dx: Float, dz: Float) {
+        knobX = centerX + dx * radius
+        knobY = centerY - dz * radius
+        invalidate()
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
@@ -71,7 +78,7 @@ class JoystickView @JvmOverloads constructor(
                 }
                 onMove?.invoke(
                     (knobX - centerX) / radius,
-                    -((knobY - centerY) / radius)  // ✅ 부호 반전
+                    -((knobY - centerY) / radius)
                 )
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
