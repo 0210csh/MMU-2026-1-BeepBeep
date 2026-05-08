@@ -25,10 +25,11 @@ class SpatialAudioEngine(private val context: Context) {
     @Volatile private var prevBallZ = -5f
 
     companion object {
-        private const val SAMPLE_RATE    = 44100
-        private const val FRAMES         = 128
-        private const val SPEED_OF_SOUND = 343f
-        private const val BEEP_FREQ      = 880f
+        private const val SAMPLE_RATE     = 44100
+        private const val FRAMES          = 128
+        private const val SPEED_OF_SOUND  = 343f
+        private const val BEEP_FREQ_FRONT = 880f   // 공이 앞에 있을 때 (정상)
+        private const val BEEP_FREQ_BACK  = 660f   // 공이 뒤에 있을 때 (낮은 음)
     }
 
     fun init() {
@@ -86,20 +87,32 @@ class SpatialAudioEngine(private val context: Context) {
             val stereoOut  = ShortArray(FRAMES * 2)
             val silenceBuf = ShortArray(FRAMES * 2)
 
-            // 100ms ON / 200ms OFF
+            // ON 길이 고정 (100ms), OFF 길이는 거리에 따라 매 사이클 재계산
             val chunksOn   = (SAMPLE_RATE * 0.10f / FRAMES).toInt().coerceAtLeast(2)
-            val chunksOff  = (SAMPLE_RATE * 0.20f / FRAMES).toInt().coerceAtLeast(1)
             val fadeChunks = 1
 
             var smoothedGain = 1f
 
             while (isActive) {
-                // ── 도플러 계산 ───────────────────────────────────────
+                // ── 거리 및 도플러 계산 ───────────────────────────────
                 val horizDist     = sqrt(ballX*ballX + ballZ*ballZ).coerceAtLeast(0.5f)
                 val prevHorizDist = sqrt(prevBallX*prevBallX + prevBallZ*prevBallZ).coerceAtLeast(0.5f)
                 val dt            = FRAMES.toFloat() / SAMPLE_RATE
                 val vel           = (prevHorizDist - horizDist) / dt.coerceAtLeast(0.001f)
-                val doppFreq      = BEEP_FREQ * (SPEED_OF_SOUND / (SPEED_OF_SOUND - vel.coerceIn(-150f, 80f)))
+
+                // ── 앞/뒤 주파수 구분 ─────────────────────────────────
+                // ballZ > 0 = 수비수 뒤에 공이 있음 → 낮은 음(660Hz)으로 구분
+                val baseFreq = if (ballZ > 0f) BEEP_FREQ_BACK else BEEP_FREQ_FRONT
+                val doppFreq = baseFreq * (SPEED_OF_SOUND / (SPEED_OF_SOUND - vel.coerceIn(-150f, 80f)))
+
+                // ── 거리 기반 OFF 간격 (가까울수록 빠른 비프) ─────────
+                // 3m 이내(포구 범위): 매우 빠름 / 8m 이내: 빠름 / 15m 이내: 보통 / 이상: 느림
+                val chunksOff = when {
+                    horizDist <= 3f  -> (SAMPLE_RATE * 0.03f / FRAMES).toInt().coerceAtLeast(1)
+                    horizDist <= 8f  -> (SAMPLE_RATE * 0.08f / FRAMES).toInt().coerceAtLeast(1)
+                    horizDist <= 15f -> (SAMPLE_RATE * 0.15f / FRAMES).toInt().coerceAtLeast(1)
+                    else             -> (SAMPLE_RATE * 0.25f / FRAMES).toInt().coerceAtLeast(1)
+                }
 
                 // ── 비프 ON ───────────────────────────────────────────
                 var prevFade = 0f
