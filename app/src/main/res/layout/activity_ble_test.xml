@@ -24,27 +24,70 @@
             android:text="배트 센서 연결"
             android:layout_marginTop="10dp"/>
 
-        <Button
-            android:id="@+id/btn_send_data"
+        <TextView
+            android:id="@+id/tv_measure_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="보드로 측정 신호 보내기"
-            android:layout_marginTop="20dp" />
+            android:text="측정 상태: 대기 중"
+            android:layout_gravity="center"
+            android:textSize="15sp"
+            android:layout_marginTop="12dp"/>
 
+        <TextView
+            android:id="@+id/tv_measure_timer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:layout_gravity="center"
+            android:textSize="14sp"
+            android:textColor="#FF8800"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btn_start_measure"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="측정 시작 (5초)"
+                android:enabled="false"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btn_stop_measure"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="측정 중지"
+                android:enabled="false"
+                android:layout_marginStart="4dp"/>
+
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="#AAAAAA" android:layout_marginVertical="12dp"/>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="\n[ 손잡이 센서 ]"
+            android:text="[ 손잡이 센서 ]"
             android:textColor="#FF0000"
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <TextView android:id="@+id/tv_h_euler" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
-        <TextView android:id="@+id/tv_h_gyro" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
-        <TextView android:id="@+id/tv_h_acc" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_h_euler" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_h_gyro" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_h_acc" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
 
-        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#AAAAAA" android:layout_marginVertical="10dp"/>
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="#AAAAAA" android:layout_marginVertical="10dp"/>
 
         <TextView
             android:layout_width="match_parent"
@@ -54,9 +97,12 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <TextView android:id="@+id/tv_t_euler" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
-        <TextView android:id="@+id/tv_t_gyro" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
-        <TextView android:id="@+id/tv_t_acc" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_t_euler" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_t_gyro" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_t_acc" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
 
     </LinearLayout>
 </ScrollView>
