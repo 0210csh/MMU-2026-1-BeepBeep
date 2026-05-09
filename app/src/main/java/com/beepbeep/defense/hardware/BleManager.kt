@@ -34,7 +34,9 @@ class BleManager(private val context: Context) {
         val handleAccel: FloatArray,
         val tipEuler:    FloatArray,
         val tipGyro:     FloatArray,
-        val tipAccel:    FloatArray
+        val tipAccel:    FloatArray,
+        val btn1: Boolean = false,
+        val btn2: Boolean = false
     )
 
     interface Callback {
@@ -122,7 +124,10 @@ class BleManager(private val context: Context) {
             if (parts.size < 2) return
             val h = parseSide(parts[0]) ?: return
             val t = parseSide(parts[1]) ?: return
-            val packet = SensorPacket(h[0], h[1], h[2], t[0], t[1], t[2])
+            val btnParts = parts.getOrNull(2)?.split(",")
+            val btn1 = btnParts?.getOrNull(0)?.trim() == "1"
+            val btn2 = btnParts?.getOrNull(1)?.trim() == "1"
+            val packet = SensorPacket(h[0], h[1], h[2], t[0], t[1], t[2], btn1, btn2)
             mainHandler.post { callback?.onPacket(packet) }
         } catch (_: Exception) {}
     }

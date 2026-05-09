@@ -299,6 +299,12 @@ class SwingTestActivity : AppCompatActivity() {
     @Volatile private var bleConnected = false
     // BLE 연결 여부. true 이면 폰 센서 대신 BLE 센서 데이터 사용
 
+    @Volatile private var prevBtn1 = false
+    @Volatile private var prevBtn2 = false
+    private var bothBtnHandled = false
+    private var batBtn1Job: Job? = null
+    private var batBtn2Job: Job? = null
+
     // ─────────────────────────────────────────────────────
     // 스윙 감지 리스너 (선형가속도 + 자이로)
     // ─────────────────────────────────────────────────────
@@ -900,6 +906,7 @@ class SwingTestActivity : AppCompatActivity() {
             btnBleConnect.text = "배트 센서 해제"
             tvBleStatus.text = "● 연결됨"
             tvBleStatus.setTextColor(0xFF4ADE80.toInt())
+            speakResult("배트가 연결되었습니다")
         }
 
         override fun onDisconnected() {
@@ -908,6 +915,7 @@ class SwingTestActivity : AppCompatActivity() {
             btnBleConnect.text = "배트 센서 연결"
             tvBleStatus.text = "● 미연결"
             tvBleStatus.setTextColor(0xFFF87171.toInt())
+            speakResult("배트 연결이 끊겼습니다")
         }
 
         override fun onPacket(packet: BleManager.SensorPacket) {
@@ -936,6 +944,79 @@ class SwingTestActivity : AppCompatActivity() {
                 2 -> readyToPitchHistory.add(Pair(phaseElapsed, currentPitchDeg))
                 3 -> pitchToEndHistory.add(Pair(phaseElapsed, currentPitchDeg))
             }
+
+            handleBatButton(packet.btn1, packet.btn2)
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 배트 버튼 처리
+    // ─────────────────────────────────────────────────────
+    private fun handleBatButton(btn1: Boolean, btn2: Boolean) {
+        val wasBtn1 = prevBtn1
+        val wasBtn2 = prevBtn2
+
+        if (btn1 && !wasBtn1) {
+            if (btn2) {
+                batBtn1Job?.cancel(); batBtn2Job?.cancel()
+                if (!bothBtnHandled) { bothBtnHandled = true; onBothBatButtons() }
+            } else {
+                batBtn1Job?.cancel()
+                batBtn1Job = scope.launch {
+                    delay(80L)
+                    withContext(Dispatchers.Main) { if (!prevBtn2) onBatButton1() }
+                }
+            }
+        }
+
+        if (btn2 && !wasBtn2) {
+            if (btn1) {
+                batBtn1Job?.cancel(); batBtn2Job?.cancel()
+                if (!bothBtnHandled) { bothBtnHandled = true; onBothBatButtons() }
+            } else {
+                batBtn2Job?.cancel()
+                batBtn2Job = scope.launch {
+                    delay(80L)
+                    withContext(Dispatchers.Main) { if (!prevBtn1) onBatButton2() }
+                }
+            }
+        }
+
+        if (!btn1 && !btn2) bothBtnHandled = false
+
+        prevBtn1 = btn1
+        prevBtn2 = btn2
+    }
+
+    private fun onBatButton1() {
+        when {
+            isWaitingForInput -> onBasePressed(1)
+            !isTraining -> {
+                if (targetPitches < 30) {
+                    targetPitches++
+                    tvSwingPitchCount.text = targetPitches.toString()
+                    speakResult("${targetPitches}회")
+                }
+            }
+        }
+    }
+
+    private fun onBatButton2() {
+        when {
+            isWaitingForInput -> onBasePressed(3)
+            !isTraining -> {
+                if (targetPitches > 1) {
+                    targetPitches--
+                    tvSwingPitchCount.text = targetPitches.toString()
+                    speakResult("${targetPitches}회")
+                }
+            }
+        }
+    }
+
+    private fun onBothBatButtons() {
+        if (!isTraining && btnStart.isEnabled) {
+            btnStart.performClick()
         }
     }
 
