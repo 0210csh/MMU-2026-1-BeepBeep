@@ -957,27 +957,31 @@ class SwingTestActivity : AppCompatActivity() {
         val wasBtn2 = prevBtn2
 
         if (btn1 && !wasBtn1) {
-            if (btn2) {
+            if (batBtn2Job?.isActive == true) {
                 batBtn1Job?.cancel(); batBtn2Job?.cancel()
                 if (!bothBtnHandled) { bothBtnHandled = true; onBothBatButtons() }
             } else {
                 batBtn1Job?.cancel()
                 batBtn1Job = scope.launch {
-                    delay(80L)
-                    withContext(Dispatchers.Main) { if (!prevBtn2) onBatButton1() }
+                    delay(200L)
+                    withContext(Dispatchers.Main) {
+                        if (batBtn2Job?.isActive != true) onBatButton1()
+                    }
                 }
             }
         }
 
         if (btn2 && !wasBtn2) {
-            if (btn1) {
+            if (batBtn1Job?.isActive == true) {
                 batBtn1Job?.cancel(); batBtn2Job?.cancel()
                 if (!bothBtnHandled) { bothBtnHandled = true; onBothBatButtons() }
             } else {
                 batBtn2Job?.cancel()
                 batBtn2Job = scope.launch {
-                    delay(80L)
-                    withContext(Dispatchers.Main) { if (!prevBtn1) onBatButton2() }
+                    delay(200L)
+                    withContext(Dispatchers.Main) {
+                        if (batBtn1Job?.isActive != true) onBatButton2()
+                    }
                 }
             }
         }

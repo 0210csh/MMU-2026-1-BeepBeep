@@ -15,7 +15,8 @@
             android:layout_height="wrap_content"
             android:text="상태: 연결 안 됨"
             android:layout_gravity="center"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            android:paddingTop="16pt"/>
 
         <Button
             android:id="@+id/btn_connect"
@@ -24,14 +25,13 @@
             android:text="배트 센서 연결"
             android:layout_marginTop="10dp"/>
 
-        <TextView
-            android:id="@+id/tv_measure_status"
+        <Button
+            android:id="@+id/btn_send_data"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="측정 상태: 대기 중"
-            android:layout_gravity="center"
-            android:textSize="15sp"
-            android:layout_marginTop="12dp"/>
+            android:text="측정 시작 (5초)"
+            android:enabled="false"
+            android:layout_marginTop="20dp" />
 
         <TextView
             android:id="@+id/tv_measure_timer"
@@ -40,54 +40,22 @@
             android:text=""
             android:layout_gravity="center"
             android:textSize="14sp"
-            android:textColor="#FF8800"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btn_start_measure"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="측정 시작 (5초)"
-                android:enabled="false"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btn_stop_measure"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="측정 중지"
-                android:enabled="false"
-                android:layout_marginStart="4dp"/>
-
-        </LinearLayout>
-
-        <View android:layout_width="match_parent" android:layout_height="1dp"
-            android:background="#AAAAAA" android:layout_marginVertical="12dp"/>
+            android:textColor="#FF8800"
+            android:layout_marginTop="4dp"/>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="[ 손잡이 센서 ]"
+            android:text="\n[ 손잡이 센서 ]"
             android:textColor="#FF0000"
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <TextView android:id="@+id/tv_h_euler" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
-        <TextView android:id="@+id/tv_h_gyro" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
-        <TextView android:id="@+id/tv_h_acc" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_h_euler" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_h_gyro" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_h_acc" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
 
-        <View android:layout_width="match_parent" android:layout_height="1dp"
-            android:background="#AAAAAA" android:layout_marginVertical="10dp"/>
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#AAAAAA" android:layout_marginVertical="10dp"/>
 
         <TextView
             android:layout_width="match_parent"
@@ -97,12 +65,30 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <TextView android:id="@+id/tv_t_euler" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
-        <TextView android:id="@+id/tv_t_gyro" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
-        <TextView android:id="@+id/tv_t_acc" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_t_euler" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_t_gyro" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
+        <TextView android:id="@+id/tv_t_acc" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/tv_battery_level"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:text="배터리 대기 중..."
+            android:textColor="#000000"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_button_event"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:text="최근 버튼 입력: 없음"
+            android:textColor="#FF5722"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 </ScrollView>
