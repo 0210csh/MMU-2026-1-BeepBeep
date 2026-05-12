@@ -304,6 +304,7 @@ class SwingTestActivity : AppCompatActivity() {
     private var bothBtnHandled = false
     private var batBtn1Job: Job? = null
     private var batBtn2Job: Job? = null
+    private var keepAliveJob: Job? = null
 
     // ─────────────────────────────────────────────────────
     // 스윙 감지 리스너 (선형가속도 + 자이로)
@@ -574,6 +575,8 @@ class SwingTestActivity : AppCompatActivity() {
         currentPitchRecord["선택베이스"]   = null
         currentPitchRecord["베이스정답여부"] = null
         currentPitchRecord["주루반응속도"] = null
+
+        stopKeepAlive()  // 훈련 시작 — keepalive 중단 (게임 루프가 sendControl 직접 관리)
 
         gameJob = scope.launch {
         // 게임 전체 흐름을 단일 코루틴으로 관리 (자기 취소 버그 방지)
@@ -904,10 +907,12 @@ class SwingTestActivity : AppCompatActivity() {
             tvBleStatus.text = "● 연결됨"
             tvBleStatus.setTextColor(0xFF4ADE80.toInt())
             speakResult("배트가 연결되었습니다")
+            startKeepAlive()
         }
 
         override fun onDisconnected() {
             bleConnected = false
+            stopKeepAlive()
             btnBleConnect.isEnabled = true
             btnBleConnect.text = "배트 센서 연결"
             tvBleStatus.text = "● 미연결"
@@ -1070,6 +1075,23 @@ class SwingTestActivity : AppCompatActivity() {
         bleManager.startScan()
     }
 
+    // 훈련 대기 중 아두이노 측정 모드 유지 (버튼 패킷 수신용)
+    // 아두이노 MEASURE_DURATION=5000ms 이므로 4초마다 sendControl(1) 재전송
+    private fun startKeepAlive() {
+        keepAliveJob?.cancel()
+        keepAliveJob = scope.launch {
+            while (isActive && !isTraining) {
+                bleManager.sendControl(1)
+                delay(4000)
+            }
+        }
+    }
+
+    private fun stopKeepAlive() {
+        keepAliveJob?.cancel()
+        keepAliveJob = null
+    }
+
     private fun scheduleNextOrFinish(success: Boolean) {
         if (success) successCount++
         if (currentPitchNum >= targetPitches) {
@@ -1088,6 +1110,7 @@ class SwingTestActivity : AppCompatActivity() {
 
     private fun finishTraining() {
         isTraining = false
+        if (bleConnected) startKeepAlive()  // 훈련 완료 — 버튼 신호 수신 재개
         tvStatus.text = "훈련 완료!"
         tvStatus.setTextColor(0xFF4ADE80.toInt())
         tvResult.text = ""
@@ -1462,8 +1485,9 @@ class SwingTestActivity : AppCompatActivity() {
         tts?.stop(); tts?.shutdown()
         audioTrack?.stop(); audioTrack?.release()
         spatialAudio.release()
+        stopKeepAlive()
         bleManager.disconnect()
         scope.cancel()
-        // 스코프 취소 → gameJob, audioJob, beepBallJob 등 모든 하위 코루틴 일괄 종료
+        // 스코프 취소 → gameJob, audioJob, keepAliveJob 등 모든 하위 코루틴 일괄 종료
     }
 }
