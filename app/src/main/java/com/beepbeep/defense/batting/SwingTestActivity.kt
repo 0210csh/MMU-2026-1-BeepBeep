@@ -709,8 +709,6 @@ class SwingTestActivity : AppCompatActivity() {
                         tvStatus.setTextColor(0xFFFBBF24.toInt())
                         tvResult.text = "실제 각도: %.0f°  /  필요 각도: %.0f°"
                             .format(swingPitchDeg, BATTING_ANGLE_DEG)
-                        liveBallParabolaView.visibility = View.GONE
-                        // 공 발산 단계에서는 라이브 포물선 그래프 숨김
                     }
 
                     val divMs      = 1500L
@@ -771,7 +769,6 @@ class SwingTestActivity : AppCompatActivity() {
                         } else {
                             "스트라이크 — 힘 부족\n필요 각도: %.0f°".format(BATTING_ANGLE_DEG)
                         }
-                        liveBallParabolaView.visibility = View.GONE
                         if (!isTraining) {
                             showSwingGraph()
                             btnStart.isEnabled = true
@@ -795,7 +792,6 @@ class SwingTestActivity : AppCompatActivity() {
                         tvStatus.text = "스트라이크!"
                         tvStatus.setTextColor(0xFFF87171.toInt())
                         tvResult.text = "스윙하지 않았습니다\n필요 각도: %.0f°".format(BATTING_ANGLE_DEG)
-                        liveBallParabolaView.visibility = View.GONE
                         if (!isTraining) {
                             showSwingGraph()
                             btnStart.isEnabled = true
@@ -1248,10 +1244,6 @@ class SwingTestActivity : AppCompatActivity() {
         hitTimeRelMs     = -1L
         pitchRecordStart = System.currentTimeMillis()
         isRecording      = true
-        val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
-        liveBallParabolaView.setData(PITCHER_DIST, PITCHER_HEIGHT, contactH, BATTER_HEIGHT, BALL_ARC, false)
-        liveBallParabolaView.setLiveMode()
-        liveBallParabolaView.visibility = View.VISIBLE
         swingGraphView.setLiveSource(pitchHistory, BATTING_ANGLE_DEG)
         swingGraphView.visibility = View.VISIBLE
     }
