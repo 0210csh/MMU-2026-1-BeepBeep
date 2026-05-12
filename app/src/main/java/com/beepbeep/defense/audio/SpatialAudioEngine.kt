@@ -94,9 +94,8 @@ class SpatialAudioEngine(private val context: Context) {
             val chunksOff  = (SAMPLE_RATE * 0.20f / FRAMES).toInt().coerceAtLeast(1)
             val fadeChunks = 2   // ~5.8ms 페이드 (클릭 노이즈 방지)
 
-            // Resonance Audio HRTF 버퍼 워밍업 (~15ms 무음)
-            // 재초기화 직후 컨볼루션 버퍼 잔류값으로 인한 시작 노이즈 방지
-            val warmupChunks = 5
+            // 시작 50ms 무음 출력 — 초기 노이즈 구간 스킵
+            val warmupChunks = (SAMPLE_RATE * 0.05f / FRAMES).toInt()
             ResonanceBridge.nativeSetGain(0f)
             repeat(warmupChunks) {
                 if (!isActive) return@repeat
