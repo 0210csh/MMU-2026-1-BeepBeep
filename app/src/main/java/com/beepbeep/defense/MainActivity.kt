@@ -357,7 +357,8 @@ class MainActivity : AppCompatActivity() {
         android.app.AlertDialog.Builder(this)
             .setTitle("🏅 훈련 결과")
             .setMessage(msg)
-            .setPositiveButton("확인", null)
+            .setPositiveButton("확인") { _, _ -> gameEngine.stopSpeak() }
+            .setOnCancelListener { gameEngine.stopSpeak() }
             .show()
     }
 

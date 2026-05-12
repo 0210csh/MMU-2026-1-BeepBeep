@@ -333,6 +333,10 @@ class GameEngine(private val context: Context) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
+    fun stopSpeak() {
+        tts?.stop()
+    }
+
     // 숫자 → 한자어 읽기 (1~99) — 시간(초) 읽기용
     private fun toKorean(n: Int): String {
         if (n == 0) return "영"
