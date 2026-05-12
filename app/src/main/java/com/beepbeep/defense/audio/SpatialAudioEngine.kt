@@ -50,8 +50,8 @@ class SpatialAudioEngine(private val context: Context) {
             SAMPLE_RATE, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT)
         audioTrack = AudioTrack.Builder()
             .setAudioAttributes(AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build())
             .setAudioFormat(AudioFormat.Builder()
                 .setSampleRate(SAMPLE_RATE)
@@ -118,6 +118,11 @@ class SpatialAudioEngine(private val context: Context) {
             var smoothedGain = 1f
 
             while (isActive) {
+                // BLE 연결 등 외부 요인으로 AudioTrack이 멈춘 경우 자동 재개
+                if (audioTrack?.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                    audioTrack?.play()
+                }
+
                 // ── 거리 및 도플러 계산 ───────────────────────────────
                 val horizDist     = sqrt(ballX*ballX + ballZ*ballZ).coerceAtLeast(0.5f)
                 val prevHorizDist = sqrt(prevBallX*prevBallX + prevBallZ*prevBallZ).coerceAtLeast(0.5f)
