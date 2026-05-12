@@ -32,37 +32,10 @@ public final class ActivityMainBinding implements ViewBinding {
   public final Button btnBallCountUp;
 
   @NonNull
-  public final Button btnBleTest;
-
-  @NonNull
   public final Button btnCatch;
 
   @NonNull
-  public final Button btnCenter;
-
-  @NonNull
-  public final Button btnLeft;
-
-  @NonNull
-  public final Button btnPitchMinus;
-
-  @NonNull
-  public final Button btnPitchPlus;
-
-  @NonNull
-  public final Button btnReset;
-
-  @NonNull
-  public final Button btnRight;
-
-  @NonNull
   public final Button btnStart;
-
-  @NonNull
-  public final Button btnStartTraining;
-
-  @NonNull
-  public final Button btnSwingTest;
 
   @NonNull
   public final LinearLayout controlLayout;
@@ -95,36 +68,20 @@ public final class ActivityMainBinding implements ViewBinding {
   public final TextView tvPhase;
 
   @NonNull
-  public final TextView tvPitchCount;
-
-  @NonNull
   public final TextView tvScore;
 
   private ActivityMainBinding(@NonNull ConstraintLayout rootView, @NonNull Button btnBallCountDown,
-      @NonNull Button btnBallCountUp, @NonNull Button btnBleTest, @NonNull Button btnCatch,
-      @NonNull Button btnCenter, @NonNull Button btnLeft, @NonNull Button btnPitchMinus,
-      @NonNull Button btnPitchPlus, @NonNull Button btnReset, @NonNull Button btnRight,
-      @NonNull Button btnStart, @NonNull Button btnStartTraining, @NonNull Button btnSwingTest,
+      @NonNull Button btnBallCountUp, @NonNull Button btnCatch, @NonNull Button btnStart,
       @NonNull LinearLayout controlLayout, @NonNull LinearLayout debugControllerLayout,
       @NonNull FieldView fieldView, @NonNull LinearLayout headerLayout,
       @NonNull JoystickView joystickView, @NonNull Spinner spinnerDifficulty,
       @NonNull Switch switchFakeController, @NonNull TextView tvBallCount,
-      @NonNull TextView tvDebug, @NonNull TextView tvPhase, @NonNull TextView tvPitchCount,
-      @NonNull TextView tvScore) {
+      @NonNull TextView tvDebug, @NonNull TextView tvPhase, @NonNull TextView tvScore) {
     this.rootView = rootView;
     this.btnBallCountDown = btnBallCountDown;
     this.btnBallCountUp = btnBallCountUp;
-    this.btnBleTest = btnBleTest;
     this.btnCatch = btnCatch;
-    this.btnCenter = btnCenter;
-    this.btnLeft = btnLeft;
-    this.btnPitchMinus = btnPitchMinus;
-    this.btnPitchPlus = btnPitchPlus;
-    this.btnReset = btnReset;
-    this.btnRight = btnRight;
     this.btnStart = btnStart;
-    this.btnStartTraining = btnStartTraining;
-    this.btnSwingTest = btnSwingTest;
     this.controlLayout = controlLayout;
     this.debugControllerLayout = debugControllerLayout;
     this.fieldView = fieldView;
@@ -135,7 +92,6 @@ public final class ActivityMainBinding implements ViewBinding {
     this.tvBallCount = tvBallCount;
     this.tvDebug = tvDebug;
     this.tvPhase = tvPhase;
-    this.tvPitchCount = tvPitchCount;
     this.tvScore = tvScore;
   }
 
@@ -178,69 +134,15 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.btnBleTest;
-      Button btnBleTest = ViewBindings.findChildViewById(rootView, id);
-      if (btnBleTest == null) {
-        break missingId;
-      }
-
       id = R.id.btnCatch;
       Button btnCatch = ViewBindings.findChildViewById(rootView, id);
       if (btnCatch == null) {
         break missingId;
       }
 
-      id = R.id.btnCenter;
-      Button btnCenter = ViewBindings.findChildViewById(rootView, id);
-      if (btnCenter == null) {
-        break missingId;
-      }
-
-      id = R.id.btnLeft;
-      Button btnLeft = ViewBindings.findChildViewById(rootView, id);
-      if (btnLeft == null) {
-        break missingId;
-      }
-
-      id = R.id.btnPitchMinus;
-      Button btnPitchMinus = ViewBindings.findChildViewById(rootView, id);
-      if (btnPitchMinus == null) {
-        break missingId;
-      }
-
-      id = R.id.btnPitchPlus;
-      Button btnPitchPlus = ViewBindings.findChildViewById(rootView, id);
-      if (btnPitchPlus == null) {
-        break missingId;
-      }
-
-      id = R.id.btnReset;
-      Button btnReset = ViewBindings.findChildViewById(rootView, id);
-      if (btnReset == null) {
-        break missingId;
-      }
-
-      id = R.id.btnRight;
-      Button btnRight = ViewBindings.findChildViewById(rootView, id);
-      if (btnRight == null) {
-        break missingId;
-      }
-
       id = R.id.btnStart;
       Button btnStart = ViewBindings.findChildViewById(rootView, id);
       if (btnStart == null) {
-        break missingId;
-      }
-
-      id = R.id.btnStartTraining;
-      Button btnStartTraining = ViewBindings.findChildViewById(rootView, id);
-      if (btnStartTraining == null) {
-        break missingId;
-      }
-
-      id = R.id.btnSwingTest;
-      Button btnSwingTest = ViewBindings.findChildViewById(rootView, id);
-      if (btnSwingTest == null) {
         break missingId;
       }
 
@@ -304,12 +206,6 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.tvPitchCount;
-      TextView tvPitchCount = ViewBindings.findChildViewById(rootView, id);
-      if (tvPitchCount == null) {
-        break missingId;
-      }
-
       id = R.id.tvScore;
       TextView tvScore = ViewBindings.findChildViewById(rootView, id);
       if (tvScore == null) {
@@ -317,10 +213,9 @@ public final class ActivityMainBinding implements ViewBinding {
       }
 
       return new ActivityMainBinding((ConstraintLayout) rootView, btnBallCountDown, btnBallCountUp,
-          btnBleTest, btnCatch, btnCenter, btnLeft, btnPitchMinus, btnPitchPlus, btnReset, btnRight,
-          btnStart, btnStartTraining, btnSwingTest, controlLayout, debugControllerLayout, fieldView,
-          headerLayout, joystickView, spinnerDifficulty, switchFakeController, tvBallCount, tvDebug,
-          tvPhase, tvPitchCount, tvScore);
+          btnCatch, btnStart, controlLayout, debugControllerLayout, fieldView, headerLayout,
+          joystickView, spinnerDifficulty, switchFakeController, tvBallCount, tvDebug, tvPhase,
+          tvScore);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

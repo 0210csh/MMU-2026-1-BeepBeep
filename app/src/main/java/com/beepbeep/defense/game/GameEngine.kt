@@ -20,18 +20,15 @@ data class GameState(
     val lastResult: CatchResult? = null,
     val catchTimeMs: Long? = null,
     val debugInfo: String = "시작 버튼을 누르세요",
-    // ✅ 내 코드: 훈련 모드
     val isTrainingMode: Boolean = false,
     val targetPitches: Int = 0,
     val currentPitchNum: Int = 0,
-    // ✅ 팀원 코드: 세션 시스템
     val targetBallCount: Int = 0
 )
 
 enum class GamePhase { IDLE, LAUNCHED, LANDED, CAUGHT, RESULT, TRAINING_COMPLETE }
 enum class CatchResult { SUCCESS, MISS }
 
-// ✅ 팀원 코드: 세션 결과
 data class SessionResult(
     val target    : Int,
     val success   : Int,
@@ -77,13 +74,11 @@ class GameEngine(private val context: Context) {
     private var attempts = 0
     private var launchTime = 0L
 
-    // ✅ 내 코드: 훈련 모드
     private var isTrainingMode = false
     private var targetPitches = 0
     private var currentPitchNum = 0
     private var trainingDifficulty = 0.5f
 
-    // ✅ 팀원 코드: 세션 시스템
     private var targetBallCount = 5
     private var sessionActive   = false
     private val catchTimes      = mutableListOf<Long>()
@@ -168,7 +163,6 @@ class GameEngine(private val context: Context) {
         }
     }
 
-    // ✅ 팀원 코드: 세션 시작
     fun startSession(ballCount: Int, difficulty: Float = 0.5f) {
         if (_state.value.phase != GamePhase.IDLE) return
         targetBallCount = ballCount
@@ -181,7 +175,6 @@ class GameEngine(private val context: Context) {
         launchRandom(difficulty)
     }
 
-    // ✅ 팀원 코드: 게임패드 컨트롤러 안내
     fun speakControllerWarning() {
         speak("컨트롤러가 연결되지 않았습니다. 블루투스 컨트롤러를 연결한 후 시작 버튼을 눌러주세요")
     }
@@ -192,7 +185,6 @@ class GameEngine(private val context: Context) {
 
     fun isSessionComplete() = sessionActive && attempts >= targetBallCount
 
-    // ✅ 팀원 코드: 전체 리셋
     fun fullReset() {
         audioEngine.stopBeep()
         sessionActive = false
@@ -213,7 +205,6 @@ class GameEngine(private val context: Context) {
         speak("공이 날아옵니다! 비프음 방향으로 이동하세요")
     }
 
-    // ✅ 팀원 코드: 랜덤 발사
     fun launchRandom(difficulty: Float = 0.5f) {
         val phase = _state.value.phase
         if (phase != GamePhase.IDLE && phase != GamePhase.RESULT) return
@@ -225,7 +216,6 @@ class GameEngine(private val context: Context) {
             phase = GamePhase.LAUNCHED, lastResult = null, catchTimeMs = null)
     }
 
-    // ✅ 내 코드: 훈련 시작
     fun startTraining(totalPitches: Int, difficulty: Float) {
         val phase = _state.value.phase
         if (phase != GamePhase.IDLE && phase != GamePhase.TRAINING_COMPLETE) return
@@ -299,7 +289,6 @@ class GameEngine(private val context: Context) {
         gameScope.launch {
             delay(2000)
             audioEngine.init()
-            // ✅ 내 코드: 훈련 모드
             if (isTrainingMode) {
                 if (currentPitchNum < targetPitches) {
                     launchNextBall()
@@ -311,7 +300,6 @@ class GameEngine(private val context: Context) {
                     )
                     speak("훈련 완료! ${targetPitches}번 중 ${score}번 성공했습니다")
                 }
-                // ✅ 팀원 코드: 세션 시스템
             } else if (isSessionComplete()) {
                 speakSessionSummary()
                 sessionActive = false
@@ -342,10 +330,13 @@ class GameEngine(private val context: Context) {
         }
     }
 
+    // ✅ Firebase + SharedPreferences 업로드
     private fun speakSessionSummary() {
-        val avgMs   = if (catchTimes.isNotEmpty()) catchTimes.average().toLong() else null
-        val bestMs  = catchTimes.minOrNull()
-        val worstMs = catchTimes.maxOrNull()
+        val avgMs      = if (catchTimes.isNotEmpty()) catchTimes.average().toLong() else null
+        val bestMs     = catchTimes.minOrNull()
+        val worstMs    = catchTimes.maxOrNull()
+        val successRate = if (targetBallCount > 0) score.toFloat() / targetBallCount * 100f else 0f
+
         val msg = buildString {
             append("훈련 종료. ")
             append("총 ${targetBallCount}회 중 ${score}회 포구 성공. ")
@@ -353,6 +344,13 @@ class GameEngine(private val context: Context) {
             else append("포구 성공이 없었습니다.")
         }
         speak(msg)
+
+        // ✅ Firebase 업로드
+        uploadToFirebase(avgMs, bestMs, worstMs, successRate)
+
+        // ✅ SharedPreferences 저장
+        saveToSharedPreferences(avgMs, successRate)
+
         onSessionComplete?.invoke(
             SessionResult(
                 target      = targetBallCount,
@@ -363,6 +361,64 @@ class GameEngine(private val context: Context) {
                 worstTimeMs = worstMs
             )
         )
+    }
+
+    private fun uploadToFirebase(
+        avgMs: Long?, bestMs: Long?, worstMs: Long?, successRate: Float
+    ) {
+        val userId = context.getSharedPreferences("UserInfo", Context.MODE_PRIVATE)
+            .getString("id", "anonymous") ?: "anonymous"
+
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val sessionId = System.currentTimeMillis().toString()
+
+        val sessionData = hashMapOf(
+            "생성일시"       to com.google.firebase.Timestamp.now(),
+            "목표횟수"       to targetBallCount,
+            "성공횟수"       to score,
+            "실패횟수"       to (targetBallCount - score),
+            "성공률"         to successRate,
+            "평균반응속도"   to (avgMs ?: -1L),
+            "최단반응속도"   to (bestMs ?: -1L),
+            "최장반응속도"   to (worstMs ?: -1L),
+            "개인반응속도목록" to catchTimes
+        )
+
+        db.collection("users")
+            .document(userId)
+            .collection("수비훈련기록")
+            .document(sessionId)
+            .set(sessionData)
+            .addOnSuccessListener {
+                android.util.Log.d("Firebase", "수비 훈련 기록 업로드 성공")
+            }
+            .addOnFailureListener { e ->
+                android.util.Log.e("Firebase", "업로드 실패: ${e.message}")
+            }
+    }
+
+    private fun saveToSharedPreferences(avgMs: Long?, successRate: Float) {
+        val userId = context.getSharedPreferences("UserInfo", Context.MODE_PRIVATE)
+            .getString("id", "anonymous") ?: "anonymous"
+
+        val pref   = context.getSharedPreferences("DefenseStats_$userId", Context.MODE_PRIVATE)
+        val editor = pref.edit()
+
+        // 최근 10판
+        val count = pref.getInt("count", 0)
+        editor.putInt("count", minOf(count + 1, 10))
+        editor.putFloat("sum_success_rate", pref.getFloat("sum_success_rate", 0f) + successRate)
+        editor.putFloat("sum_reaction",     pref.getFloat("sum_reaction",     0f) + (avgMs?.toFloat() ?: 0f))
+        editor.putFloat("sum_success",      pref.getFloat("sum_success",      0f) + score.toFloat())
+
+        // 전체 판수
+        val totalCount = pref.getInt("total_count", 0) + 1
+        editor.putInt("total_count", totalCount)
+        editor.putFloat("total_sum_success_rate", pref.getFloat("total_sum_success_rate", 0f) + successRate)
+        editor.putFloat("total_sum_reaction",     pref.getFloat("total_sum_reaction",     0f) + (avgMs?.toFloat() ?: 0f))
+        editor.putFloat("total_sum_success",      pref.getFloat("total_sum_success",      0f) + score.toFloat())
+
+        editor.apply()
     }
 
     private fun buildDebug(): String {
@@ -378,7 +434,6 @@ class GameEngine(private val context: Context) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
-    // ✅ 팀원 코드: 밀리초 → 한국어 시간
     private fun toKorean(n: Int): String {
         if (n == 0) return "영"
         val u = arrayOf("", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구")

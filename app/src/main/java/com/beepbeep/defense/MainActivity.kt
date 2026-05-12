@@ -15,7 +15,6 @@ import androidx.lifecycle.lifecycleScope
 import com.beepbeep.defense.databinding.ActivityMainBinding
 import com.beepbeep.defense.game.GameEngine
 import com.beepbeep.defense.game.GamePhase
-import com.beepbeep.defense.game.HitDirection
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -45,11 +44,7 @@ class MainActivity : AppCompatActivity() {
     private var prevAmplified   = 0f
     private var headingVelocity = 0f
     private var signedVelocity  = 0f
-
-    // ✅ 내 코드 유지: 훈련 시스템
-    private var pitchCount = 10
     private var ballCount = 5
-
     private val HEADING_SENSITIVITY = 2.0f
 
     private val orientationListener = object : SensorEventListener {
@@ -64,7 +59,6 @@ class MainActivity : AppCompatActivity() {
             while (rel > 180f)  rel -= 360f
             while (rel < -180f) rel += 360f
 
-            // ✅ 팀원 코드: 감도 + 스무딩 적용
             val amplified = (-rel * HEADING_SENSITIVITY).coerceIn(-180f, 180f)
             val instantVel       = abs(amplified - prevAmplified)
             val instantSignedVel = amplified - prevAmplified
@@ -115,7 +109,6 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread { binding.fieldView.updateHeading(deg) }
         }
 
-        // ✅ 팀원 코드: 세션 완료 콜백
         gameEngine.onSessionComplete = { result ->
             runOnUiThread { showSessionResultDialog(result) }
         }
@@ -140,33 +133,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
-        // ✅ 내 코드 유지: 훈련 버튼들
-        binding.btnLeft.setOnClickListener   { gameEngine.launchBall(HitDirection.LEFT,   getDifficulty()) }
-        binding.btnCenter.setOnClickListener { gameEngine.launchBall(HitDirection.CENTER, getDifficulty()) }
-        binding.btnRight.setOnClickListener  { gameEngine.launchBall(HitDirection.RIGHT,  getDifficulty()) }
-        binding.btnReset.setOnClickListener  {
-            gameEngine.resetToIdle()
-            baseAzimuth = null
-        }
-
-        binding.btnPitchMinus.setOnClickListener {
-            if (pitchCount > 1) {
-                pitchCount--
-                binding.tvPitchCount.text = pitchCount.toString()
-            }
-        }
-        binding.btnPitchPlus.setOnClickListener {
-            if (pitchCount < 30) {
-                pitchCount++
-                binding.tvPitchCount.text = pitchCount.toString()
-            }
-        }
-        binding.btnStartTraining.setOnClickListener {
-            gameEngine.startTraining(pitchCount, getDifficulty())
-            baseAzimuth = null
-        }
-
-        // ✅ 팀원 코드: 게임패드 시작 버튼
         binding.btnStart.setOnClickListener {
             if (!isGamepadConnected()) {
                 gameEngine.speakControllerWarning()
@@ -184,28 +150,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnCatch.setOnClickListener { gameEngine.onCatchPressed() }
-
-        // ✅ 팀원 코드: 공 개수 조절
         binding.btnBallCountDown.setOnClickListener { adjustBallCount(-1) }
         binding.btnBallCountUp.setOnClickListener   { adjustBallCount(+1) }
 
         binding.joystickView.onMove = { dx, dz ->
             gameEngine.joystickDx = dx
             gameEngine.joystickDz = -dz
-        }
-
-        // ✅ 내 코드 유지: 스윙/BLE 테스트 버튼
-        binding.btnSwingTest.setOnClickListener {
-            startActivity(android.content.Intent(
-                this,
-                com.beepbeep.defense.batting.SwingTestActivity::class.java
-            ))
-        }
-        binding.btnBleTest.setOnClickListener {
-            startActivity(android.content.Intent(
-                this,
-                com.beepbeep.defense.hardware.BleTestActivity::class.java
-            ))
         }
     }
 
@@ -227,19 +177,16 @@ class MainActivity : AppCompatActivity() {
                     ball = state.ball, defX = state.defenderX,
                     defZ = state.defenderZ, isFlying = state.phase == GamePhase.LAUNCHED
                 )
-                // ✅ 내 코드: 훈련 모드 점수 표시
-                binding.tvScore.text = if (state.isTrainingMode || state.phase == GamePhase.TRAINING_COMPLETE) {
-                    "투구 ${state.currentPitchNum}/${state.targetPitches} | 성공 ${state.score}"
-                } else if (state.targetBallCount > 0) {
+                binding.tvScore.text = if (state.targetBallCount > 0)
                     "성공: ${state.score} / ${state.totalAttempts} (목표 ${state.targetBallCount}회)"
-                } else {
+                else
                     "성공: ${state.score} / ${state.totalAttempts}"
-                }
+
                 binding.tvPhase.text = when (state.phase) {
-                    GamePhase.IDLE              -> "🎯 시작 버튼을 누르세요"
-                    GamePhase.LAUNCHED          -> "🔊 비프음 방향으로 이동!"
-                    GamePhase.LANDED            -> "📍 착지! CATCH 누르세요!"
-                    GamePhase.CAUGHT            -> {
+                    GamePhase.IDLE     -> "🎯 시작 버튼을 누르세요"
+                    GamePhase.LAUNCHED -> "🔊 비프음 방향으로 이동!"
+                    GamePhase.LANDED   -> "📍 착지! CATCH 누르세요!"
+                    GamePhase.CAUGHT   -> {
                         val t = state.catchTimeMs?.let { "%.1f".format(it / 1000.0) }
                         if (t != null) "✅ 포구 성공!  ${t}s" else "✅ 포구 성공!"
                     }
@@ -254,14 +201,6 @@ class MainActivity : AppCompatActivity() {
                 val catchEnabled = state.phase == GamePhase.LAUNCHED || state.phase == GamePhase.LANDED
                 binding.btnCatch.isEnabled = catchEnabled
                 binding.btnCatch.alpha = if (catchEnabled) 1f else 0.4f
-
-                val inTraining = state.isTrainingMode
-                binding.btnLeft.isEnabled = !inTraining
-                binding.btnCenter.isEnabled = !inTraining
-                binding.btnRight.isEnabled = !inTraining
-                binding.btnStartTraining.isEnabled = !inTraining
-                binding.btnPitchMinus.isEnabled = !inTraining
-                binding.btnPitchPlus.isEnabled = !inTraining
 
                 val ballCountEditable = state.totalAttempts == 0 && state.phase == GamePhase.IDLE
                 binding.btnBallCountDown.isEnabled = ballCountEditable
@@ -293,7 +232,6 @@ class MainActivity : AppCompatActivity() {
         inputManager.unregisterInputDeviceListener(inputDeviceListener)
     }
 
-    // ✅ 팀원 코드: 게임패드 아날로그 스틱
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         if (event.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
             && event.action == MotionEvent.ACTION_MOVE) {
@@ -318,7 +256,6 @@ class MainActivity : AppCompatActivity() {
         return if (abs(value) > range.flat.coerceAtLeast(0.15f)) value else 0f
     }
 
-    // ✅ 팀원 코드: 게임패드 버튼
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD) {
             if (event.action == KeyEvent.ACTION_DOWN) {
@@ -344,7 +281,6 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
-    // ✅ 팀원 코드: 세션 결과 다이얼로그
     private fun showSessionResultDialog(result: com.beepbeep.defense.game.SessionResult) {
         val rate = if (result.target > 0) result.success * 100 / result.target else 0
         fun fmtTime(ms: Long?) = if (ms != null) "%.1f초".format(ms / 1000.0) else "-"
