@@ -31,6 +31,8 @@ class MainActivity : AppCompatActivity() {
             val dev = InputDevice.getDevice(deviceId) ?: return
             if ((dev.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD) {
                 runOnUiThread { binding.switchFakeController.isChecked = true }
+                // 블루투스 연결 시 오디오 라우팅이 바뀔 수 있어 AudioTrack 재초기화
+                gameEngine.reinitAudio()
             }
         }
         override fun onInputDeviceChanged(deviceId: Int) {}
