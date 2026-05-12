@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private var signedVelocity  = 0f   // 스무딩된 부호 있는 각속도 (예측 보상용)
 
     private var ballCount = 5   // 공 개수 (1~20)
+    private var prevHatX  = 0f  // D패드 HAT 축 엣지 감지용
 
     // 감도 배율 (1.0 = 원래, 높을수록 작은 회전에도 크게 반응)
     private val HEADING_SENSITIVITY = 2.0f
@@ -251,7 +252,7 @@ class MainActivity : AppCompatActivity() {
         inputManager.unregisterInputDeviceListener(inputDeviceListener)
     }
 
-    // ─── 블루투스 게임패드 아날로그 스틱 ────────────────────────────────
+    // ─── 블루투스 게임패드 아날로그 스틱 + D패드 ────────────────────────
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         if (event.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
             && event.action == MotionEvent.ACTION_MOVE) {
@@ -270,6 +271,13 @@ class MainActivity : AppCompatActivity() {
 
             // JoystickView 시각 동기화
             binding.joystickView.setExternalInput(dx, -dy)
+
+            // D패드를 HAT 축으로 전달하는 게임패드 처리 (엣지 감지)
+            val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+            if (prevHatX == 0f && hatX == -1f) adjustDifficulty(-1)
+            if (prevHatX == 0f && hatX ==  1f) adjustDifficulty(+1)
+            prevHatX = hatX
+
             return true
         }
         return super.dispatchGenericMotionEvent(event)
