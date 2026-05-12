@@ -488,11 +488,12 @@ class SwingTestActivity : AppCompatActivity() {
             if (bleConnected) {
                 bleManager.disconnect()
             } else {
-                btnBleConnect.isEnabled = false
-                btnBleConnect.text = "연결 중..."
-                requestBlePermissions()
+                startBleScan()
             }
         }
+
+        // 앱 시작 시 자동 스캔
+        if (hasBlePermissions()) startBleScan() else requestBlePermissions()
 
         btnSwingPitchMinus.setOnClickListener {
             if (targetPitches > 1) {
@@ -912,6 +913,13 @@ class SwingTestActivity : AppCompatActivity() {
             tvBleStatus.text = "● 미연결"
             tvBleStatus.setTextColor(0xFFF87171.toInt())
             speakResult("배트 연결이 끊겼습니다")
+            // 2초 후 자동 재스캔
+            scope.launch {
+                delay(2000)
+                withContext(Dispatchers.Main) {
+                    if (!bleConnected && hasBlePermissions()) startBleScan()
+                }
+            }
         }
 
         override fun onPacket(packet: BleManager.SensorPacket) {
@@ -1052,8 +1060,14 @@ class SwingTestActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQ_BLE_PERM && grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-            bleManager.startScan()
+            startBleScan()
         }
+    }
+
+    private fun startBleScan() {
+        btnBleConnect.isEnabled = false
+        btnBleConnect.text = "연결 중..."
+        bleManager.startScan()
     }
 
     private fun scheduleNextOrFinish(success: Boolean) {
