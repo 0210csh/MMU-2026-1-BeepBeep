@@ -55,6 +55,8 @@ class SpatialAudioEngine(private val context: Context) {
             .setTransferMode(AudioTrack.MODE_STREAM)
             .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
             .build()
+        // play() 전 버퍼를 무음으로 채워 시작 시 하드웨어 팝(웅) 방지
+        audioTrack?.write(ShortArray(minBuf), 0, minBuf)
         audioTrack?.play()
     }
 
