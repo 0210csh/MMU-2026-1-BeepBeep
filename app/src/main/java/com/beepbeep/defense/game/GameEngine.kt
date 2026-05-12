@@ -202,10 +202,11 @@ class GameEngine(private val context: Context) {
 
     fun isSessionComplete() = sessionActive && attempts >= targetBallCount
 
-    // 블루투스 연결로 인한 오디오 라우팅 변경 시 AudioTrack 재초기화
+    // 블루투스 연결로 인한 오디오 라우팅 변경 시 AudioTrack만 재초기화
+    // (nativeInit 중복 호출 시 Resonance Audio 핸들 꼬임 방지)
     fun reinitAudio() {
         val wasBeeping = _state.value.phase == GamePhase.LAUNCHED || _state.value.phase == GamePhase.LANDED
-        audioEngine.init()
+        audioEngine.reinitAudioTrack()
         if (wasBeeping) audioEngine.startBeep()
     }
 

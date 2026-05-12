@@ -37,6 +37,13 @@ class SpatialAudioEngine(private val context: Context) {
         initAudioTrack()
     }
 
+    // Resonance Audio는 건드리지 않고 AudioTrack만 재초기화
+    // → 블루투스 연결로 오디오 라우팅이 바뀔 때 사용
+    fun reinitAudioTrack() {
+        stopBeep()
+        initAudioTrack()
+    }
+
     private fun initAudioTrack() {
         audioTrack?.stop(); audioTrack?.release()
         val minBuf = AudioTrack.getMinBufferSize(
