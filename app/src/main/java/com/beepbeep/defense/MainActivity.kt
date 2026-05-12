@@ -178,6 +178,12 @@ class MainActivity : AppCompatActivity() {
         gameEngine.speakBallCount(ballCount)
     }
 
+    private fun adjustDifficulty(delta: Int) {
+        val next = (binding.spinnerDifficulty.selectedItemPosition + delta).coerceIn(0, 2)
+        binding.spinnerDifficulty.setSelection(next)
+        gameEngine.speakDifficulty(next)
+    }
+
     private fun getDifficulty() = when (binding.spinnerDifficulty.selectedItemPosition) {
         0 -> 0.3f; 1 -> 0.5f; 2 -> 0.8f; else -> 0.5f
     }
@@ -301,6 +307,10 @@ class MainActivity : AppCompatActivity() {
                     KeyEvent.KEYCODE_BUTTON_L1 -> { adjustBallCount(-1); return true }
                     // R1 → 공 개수 증가
                     KeyEvent.KEYCODE_BUTTON_R1 -> { adjustBallCount(+1); return true }
+                    // D패드 좌 → 난이도 감소
+                    KeyEvent.KEYCODE_DPAD_LEFT  -> { adjustDifficulty(-1); return true }
+                    // D패드 우 → 난이도 증가
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> { adjustDifficulty(+1); return true }
                 }
             }
             return true  // 게임패드 키는 시스템에 넘기지 않음

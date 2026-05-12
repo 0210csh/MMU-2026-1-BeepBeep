@@ -189,6 +189,17 @@ class GameEngine(private val context: Context) {
         speak("현재 훈련 횟수는 ${toNativeKorean(count)}개")
     }
 
+    // 난이도 변경 시 현재 난이도 안내
+    fun speakDifficulty(position: Int) {
+        val name = when (position) {
+            0 -> "쉬움"
+            1 -> "보통"
+            2 -> "어려움"
+            else -> "보통"
+        }
+        speak("현재 난이도는 $name")
+    }
+
     fun isSessionComplete() = sessionActive && attempts >= targetBallCount
 
     // ── 전체 리셋 (B버튼 / 수동 리셋) ────────────────────────────────────
