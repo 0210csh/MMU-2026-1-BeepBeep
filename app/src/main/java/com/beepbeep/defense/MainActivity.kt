@@ -182,6 +182,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun adjustBallCount(delta: Int) {
+        if (!binding.btnBallCountDown.isEnabled) return  // 훈련 중 변경 불가
         ballCount = (ballCount + delta).coerceIn(1, 20)
         binding.tvBallCount.text = ballCount.toString()
         gameEngine.speakBallCount(ballCount)
