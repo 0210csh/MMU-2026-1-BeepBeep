@@ -80,6 +80,9 @@ class SpatialAudioEngine(private val context: Context) {
 
     fun startBeep() {
         beepJob?.cancel()
+        // 위치 이력 초기화 → 첫 프레임 도플러 속도 점프 방지
+        prevBallX = ballX
+        prevBallZ = ballZ
         beepJob = scope.launch {
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
 
@@ -90,6 +93,19 @@ class SpatialAudioEngine(private val context: Context) {
             val chunksOn   = (SAMPLE_RATE * 0.10f / FRAMES).toInt().coerceAtLeast(2)
             val chunksOff  = (SAMPLE_RATE * 0.20f / FRAMES).toInt().coerceAtLeast(1)
             val fadeChunks = 2   // ~5.8ms 페이드 (클릭 노이즈 방지)
+
+            // Resonance Audio HRTF 버퍼 워밍업 (~15ms 무음)
+            // 재초기화 직후 컨볼루션 버퍼 잔류값으로 인한 시작 노이즈 방지
+            val warmupChunks = 5
+            ResonanceBridge.nativeSetGain(0f)
+            repeat(warmupChunks) {
+                if (!isActive) return@repeat
+                val r = Math.toRadians(currentHeadingDeg.toDouble())
+                ResonanceBridge.nativeSetHeadRotation(
+                    0f, sin(r / 2).toFloat(), 0f, cos(r / 2).toFloat())
+                ResonanceBridge.nativeProcessChunk(BEEP_FREQ, 0f, 0f, 0f, 0f, stereoOut)
+                audioTrack?.write(stereoOut, 0, stereoOut.size)
+            }
 
             var smoothedGain = 1f
 
