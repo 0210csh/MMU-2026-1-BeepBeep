@@ -301,10 +301,9 @@ class SwingTestActivity : AppCompatActivity() {
 
     @Volatile private var prevBtn1 = false
     @Volatile private var prevBtn2 = false
-    private var bothBtnHandled = false
-    private var batBtn1Job: Job? = null
-    private var batBtn2Job: Job? = null
-    private var keepAliveJob: Job? = null
+    private var lastBtn1TapMs = 0L
+    private var btn1TapJob: Job? = null
+    private val DOUBLE_TAP_MS = 500L
 
     // ─────────────────────────────────────────────────────
     // 스윙 감지 리스너 (선형가속도 + 자이로)
@@ -575,8 +574,6 @@ class SwingTestActivity : AppCompatActivity() {
         currentPitchRecord["선택베이스"]   = null
         currentPitchRecord["베이스정답여부"] = null
         currentPitchRecord["주루반응속도"] = null
-
-        stopKeepAlive()  // 훈련 시작 — keepalive 중단 (게임 루프가 sendControl 직접 관리)
 
         gameJob = scope.launch {
         // 게임 전체 흐름을 단일 코루틴으로 관리 (자기 취소 버그 방지)
@@ -907,12 +904,11 @@ class SwingTestActivity : AppCompatActivity() {
             tvBleStatus.text = "● 연결됨"
             tvBleStatus.setTextColor(0xFF4ADE80.toInt())
             speakResult("배트가 연결되었습니다")
-            startKeepAlive()
+            bleManager.sendControl(1)  // 아두이노 측정 모드 ON → 버튼 패킷 수신 활성화
         }
 
         override fun onDisconnected() {
             bleConnected = false
-            stopKeepAlive()
             btnBleConnect.isEnabled = true
             btnBleConnect.text = "배트 센서 연결"
             tvBleStatus.text = "● 미연결"
@@ -961,76 +957,65 @@ class SwingTestActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────
     // 배트 버튼 처리
     // ─────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────
+    // 배트 버튼 처리
+    //   오른쪽(btn1) 단일탭 → 투구수 +1 / 1루 선택
+    //   오른쪽(btn1) 더블탭(500ms 내) → 훈련 시작
+    //   왼쪽(btn2)   단일탭 → 투구수 -1 / 3루 선택
+    // ─────────────────────────────────────────────────────
     private fun handleBatButton(btn1: Boolean, btn2: Boolean) {
         val wasBtn1 = prevBtn1
         val wasBtn2 = prevBtn2
 
+        // 오른쪽 버튼 상승 에지
         if (btn1 && !wasBtn1) {
-            if (batBtn2Job?.isActive == true) {
-                batBtn1Job?.cancel(); batBtn2Job?.cancel()
-                if (!bothBtnHandled) { bothBtnHandled = true; onBothBatButtons() }
-            } else {
-                batBtn1Job?.cancel()
-                batBtn1Job = scope.launch {
-                    delay(200L)
-                    withContext(Dispatchers.Main) {
-                        if (batBtn2Job?.isActive != true) onBatButton1()
+            when {
+                isWaitingForInput -> {
+                    btn1TapJob?.cancel()
+                    onBasePressed(1)
+                }
+                !isTraining -> {
+                    val now = System.currentTimeMillis()
+                    if (btn1TapJob?.isActive == true && now - lastBtn1TapMs <= DOUBLE_TAP_MS) {
+                        // 더블탭 → 훈련 시작
+                        btn1TapJob?.cancel()
+                        lastBtn1TapMs = 0L
+                        if (btnStart.isEnabled) btnStart.performClick()
+                    } else {
+                        // 첫 탭 → 500ms 후 단일탭 확정
+                        lastBtn1TapMs = now
+                        btn1TapJob?.cancel()
+                        btn1TapJob = scope.launch {
+                            delay(DOUBLE_TAP_MS)
+                            withContext(Dispatchers.Main) {
+                                if (targetPitches < 30) {
+                                    targetPitches++
+                                    tvSwingPitchCount.text = targetPitches.toString()
+                                    speakResult("${targetPitches}회")
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
+        // 왼쪽 버튼 상승 에지
         if (btn2 && !wasBtn2) {
-            if (batBtn1Job?.isActive == true) {
-                batBtn1Job?.cancel(); batBtn2Job?.cancel()
-                if (!bothBtnHandled) { bothBtnHandled = true; onBothBatButtons() }
-            } else {
-                batBtn2Job?.cancel()
-                batBtn2Job = scope.launch {
-                    delay(200L)
-                    withContext(Dispatchers.Main) {
-                        if (batBtn1Job?.isActive != true) onBatButton2()
+            when {
+                isWaitingForInput -> onBasePressed(3)
+                !isTraining -> {
+                    if (targetPitches > 1) {
+                        targetPitches--
+                        tvSwingPitchCount.text = targetPitches.toString()
+                        speakResult("${targetPitches}회")
                     }
                 }
             }
         }
-
-        if (!btn1 && !btn2) bothBtnHandled = false
 
         prevBtn1 = btn1
         prevBtn2 = btn2
-    }
-
-    private fun onBatButton1() {
-        when {
-            isWaitingForInput -> onBasePressed(1)
-            !isTraining -> {
-                if (targetPitches < 30) {
-                    targetPitches++
-                    tvSwingPitchCount.text = targetPitches.toString()
-                    speakResult("${targetPitches}회")
-                }
-            }
-        }
-    }
-
-    private fun onBatButton2() {
-        when {
-            isWaitingForInput -> onBasePressed(3)
-            !isTraining -> {
-                if (targetPitches > 1) {
-                    targetPitches--
-                    tvSwingPitchCount.text = targetPitches.toString()
-                    speakResult("${targetPitches}회")
-                }
-            }
-        }
-    }
-
-    private fun onBothBatButtons() {
-        if (!isTraining && btnStart.isEnabled) {
-            btnStart.performClick()
-        }
     }
 
     // ─────────────────────────────────────────────────────
@@ -1075,23 +1060,6 @@ class SwingTestActivity : AppCompatActivity() {
         bleManager.startScan()
     }
 
-    // 훈련 대기 중 아두이노 측정 모드 유지 (버튼 패킷 수신용)
-    // 아두이노 MEASURE_DURATION=5000ms 이므로 4초마다 sendControl(1) 재전송
-    private fun startKeepAlive() {
-        keepAliveJob?.cancel()
-        keepAliveJob = scope.launch {
-            while (isActive && !isTraining) {
-                bleManager.sendControl(1)
-                delay(4000)
-            }
-        }
-    }
-
-    private fun stopKeepAlive() {
-        keepAliveJob?.cancel()
-        keepAliveJob = null
-    }
-
     private fun scheduleNextOrFinish(success: Boolean) {
         if (success) successCount++
         if (currentPitchNum >= targetPitches) {
@@ -1110,7 +1078,6 @@ class SwingTestActivity : AppCompatActivity() {
 
     private fun finishTraining() {
         isTraining = false
-        if (bleConnected) startKeepAlive()  // 훈련 완료 — 버튼 신호 수신 재개
         tvStatus.text = "훈련 완료!"
         tvStatus.setTextColor(0xFF4ADE80.toInt())
         tvResult.text = ""
@@ -1485,9 +1452,8 @@ class SwingTestActivity : AppCompatActivity() {
         tts?.stop(); tts?.shutdown()
         audioTrack?.stop(); audioTrack?.release()
         spatialAudio.release()
-        stopKeepAlive()
         bleManager.disconnect()
         scope.cancel()
-        // 스코프 취소 → gameJob, audioJob, keepAliveJob 등 모든 하위 코루틴 일괄 종료
+        // 스코프 취소 → gameJob, audioJob, btn1TapJob 등 모든 하위 코루틴 일괄 종료
     }
 }
