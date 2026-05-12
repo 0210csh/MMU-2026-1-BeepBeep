@@ -122,6 +122,15 @@ class BleManager(private val context: Context) {
         try {
             val trimmed = raw.trim()
 
+            if (trimmed == "훈련 시작") {
+                val empty = floatArrayOf(0f, 0f, 0f)
+                val press   = SensorPacket(empty, empty, empty, empty, empty, empty, true, true)
+                val release = SensorPacket(empty, empty, empty, empty, empty, empty, false, false)
+                mainHandler.post { callback?.onPacket(press) }
+                mainHandler.postDelayed({ callback?.onPacket(release) }, 100)
+                return
+            }
+
             val btn1 = trimmed == "오른쪽 버튼"
             val btn2 = trimmed == "왼쪽 버튼"
             if (btn1 || btn2) {

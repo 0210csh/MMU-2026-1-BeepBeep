@@ -603,7 +603,8 @@ class SwingTestActivity : AppCompatActivity() {
 
             val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
 
-            spatialAudio.updateBallPosition(0f, 0f, -PITCHER_DIST)
+            val APPROACH_START_X = -1.5f
+            spatialAudio.updateBallPosition(APPROACH_START_X, 0f, -PITCHER_DIST)
             spatialAudio.updateHeading(currentHeadingDeg)
             spatialAudio.startBeep()
 
@@ -613,7 +614,8 @@ class SwingTestActivity : AppCompatActivity() {
 
                 ballApproachProgress = progress
                 val zPos = -(PITCHER_DIST * (1f - progress)).coerceAtLeast(0.5f)
-                spatialAudio.updateBallPosition(0f, 0f, zPos)
+                val approachX = APPROACH_START_X * (1f - progress)
+                spatialAudio.updateBallPosition(approachX, 0f, zPos)
                 spatialAudio.updateHeading(currentHeadingDeg)
 
                 withContext(Dispatchers.Main) {
@@ -811,33 +813,23 @@ class SwingTestActivity : AppCompatActivity() {
     // 베이스 도착음 — 베이스 선택 전까지 반복 재생 (헤드트래킹 스테레오 패닝)
     // ─────────────────────────────────────────────────────
     private fun startBaseBeep() {
-        val finalPan = if (targetBase == 3) -1.0f else 1.0f
-        // 3루=왼쪽(-1.0), 1루=오른쪽(+1.0). 베이스 방향의 기본 패닝값
+        // 3루=왼쪽(-5f), 1루=오른쪽(+5f) — 화면 레이아웃과 동일 방향
+        val targetX = if (targetBase == 3) -5f else 5f
 
         audioJob?.cancel()
-        // 이전 오디오 잡이 있으면 취소
 
+        spatialAudio.updateBallPosition(targetX, 0f, 0f)
+        spatialAudio.updateHeading(currentHeadingDeg)
+        spatialAudio.startBeep()
+
+        // heading 을 16ms 마다 갱신해 스마트폰 회전에 따라 소리 방향이 추적되도록 함
         audioJob = scope.launch {
-        // 독립 코루틴으로 실행 → onBasePressed() 의 stopAudio() 에서 명시적 취소
-
-            val sr          = 44100
-            val beepSamples = sr * 200 / 1000   // 200ms 비프음 샘플 수
-            val silSamples  = sr * 0 / 1000   // 150ms 무음 샘플 수
-
             while (isActive) {
-                val rAngle = finalPan * 90f + currentHeadingDeg
-                // 베이스 방향(±90°) + 현재 머리 방향 = 실제 음원 각도
-                val pan    = sin(Math.toRadians(rAngle.toDouble())).toFloat().coerceIn(-1f, 1f)
-                // 각도 → 스테레오 pan(-1~+1) 변환. sin 함수로 -90°~+90° 자연스럽게 매핑
-                audioTrack?.write(tone(beepSamples, 880f, pan, 1.0f), 0, beepSamples * 2)
-                // 1100Hz 200ms 비프음 스트리밍
-                if (!isActive) break
-                audioTrack?.write(ShortArray(silSamples * 2), 0, silSamples * 2)
-                // 150ms 무음 (비프음 간 간격)
+                spatialAudio.updateHeading(currentHeadingDeg)
+                delay(16)
             }
         }
         beepStartTime = SystemClock.elapsedRealtimeNanos()
-        // 반응속도 측정 기준점 기록. onBasePressed() 에서 차이를 ms 로 계산
     }
 
     // ─────────────────────────────────────────────────────
@@ -1363,12 +1355,10 @@ class SwingTestActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────
     private fun stopAudio() {
         audioJob?.cancel()
-        // 베이스 도착음 반복 재생 코루틴 취소
+        spatialAudio.stopBeep()
         audioTrack?.pause()
         audioTrack?.flush()
         audioTrack?.play()
-        // pause→flush→play: 버퍼에 남은 데이터 비우고 재생 상태로 복귀
-        // (다음 write() 호출을 위해 play() 상태 유지)
     }
 
     // ─────────────────────────────────────────────────────
