@@ -186,7 +186,7 @@ class GameEngine(private val context: Context) {
 
     // 공 개수 변경 시 현재 개수 안내 (순우리말: 한개, 두개, 열개, 열한개 ...)
     fun speakBallCount(count: Int) {
-        speak("${toNativeKorean(count)}개")
+        speak("현재 훈련 횟수는 ${toNativeKorean(count)}개")
     }
 
     fun isSessionComplete() = sessionActive && attempts >= targetBallCount
