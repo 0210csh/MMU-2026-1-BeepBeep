@@ -27,11 +27,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var inputManager: InputManager
 
     private val inputDeviceListener = object : InputManager.InputDeviceListener {
-        override fun onInputDeviceAdded(deviceId: Int) {}
+        override fun onInputDeviceAdded(deviceId: Int) {
+            val dev = InputDevice.getDevice(deviceId) ?: return
+            if ((dev.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD) {
+                runOnUiThread { binding.switchFakeController.isChecked = true }
+            }
+        }
         override fun onInputDeviceChanged(deviceId: Int) {}
         override fun onInputDeviceRemoved(deviceId: Int) {
-            // 제거 후 남은 게임패드가 없으면 연결 끊김 안내
-            if (!isGamepadConnected()) {
+            if (!isRealGamepadConnected()) {
+                runOnUiThread { binding.switchFakeController.isChecked = false }
                 gameEngine.speakControllerDisconnected()
             }
         }
@@ -137,13 +142,16 @@ class MainActivity : AppCompatActivity() {
         sensorManager.registerListener(orientationListener, sensor, SensorManager.SENSOR_DELAY_FASTEST)
     }
 
-    private fun isGamepadConnected(): Boolean {
-        if (binding.switchFakeController.isChecked) return true  // 테스트용 스위치
-        return InputDevice.getDeviceIds().any { id ->
+    // 실제 하드웨어 게임패드 연결 여부 (스위치 무관)
+    private fun isRealGamepadConnected(): Boolean =
+        InputDevice.getDeviceIds().any { id ->
             val dev = InputDevice.getDevice(id) ?: return@any false
             (dev.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
         }
-    }
+
+    // 스위치 포함 연결 여부 (시작 버튼 판단용)
+    private fun isGamepadConnected(): Boolean =
+        binding.switchFakeController.isChecked || isRealGamepadConnected()
 
     private fun setupButtons() {
         binding.btnStart.setOnClickListener {
@@ -237,6 +245,8 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         registerOrientationSensor()
         inputManager.registerInputDeviceListener(inputDeviceListener, null)
+        // 실제 연결 상태를 스위치에 반영
+        binding.switchFakeController.isChecked = isRealGamepadConnected()
         // 앱 시작 후 최초 1회 컨트롤러 연결 상태 안내
         if (!controllerCheckedOnStart) {
             controllerCheckedOnStart = true
