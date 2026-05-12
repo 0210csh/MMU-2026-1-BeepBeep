@@ -301,9 +301,8 @@ class SwingTestActivity : AppCompatActivity() {
 
     @Volatile private var prevBtn1 = false
     @Volatile private var prevBtn2 = false
-    private var lastBtn1TapMs = 0L
-    private var btn1TapJob: Job? = null
-    private val DOUBLE_TAP_MS = 500L
+    private var batBtn1Job: Job? = null
+    private var batBtn2Job: Job? = null
 
     // ─────────────────────────────────────────────────────
     // 스윙 감지 리스너 (선형가속도 + 자이로)
@@ -960,8 +959,8 @@ class SwingTestActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────
     // 배트 버튼 처리
     //   오른쪽(btn1) 단일탭 → 투구수 +1 / 1루 선택
-    //   오른쪽(btn1) 더블탭(500ms 내) → 훈련 시작
     //   왼쪽(btn2)   단일탭 → 투구수 -1 / 3루 선택
+    //   양쪽 동시    → 훈련 시작
     // ─────────────────────────────────────────────────────
     private fun handleBatButton(btn1: Boolean, btn2: Boolean) {
         val wasBtn1 = prevBtn1
@@ -970,25 +969,18 @@ class SwingTestActivity : AppCompatActivity() {
         // 오른쪽 버튼 상승 에지
         if (btn1 && !wasBtn1) {
             when {
-                isWaitingForInput -> {
-                    btn1TapJob?.cancel()
-                    onBasePressed(1)
-                }
+                isWaitingForInput -> { batBtn2Job?.cancel(); onBasePressed(1) }
                 !isTraining -> {
-                    val now = System.currentTimeMillis()
-                    if (btn1TapJob?.isActive == true && now - lastBtn1TapMs <= DOUBLE_TAP_MS) {
-                        // 더블탭 → 훈련 시작
-                        btn1TapJob?.cancel()
-                        lastBtn1TapMs = 0L
+                    if (batBtn2Job?.isActive == true) {
+                        // 왼쪽 타이머 대기 중 → 동시 누름 → 훈련 시작
+                        batBtn1Job?.cancel(); batBtn2Job?.cancel()
                         if (btnStart.isEnabled) btnStart.performClick()
                     } else {
-                        // 첫 탭 → 500ms 후 단일탭 확정
-                        lastBtn1TapMs = now
-                        btn1TapJob?.cancel()
-                        btn1TapJob = scope.launch {
-                            delay(DOUBLE_TAP_MS)
+                        batBtn1Job?.cancel()
+                        batBtn1Job = scope.launch {
+                            delay(200L)
                             withContext(Dispatchers.Main) {
-                                if (targetPitches < 30) {
+                                if (batBtn2Job?.isActive != true && targetPitches < 30) {
                                     targetPitches++
                                     tvSwingPitchCount.text = targetPitches.toString()
                                     speakResult("${targetPitches}회")
@@ -1003,12 +995,24 @@ class SwingTestActivity : AppCompatActivity() {
         // 왼쪽 버튼 상승 에지
         if (btn2 && !wasBtn2) {
             when {
-                isWaitingForInput -> onBasePressed(3)
+                isWaitingForInput -> { batBtn1Job?.cancel(); onBasePressed(3) }
                 !isTraining -> {
-                    if (targetPitches > 1) {
-                        targetPitches--
-                        tvSwingPitchCount.text = targetPitches.toString()
-                        speakResult("${targetPitches}회")
+                    if (batBtn1Job?.isActive == true) {
+                        // 오른쪽 타이머 대기 중 → 동시 누름 → 훈련 시작
+                        batBtn1Job?.cancel(); batBtn2Job?.cancel()
+                        if (btnStart.isEnabled) btnStart.performClick()
+                    } else {
+                        batBtn2Job?.cancel()
+                        batBtn2Job = scope.launch {
+                            delay(200L)
+                            withContext(Dispatchers.Main) {
+                                if (batBtn1Job?.isActive != true && targetPitches > 1) {
+                                    targetPitches--
+                                    tvSwingPitchCount.text = targetPitches.toString()
+                                    speakResult("${targetPitches}회")
+                                }
+                            }
+                        }
                     }
                 }
             }
