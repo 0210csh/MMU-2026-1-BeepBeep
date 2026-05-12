@@ -35,12 +35,28 @@
             android:textSize="15sp"
             android:gravity="center"/>
 
-        <Spinner
-            android:id="@+id/spinnerDifficulty"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:entries="@array/difficulty_levels"/>
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="[◀ ▶]"
+                android:textColor="#64B4FF"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:fontFamily="monospace"/>
+
+            <Spinner
+                android:id="@+id/spinnerDifficulty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:entries="@array/difficulty_levels"/>
+        </LinearLayout>
     </LinearLayout>
 
     <!-- 경기장 시각화 -->

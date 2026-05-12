@@ -179,12 +179,49 @@ class GameEngine(private val context: Context) {
         speak("컨트롤러가 연결되지 않았습니다. 블루투스 컨트롤러를 연결한 후 시작 버튼을 눌러주세요")
     }
 
+<<<<<<< HEAD
+=======
+    // 컨트롤러 연결 안내
+    fun speakControllerConnected() {
+        speak("컨트롤러가 연결되었습니다")
+    }
+
+    // 컨트롤러 연결 끊김 안내
+>>>>>>> origin/hyeon_audio
     fun speakControllerDisconnected() {
         speak("컨트롤러 연결이 끊어졌습니다")
     }
 
+    // 공 개수 변경 시 현재 개수 안내 (순우리말: 한개, 두개, 열개, 열한개 ...)
+    fun speakBallCount(count: Int) {
+        speak("현재 훈련 횟수 ${toNativeKorean(count)}개")
+    }
+
+    // 난이도 변경 시 현재 난이도 안내
+    fun speakDifficulty(position: Int) {
+        val name = when (position) {
+            0 -> "쉬움"
+            1 -> "보통"
+            2 -> "어려움"
+            else -> "보통"
+        }
+        speak("현재 난이도는 $name")
+    }
+
     fun isSessionComplete() = sessionActive && attempts >= targetBallCount
 
+<<<<<<< HEAD
+=======
+    // 블루투스 연결로 인한 오디오 라우팅 변경 시 AudioTrack만 재초기화
+    // (nativeInit 중복 호출 시 Resonance Audio 핸들 꼬임 방지)
+    fun reinitAudio() {
+        val wasBeeping = _state.value.phase == GamePhase.LAUNCHED || _state.value.phase == GamePhase.LANDED
+        audioEngine.reinitAudioTrack()
+        if (wasBeeping) audioEngine.startBeep()
+    }
+
+    // ── 전체 리셋 (B버튼 / 수동 리셋) ────────────────────────────────────
+>>>>>>> origin/hyeon_audio
     fun fullReset() {
         audioEngine.stopBeep()
         sessionActive = false
@@ -434,6 +471,14 @@ class GameEngine(private val context: Context) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
+<<<<<<< HEAD
+=======
+    fun stopSpeak() {
+        tts?.stop()
+    }
+
+    // 숫자 → 한자어 읽기 (1~99) — 시간(초) 읽기용
+>>>>>>> origin/hyeon_audio
     private fun toKorean(n: Int): String {
         if (n == 0) return "영"
         val u = arrayOf("", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구")
@@ -442,6 +487,22 @@ class GameEngine(private val context: Context) {
         else t[n / 10] + (if (n % 10 != 0) u[n % 10] else "")
     }
 
+<<<<<<< HEAD
+=======
+    // 숫자 → 순우리말 읽기 (1~20) — 개수 읽기용 (한, 두, 세 ... 열, 열한 ... 스물)
+    private fun toNativeKorean(n: Int): String {
+        val ones = arrayOf("", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉")
+        return when {
+            n in 1..9   -> ones[n]
+            n == 10     -> "열"
+            n in 11..19 -> "열${ones[n % 10]}"
+            n == 20     -> "스물"
+            else        -> "$n"
+        }
+    }
+
+    // 밀리초 → "X초" 또는 "X점Y초" 한국어 (화면 표시 "%.1f"와 동일한 반올림 기준)
+>>>>>>> origin/hyeon_audio
     private fun msToKoreanTime(ms: Long): String {
         val formatted = "%.1f".format(ms / 1000.0)
         val parts = formatted.split(".")

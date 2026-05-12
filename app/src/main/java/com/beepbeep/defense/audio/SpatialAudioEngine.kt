@@ -28,12 +28,19 @@ class SpatialAudioEngine(private val context: Context) {
         private const val SAMPLE_RATE    = 44100
         private const val FRAMES         = 128  // ✅ 팀원: 저지연
         private const val SPEED_OF_SOUND = 343f
-        private const val BEEP_FREQ      = 880f
+        private const val BEEP_FREQ      = 880f    // 고정 주파수 — 앞/뒤 구분은 HRTF에 위임
     }
 
     fun init() {
         val ok = ResonanceBridge.nativeInit(SAMPLE_RATE, FRAMES)
         android.util.Log.i("SpatialAudio", "Resonance Audio init: $ok")
+        initAudioTrack()
+    }
+
+    // Resonance Audio는 건드리지 않고 AudioTrack만 재초기화
+    // → 블루투스 연결로 오디오 라우팅이 바뀔 때 사용
+    fun reinitAudioTrack() {
+        stopBeep()
         initAudioTrack()
     }
 
@@ -43,8 +50,8 @@ class SpatialAudioEngine(private val context: Context) {
             SAMPLE_RATE, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT)
         audioTrack = AudioTrack.Builder()
             .setAudioAttributes(AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build())
             .setAudioFormat(AudioFormat.Builder()
                 .setSampleRate(SAMPLE_RATE)
@@ -55,6 +62,8 @@ class SpatialAudioEngine(private val context: Context) {
             .setTransferMode(AudioTrack.MODE_STREAM)
             .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)  // ✅ 팀원: 저지연
             .build()
+        // play() 전 버퍼를 무음으로 채워 시작 시 하드웨어 팝(웅) 방지
+        audioTrack?.write(ShortArray(minBuf), 0, minBuf)
         audioTrack?.play()
     }
 
@@ -80,26 +89,48 @@ class SpatialAudioEngine(private val context: Context) {
 
     fun startBeep() {
         beepJob?.cancel()
+        // 위치 이력 초기화 → 첫 프레임 도플러 속도 점프 방지
+        prevBallX = ballX
+        prevBallZ = ballZ
         beepJob = scope.launch {
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
 
             val stereoOut  = ShortArray(FRAMES * 2)
             val silenceBuf = ShortArray(FRAMES * 2)
 
-            // 100ms ON / 200ms OFF
+            // 100ms ON / 200ms OFF (현실의 비프음 공과 동일한 고정 패턴)
             val chunksOn   = (SAMPLE_RATE * 0.10f / FRAMES).toInt().coerceAtLeast(2)
             val chunksOff  = (SAMPLE_RATE * 0.20f / FRAMES).toInt().coerceAtLeast(1)
-            val fadeChunks = 1
+            val fadeChunks = 2   // ~5.8ms 페이드 (클릭 노이즈 방지)
+
+            // 시작 50ms 무음 출력 — 초기 노이즈 구간 스킵
+            val warmupChunks = (SAMPLE_RATE * 0.05f / FRAMES).toInt()
+            ResonanceBridge.nativeSetGain(0f)
+            repeat(warmupChunks) {
+                if (!isActive) return@repeat
+                val r = Math.toRadians(currentHeadingDeg.toDouble())
+                ResonanceBridge.nativeSetHeadRotation(
+                    0f, sin(r / 2).toFloat(), 0f, cos(r / 2).toFloat())
+                ResonanceBridge.nativeProcessChunk(BEEP_FREQ, 0f, 0f, 0f, 0f, stereoOut)
+                audioTrack?.write(stereoOut, 0, stereoOut.size)
+            }
 
             var smoothedGain = 1f
 
             while (isActive) {
-                // ── 도플러 계산 ───────────────────────────────────────
+                // BLE 연결 등 외부 요인으로 AudioTrack이 멈춘 경우 자동 재개
+                if (audioTrack?.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                    audioTrack?.play()
+                }
+
+                // ── 거리 및 도플러 계산 ───────────────────────────────
                 val horizDist     = sqrt(ballX*ballX + ballZ*ballZ).coerceAtLeast(0.5f)
                 val prevHorizDist = sqrt(prevBallX*prevBallX + prevBallZ*prevBallZ).coerceAtLeast(0.5f)
                 val dt            = FRAMES.toFloat() / SAMPLE_RATE
                 val vel           = (prevHorizDist - horizDist) / dt.coerceAtLeast(0.001f)
-                val doppFreq      = BEEP_FREQ * (SPEED_OF_SOUND / (SPEED_OF_SOUND - vel.coerceIn(-150f, 80f)))
+
+                // 도플러만 적용 — 앞/뒤 방향 구분은 Resonance Audio HRTF가 담당
+                val doppFreq = BEEP_FREQ * (SPEED_OF_SOUND / (SPEED_OF_SOUND - vel.coerceIn(-150f, 80f)))
 
                 // ── 비프 ON ───────────────────────────────────────────
                 var prevFade = 0f
@@ -134,13 +165,21 @@ class SpatialAudioEngine(private val context: Context) {
                 }
 
                 // ── 무음 OFF ─────────────────────────────────────────
+                // gain=0이지만 nativeProcessChunk를 계속 호출해 C++ 위상 연속성 유지
+                // → 다음 ON 구간 시작 시 파형이 어긋나지 않아 딱 소리(클릭) 방지
                 ResonanceBridge.nativeSetGain(0f)
+                var offPan = computePan()
                 repeat(chunksOff) {
                     if (!isActive) return@repeat
                     val r = Math.toRadians(currentHeadingDeg.toDouble())
                     ResonanceBridge.nativeSetHeadRotation(
                         0f, sin(r / 2).toFloat(), 0f, cos(r / 2).toFloat())
-                    audioTrack?.write(silenceBuf, 0, silenceBuf.size)
+                    val newPan = computePan()
+                    val ok = ResonanceBridge.nativeProcessChunk(
+                        doppFreq, 0f, 0f, offPan, newPan, stereoOut)
+                    if (ok) audioTrack?.write(stereoOut, 0, stereoOut.size)
+                    else    audioTrack?.write(silenceBuf, 0, silenceBuf.size)
+                    offPan = newPan
                 }
 
                 prevBallX = ballX; prevBallZ = ballZ

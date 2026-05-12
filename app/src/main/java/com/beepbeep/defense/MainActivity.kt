@@ -27,10 +27,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var inputManager: InputManager
 
     private val inputDeviceListener = object : InputManager.InputDeviceListener {
-        override fun onInputDeviceAdded(deviceId: Int) {}
+        override fun onInputDeviceAdded(deviceId: Int) {
+            val dev = InputDevice.getDevice(deviceId) ?: return
+            if ((dev.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD) {
+                runOnUiThread { binding.switchFakeController.isChecked = true }
+                gameEngine.speakControllerConnected()
+            }
+        }
         override fun onInputDeviceChanged(deviceId: Int) {}
         override fun onInputDeviceRemoved(deviceId: Int) {
+<<<<<<< HEAD
             if (!isGamepadConnected()) {
+=======
+            if (!isRealGamepadConnected()) {
+                runOnUiThread { binding.switchFakeController.isChecked = false }
+>>>>>>> origin/hyeon_audio
                 gameEngine.speakControllerDisconnected()
             }
         }
@@ -41,11 +52,24 @@ class MainActivity : AppCompatActivity() {
     private var baseAzimuth: Float? = null
     private var controllerCheckedOnStart = false
     private var smoothedHeading = 0f
+<<<<<<< HEAD
     private var prevAmplified   = 0f
     private var headingVelocity = 0f
     private var signedVelocity  = 0f
     private var ballCount = 5
     private val HEADING_SENSITIVITY = 2.0f
+=======
+    private var prevAmplified   = 0f   // 이전 프레임 값 (각속도 계산용)
+    private var headingVelocity = 0f   // 스무딩된 절대 각속도 (°/update)
+    private var signedVelocity  = 0f   // 스무딩된 부호 있는 각속도 (예측 보상용)
+
+    private var ballCount = 5   // 공 개수 (1~20)
+    private var prevHatX  = 0f  // D패드 HAT 축 엣지 감지용
+
+    // 감도 배율 (1.0 = 실제 회전과 1:1)
+    private val HEADING_SENSITIVITY = 1.0f
+    // 적응형 스무딩: 각속도(회전 속도) 기반 — 빠를수록 즉시 반응, 느릴수록 노이즈 억제
+>>>>>>> origin/hyeon_audio
 
     private val orientationListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
@@ -124,13 +148,22 @@ class MainActivity : AppCompatActivity() {
         sensorManager.registerListener(orientationListener, sensor, SensorManager.SENSOR_DELAY_FASTEST)
     }
 
+<<<<<<< HEAD
     private fun isGamepadConnected(): Boolean {
         if (binding.switchFakeController.isChecked) return true
         return InputDevice.getDeviceIds().any { id ->
+=======
+    // 실제 하드웨어 게임패드 연결 여부 (스위치 무관)
+    private fun isRealGamepadConnected(): Boolean =
+        InputDevice.getDeviceIds().any { id ->
+>>>>>>> origin/hyeon_audio
             val dev = InputDevice.getDevice(id) ?: return@any false
             (dev.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
         }
-    }
+
+    // 스위치 포함 연결 여부 (시작 버튼 판단용)
+    private fun isGamepadConnected(): Boolean =
+        binding.switchFakeController.isChecked || isRealGamepadConnected()
 
     private fun setupButtons() {
         binding.btnStart.setOnClickListener {
@@ -160,8 +193,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun adjustBallCount(delta: Int) {
+        if (!binding.btnBallCountDown.isEnabled) return  // 훈련 중 변경 불가
         ballCount = (ballCount + delta).coerceIn(1, 20)
         binding.tvBallCount.text = ballCount.toString()
+        gameEngine.speakBallCount(ballCount)
+    }
+
+    private fun adjustDifficulty(delta: Int) {
+        val next = (binding.spinnerDifficulty.selectedItemPosition + delta).coerceIn(0, 2)
+        binding.spinnerDifficulty.setSelection(next)
+        gameEngine.speakDifficulty(next)
     }
 
     private fun getDifficulty() = when (binding.spinnerDifficulty.selectedItemPosition) {
@@ -218,6 +259,12 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         registerOrientationSensor()
         inputManager.registerInputDeviceListener(inputDeviceListener, null)
+<<<<<<< HEAD
+=======
+        // 실제 연결 상태를 스위치에 반영
+        binding.switchFakeController.isChecked = isRealGamepadConnected()
+        // 앱 시작 후 최초 1회 컨트롤러 연결 상태 안내
+>>>>>>> origin/hyeon_audio
         if (!controllerCheckedOnStart) {
             controllerCheckedOnStart = true
             if (!isGamepadConnected()) {
@@ -232,6 +279,10 @@ class MainActivity : AppCompatActivity() {
         inputManager.unregisterInputDeviceListener(inputDeviceListener)
     }
 
+<<<<<<< HEAD
+=======
+    // ─── 블루투스 게임패드 아날로그 스틱 + D패드 ────────────────────────
+>>>>>>> origin/hyeon_audio
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         if (event.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
             && event.action == MotionEvent.ACTION_MOVE) {
@@ -244,6 +295,13 @@ class MainActivity : AppCompatActivity() {
             gameEngine.joystickDx = dx
             gameEngine.joystickDz = dy
             binding.joystickView.setExternalInput(dx, -dy)
+
+            // D패드를 HAT 축으로 전달하는 게임패드 처리 (엣지 감지)
+            val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+            if (prevHatX == 0f && hatX == -1f) adjustDifficulty(-1)
+            if (prevHatX == 0f && hatX ==  1f) adjustDifficulty(+1)
+            prevHatX = hatX
+
             return true
         }
         return super.dispatchGenericMotionEvent(event)
@@ -274,6 +332,10 @@ class MainActivity : AppCompatActivity() {
                     }
                     KeyEvent.KEYCODE_BUTTON_L1 -> { adjustBallCount(-1); return true }
                     KeyEvent.KEYCODE_BUTTON_R1 -> { adjustBallCount(+1); return true }
+                    // D패드 좌 → 난이도 감소
+                    KeyEvent.KEYCODE_DPAD_LEFT  -> { adjustDifficulty(-1); return true }
+                    // D패드 우 → 난이도 증가
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> { adjustDifficulty(+1); return true }
                 }
             }
             return true
@@ -301,7 +363,8 @@ class MainActivity : AppCompatActivity() {
         android.app.AlertDialog.Builder(this)
             .setTitle("🏅 훈련 결과")
             .setMessage(msg)
-            .setPositiveButton("확인", null)
+            .setPositiveButton("확인") { _, _ -> gameEngine.stopSpeak() }
+            .setOnCancelListener { gameEngine.stopSpeak() }
             .show()
     }
 
