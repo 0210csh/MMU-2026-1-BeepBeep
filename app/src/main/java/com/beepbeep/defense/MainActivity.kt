@@ -31,6 +31,7 @@ class MainActivity : AppCompatActivity() {
             val dev = InputDevice.getDevice(deviceId) ?: return
             if ((dev.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD) {
                 runOnUiThread { binding.switchFakeController.isChecked = true }
+                gameEngine.speakControllerConnected()
             }
         }
         override fun onInputDeviceChanged(deviceId: Int) {}

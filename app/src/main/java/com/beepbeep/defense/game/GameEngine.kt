@@ -179,6 +179,11 @@ class GameEngine(private val context: Context) {
         speak("컨트롤러가 연결되지 않았습니다. 블루투스 컨트롤러를 연결한 후 시작 버튼을 눌러주세요")
     }
 
+    // 컨트롤러 연결 안내
+    fun speakControllerConnected() {
+        speak("컨트롤러가 연결되었습니다")
+    }
+
     // 컨트롤러 연결 끊김 안내
     fun speakControllerDisconnected() {
         speak("컨트롤러 연결이 끊어졌습니다")
