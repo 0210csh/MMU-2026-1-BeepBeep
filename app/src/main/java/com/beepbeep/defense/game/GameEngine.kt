@@ -184,9 +184,9 @@ class GameEngine(private val context: Context) {
         speak("컨트롤러 연결이 끊어졌습니다")
     }
 
-    // 공 개수 변경 시 현재 개수 안내
+    // 공 개수 변경 시 현재 개수 안내 (순우리말: 한개, 두개, 열개, 열한개 ...)
     fun speakBallCount(count: Int) {
-        speak("${toKorean(count)}개")
+        speak("${toNativeKorean(count)}개")
     }
 
     fun isSessionComplete() = sessionActive && attempts >= targetBallCount
@@ -322,13 +322,25 @@ class GameEngine(private val context: Context) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
-    // 숫자 → 한국어 읽기 (1~99)
+    // 숫자 → 한자어 읽기 (1~99) — 시간(초) 읽기용
     private fun toKorean(n: Int): String {
         if (n == 0) return "영"
         val u = arrayOf("", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구")
         val t = arrayOf("", "십", "이십", "삼십", "사십", "오십", "육십", "칠십", "팔십", "구십")
         return if (n < 10) u[n]
         else t[n / 10] + (if (n % 10 != 0) u[n % 10] else "")
+    }
+
+    // 숫자 → 순우리말 읽기 (1~20) — 개수 읽기용 (한, 두, 세 ... 열, 열한 ... 스물)
+    private fun toNativeKorean(n: Int): String {
+        val ones = arrayOf("", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉")
+        return when {
+            n in 1..9   -> ones[n]
+            n == 10     -> "열"
+            n in 11..19 -> "열${ones[n % 10]}"
+            n == 20     -> "스물"
+            else        -> "$n"
+        }
     }
 
     // 밀리초 → "X초" 또는 "X점Y초" 한국어 (화면 표시 "%.1f"와 동일한 반올림 기준)
