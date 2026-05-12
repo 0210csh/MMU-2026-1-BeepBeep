@@ -175,6 +175,7 @@ class MainActivity : AppCompatActivity() {
     private fun adjustBallCount(delta: Int) {
         ballCount = (ballCount + delta).coerceIn(1, 20)
         binding.tvBallCount.text = ballCount.toString()
+        gameEngine.speakBallCount(ballCount)
     }
 
     private fun getDifficulty() = when (binding.spinnerDifficulty.selectedItemPosition) {

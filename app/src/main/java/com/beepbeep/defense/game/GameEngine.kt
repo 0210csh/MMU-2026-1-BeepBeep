@@ -184,6 +184,11 @@ class GameEngine(private val context: Context) {
         speak("컨트롤러 연결이 끊어졌습니다")
     }
 
+    // 공 개수 변경 시 현재 개수 안내
+    fun speakBallCount(count: Int) {
+        speak("${toKorean(count)}개")
+    }
+
     fun isSessionComplete() = sessionActive && attempts >= targetBallCount
 
     // ── 전체 리셋 (B버튼 / 수동 리셋) ────────────────────────────────────
