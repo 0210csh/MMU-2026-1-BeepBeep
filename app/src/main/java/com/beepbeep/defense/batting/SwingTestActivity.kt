@@ -299,6 +299,11 @@ class SwingTestActivity : AppCompatActivity() {
     @Volatile private var bleConnected = false
     // BLE 연결 여부. true 이면 폰 센서 대신 BLE 센서 데이터 사용
 
+    @Volatile private var prevBtn1 = false
+    @Volatile private var prevBtn2 = false
+    private var batBtn1Job: Job? = null
+    private var batBtn2Job: Job? = null
+
     // ─────────────────────────────────────────────────────
     // 스윙 감지 리스너 (선형가속도 + 자이로)
     // ─────────────────────────────────────────────────────
@@ -482,11 +487,12 @@ class SwingTestActivity : AppCompatActivity() {
             if (bleConnected) {
                 bleManager.disconnect()
             } else {
-                btnBleConnect.isEnabled = false
-                btnBleConnect.text = "연결 중..."
-                requestBlePermissions()
+                startBleScan()
             }
         }
+
+        // 앱 시작 시 자동 스캔
+        if (hasBlePermissions()) startBleScan() else requestBlePermissions()
 
         btnSwingPitchMinus.setOnClickListener {
             if (targetPitches > 1) {
@@ -703,8 +709,6 @@ class SwingTestActivity : AppCompatActivity() {
                         tvStatus.setTextColor(0xFFFBBF24.toInt())
                         tvResult.text = "실제 각도: %.0f°  /  필요 각도: %.0f°"
                             .format(swingPitchDeg, BATTING_ANGLE_DEG)
-                        liveBallParabolaView.visibility = View.GONE
-                        // 공 발산 단계에서는 라이브 포물선 그래프 숨김
                     }
 
                     val divMs      = 1500L
@@ -765,7 +769,6 @@ class SwingTestActivity : AppCompatActivity() {
                         } else {
                             "스트라이크 — 힘 부족\n필요 각도: %.0f°".format(BATTING_ANGLE_DEG)
                         }
-                        liveBallParabolaView.visibility = View.GONE
                         if (!isTraining) {
                             showSwingGraph()
                             btnStart.isEnabled = true
@@ -789,7 +792,6 @@ class SwingTestActivity : AppCompatActivity() {
                         tvStatus.text = "스트라이크!"
                         tvStatus.setTextColor(0xFFF87171.toInt())
                         tvResult.text = "스윙하지 않았습니다\n필요 각도: %.0f°".format(BATTING_ANGLE_DEG)
-                        liveBallParabolaView.visibility = View.GONE
                         if (!isTraining) {
                             showSwingGraph()
                             btnStart.isEnabled = true
@@ -813,29 +815,22 @@ class SwingTestActivity : AppCompatActivity() {
         // 3루=왼쪽(-1.0), 1루=오른쪽(+1.0). 베이스 방향의 기본 패닝값
 
         audioJob?.cancel()
-        // 이전 오디오 잡이 있으면 취소
 
         audioJob = scope.launch {
-        // 독립 코루틴으로 실행 → onBasePressed() 의 stopAudio() 에서 명시적 취소
-
             val sr          = 44100
             val beepSamples = sr * 200 / 1000   // 200ms 비프음 샘플 수
-            val silSamples  = sr * 0 / 1000   // 150ms 무음 샘플 수
+            val silSamples  = sr * 0 / 1000     // 무음 샘플 수
 
             while (isActive) {
                 val rAngle = finalPan * 90f + currentHeadingDeg
                 // 베이스 방향(±90°) + 현재 머리 방향 = 실제 음원 각도
                 val pan    = sin(Math.toRadians(rAngle.toDouble())).toFloat().coerceIn(-1f, 1f)
-                // 각도 → 스테레오 pan(-1~+1) 변환. sin 함수로 -90°~+90° 자연스럽게 매핑
                 audioTrack?.write(tone(beepSamples, 880f, pan, 1.0f), 0, beepSamples * 2)
-                // 1100Hz 200ms 비프음 스트리밍
                 if (!isActive) break
                 audioTrack?.write(ShortArray(silSamples * 2), 0, silSamples * 2)
-                // 150ms 무음 (비프음 간 간격)
             }
         }
         beepStartTime = SystemClock.elapsedRealtimeNanos()
-        // 반응속도 측정 기준점 기록. onBasePressed() 에서 차이를 ms 로 계산
     }
 
     // ─────────────────────────────────────────────────────
@@ -900,6 +895,8 @@ class SwingTestActivity : AppCompatActivity() {
             btnBleConnect.text = "배트 센서 해제"
             tvBleStatus.text = "● 연결됨"
             tvBleStatus.setTextColor(0xFF4ADE80.toInt())
+            speakResult("배트가 연결되었습니다")
+            bleManager.sendControl(1)  // 아두이노 측정 모드 ON → 버튼 패킷 수신 활성화
         }
 
         override fun onDisconnected() {
@@ -908,6 +905,14 @@ class SwingTestActivity : AppCompatActivity() {
             btnBleConnect.text = "배트 센서 연결"
             tvBleStatus.text = "● 미연결"
             tvBleStatus.setTextColor(0xFFF87171.toInt())
+            speakResult("배트 연결이 끊겼습니다")
+            // 2초 후 자동 재스캔
+            scope.launch {
+                delay(2000)
+                withContext(Dispatchers.Main) {
+                    if (!bleConnected && hasBlePermissions()) startBleScan()
+                }
+            }
         }
 
         override fun onPacket(packet: BleManager.SensorPacket) {
@@ -936,7 +941,78 @@ class SwingTestActivity : AppCompatActivity() {
                 2 -> readyToPitchHistory.add(Pair(phaseElapsed, currentPitchDeg))
                 3 -> pitchToEndHistory.add(Pair(phaseElapsed, currentPitchDeg))
             }
+
+            handleBatButton(packet.btn1, packet.btn2)
         }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 배트 버튼 처리
+    // ─────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────
+    // 배트 버튼 처리
+    //   오른쪽(btn1) 단일탭 → 투구수 +1 / 1루 선택
+    //   왼쪽(btn2)   단일탭 → 투구수 -1 / 3루 선택
+    //   양쪽 동시    → 훈련 시작
+    // ─────────────────────────────────────────────────────
+    private fun handleBatButton(btn1: Boolean, btn2: Boolean) {
+        val wasBtn1 = prevBtn1
+        val wasBtn2 = prevBtn2
+
+        // 오른쪽 버튼 상승 에지
+        if (btn1 && !wasBtn1) {
+            when {
+                isWaitingForInput -> { batBtn2Job?.cancel(); onBasePressed(1) }
+                !isTraining -> {
+                    if (batBtn2Job?.isActive == true) {
+                        // 왼쪽 타이머 대기 중 → 동시 누름 → 훈련 시작
+                        batBtn1Job?.cancel(); batBtn2Job?.cancel()
+                        if (btnStart.isEnabled) btnStart.performClick()
+                    } else {
+                        batBtn1Job?.cancel()
+                        batBtn1Job = scope.launch {
+                            delay(200L)
+                            withContext(Dispatchers.Main) {
+                                if (batBtn2Job?.isActive != true && targetPitches < 30) {
+                                    targetPitches++
+                                    tvSwingPitchCount.text = targetPitches.toString()
+                                    speakResult("${targetPitches}회")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 왼쪽 버튼 상승 에지
+        if (btn2 && !wasBtn2) {
+            when {
+                isWaitingForInput -> { batBtn1Job?.cancel(); onBasePressed(3) }
+                !isTraining -> {
+                    if (batBtn1Job?.isActive == true) {
+                        // 오른쪽 타이머 대기 중 → 동시 누름 → 훈련 시작
+                        batBtn1Job?.cancel(); batBtn2Job?.cancel()
+                        if (btnStart.isEnabled) btnStart.performClick()
+                    } else {
+                        batBtn2Job?.cancel()
+                        batBtn2Job = scope.launch {
+                            delay(200L)
+                            withContext(Dispatchers.Main) {
+                                if (batBtn1Job?.isActive != true && targetPitches > 1) {
+                                    targetPitches--
+                                    tvSwingPitchCount.text = targetPitches.toString()
+                                    speakResult("${targetPitches}회")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        prevBtn1 = btn1
+        prevBtn2 = btn2
     }
 
     // ─────────────────────────────────────────────────────
@@ -971,8 +1047,14 @@ class SwingTestActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQ_BLE_PERM && grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-            bleManager.startScan()
+            startBleScan()
         }
+    }
+
+    private fun startBleScan() {
+        btnBleConnect.isEnabled = false
+        btnBleConnect.text = "연결 중..."
+        bleManager.startScan()
     }
 
     private fun scheduleNextOrFinish(success: Boolean) {
@@ -1233,10 +1315,6 @@ class SwingTestActivity : AppCompatActivity() {
         hitTimeRelMs     = -1L
         pitchRecordStart = System.currentTimeMillis()
         isRecording      = true
-        val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
-        liveBallParabolaView.setData(PITCHER_DIST, PITCHER_HEIGHT, contactH, BATTER_HEIGHT, BALL_ARC, false)
-        liveBallParabolaView.setLiveMode()
-        liveBallParabolaView.visibility = View.VISIBLE
         swingGraphView.setLiveSource(pitchHistory, BATTING_ANGLE_DEG)
         swingGraphView.visibility = View.VISIBLE
     }
@@ -1348,12 +1426,9 @@ class SwingTestActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────
     private fun stopAudio() {
         audioJob?.cancel()
-        // 베이스 도착음 반복 재생 코루틴 취소
         audioTrack?.pause()
         audioTrack?.flush()
         audioTrack?.play()
-        // pause→flush→play: 버퍼에 남은 데이터 비우고 재생 상태로 복귀
-        // (다음 write() 호출을 위해 play() 상태 유지)
     }
 
     // ─────────────────────────────────────────────────────
@@ -1445,6 +1520,6 @@ class SwingTestActivity : AppCompatActivity() {
         spatialAudio.release()
         bleManager.disconnect()
         scope.cancel()
-        // 스코프 취소 → gameJob, audioJob, beepBallJob 등 모든 하위 코루틴 일괄 종료
+        // 스코프 취소 → gameJob, audioJob, btn1TapJob 등 모든 하위 코루틴 일괄 종료
     }
 }
