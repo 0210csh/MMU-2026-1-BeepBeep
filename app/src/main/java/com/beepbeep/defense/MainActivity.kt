@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
     private var prevHatX  = 0f  // D패드 HAT 축 엣지 감지용
 
     // 감도 배율 (1.0 = 실제 회전과 1:1)
-    private val HEADING_SENSITIVITY = 1.0f
+    private val HEADING_SENSITIVITY = 0.67f
     // 적응형 스무딩: 각속도(회전 속도) 기반 — 빠를수록 즉시 반응, 느릴수록 노이즈 억제
 
     private val orientationListener = object : SensorEventListener {
