@@ -157,7 +157,9 @@ id tvSwingPitchProgress
 id tvV2Result
 id tvV2Status
 id tv_bat_rate
+id tv_battery_level
 id tv_batting_label
+id tv_button_event
 id tv_def_rate
 id tv_defense_label
 id tv_find_account
@@ -167,6 +169,7 @@ id tv_h_gyro
 id tv_label_recent
 id tv_label_select
 id tv_login
+id tv_measure_timer
 id tv_pw_status
 id tv_rec_bat
 id tv_rec_def

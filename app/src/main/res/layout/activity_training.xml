@@ -201,7 +201,6 @@
                 android:paddingBottom="40dp"
                 android:importantForAccessibility="no">
 
-                <!-- 타격 훈련 기록 -->
                 <LinearLayout
                     android:id="@+id/rl_bat_record"
                     android:layout_width="match_parent"
@@ -243,7 +242,6 @@
                     android:layout_marginBottom="25dp"
                     android:importantForAccessibility="no" />
 
-                <!-- 수비 훈련 기록 -->
                 <LinearLayout
                     android:id="@+id/rl_def_record"
                     android:layout_width="match_parent"
@@ -293,6 +291,7 @@
         android:elevation="10dp"
         android:importantForAccessibility="no">
 
+        <!-- ✅ 홈 아이콘 하얀색으로 변경 -->
         <LinearLayout
             android:id="@+id/navHome"
             android:layout_width="0dp"
@@ -311,7 +310,8 @@
                 android:backgroundTint="#441111"
                 android:padding="8dp"
                 android:src="@drawable/ic_home"
-                android:importantForAccessibility="no" />
+                android:importantForAccessibility="no"
+                app:tint="#FFFFFF" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

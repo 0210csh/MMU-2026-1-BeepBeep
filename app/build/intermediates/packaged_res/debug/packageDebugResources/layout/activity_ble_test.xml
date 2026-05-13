@@ -15,7 +15,8 @@
             android:layout_height="wrap_content"
             android:text="상태: 연결 안 됨"
             android:layout_gravity="center"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            android:paddingTop="16pt"/>
 
         <Button
             android:id="@+id/btn_connect"
@@ -28,9 +29,19 @@
             android:id="@+id/btn_send_data"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="보드로 측정 신호 보내기"
+            android:text="측정 시작 (5초)"
+            android:enabled="false"
             android:layout_marginTop="20dp" />
 
+        <TextView
+            android:id="@+id/tv_measure_timer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:layout_gravity="center"
+            android:textSize="14sp"
+            android:textColor="#FF8800"
+            android:layout_marginTop="4dp"/>
 
         <TextView
             android:layout_width="match_parent"
@@ -57,6 +68,27 @@
         <TextView android:id="@+id/tv_t_euler" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="오일러 각 : ---" android:textSize="16sp"/>
         <TextView android:id="@+id/tv_t_gyro" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="자이로스코프 : ---" android:textSize="16sp"/>
         <TextView android:id="@+id/tv_t_acc" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="가속도 : ---" android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/tv_battery_level"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:text="배터리 대기 중..."
+            android:textColor="#000000"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_button_event"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:text="최근 버튼 입력: 없음"
+            android:textColor="#FF5722"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 </ScrollView>

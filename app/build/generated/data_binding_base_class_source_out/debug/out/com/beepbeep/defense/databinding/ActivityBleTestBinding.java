@@ -27,6 +27,12 @@ public final class ActivityBleTestBinding implements ViewBinding {
   public final Button btnSendData;
 
   @NonNull
+  public final TextView tvBatteryLevel;
+
+  @NonNull
+  public final TextView tvButtonEvent;
+
+  @NonNull
   public final TextView tvHAcc;
 
   @NonNull
@@ -34,6 +40,9 @@ public final class ActivityBleTestBinding implements ViewBinding {
 
   @NonNull
   public final TextView tvHGyro;
+
+  @NonNull
+  public final TextView tvMeasureTimer;
 
   @NonNull
   public final TextView tvStatus;
@@ -48,15 +57,19 @@ public final class ActivityBleTestBinding implements ViewBinding {
   public final TextView tvTGyro;
 
   private ActivityBleTestBinding(@NonNull ScrollView rootView, @NonNull Button btnConnect,
-      @NonNull Button btnSendData, @NonNull TextView tvHAcc, @NonNull TextView tvHEuler,
-      @NonNull TextView tvHGyro, @NonNull TextView tvStatus, @NonNull TextView tvTAcc,
-      @NonNull TextView tvTEuler, @NonNull TextView tvTGyro) {
+      @NonNull Button btnSendData, @NonNull TextView tvBatteryLevel,
+      @NonNull TextView tvButtonEvent, @NonNull TextView tvHAcc, @NonNull TextView tvHEuler,
+      @NonNull TextView tvHGyro, @NonNull TextView tvMeasureTimer, @NonNull TextView tvStatus,
+      @NonNull TextView tvTAcc, @NonNull TextView tvTEuler, @NonNull TextView tvTGyro) {
     this.rootView = rootView;
     this.btnConnect = btnConnect;
     this.btnSendData = btnSendData;
+    this.tvBatteryLevel = tvBatteryLevel;
+    this.tvButtonEvent = tvButtonEvent;
     this.tvHAcc = tvHAcc;
     this.tvHEuler = tvHEuler;
     this.tvHGyro = tvHGyro;
+    this.tvMeasureTimer = tvMeasureTimer;
     this.tvStatus = tvStatus;
     this.tvTAcc = tvTAcc;
     this.tvTEuler = tvTEuler;
@@ -102,6 +115,18 @@ public final class ActivityBleTestBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.tv_battery_level;
+      TextView tvBatteryLevel = ViewBindings.findChildViewById(rootView, id);
+      if (tvBatteryLevel == null) {
+        break missingId;
+      }
+
+      id = R.id.tv_button_event;
+      TextView tvButtonEvent = ViewBindings.findChildViewById(rootView, id);
+      if (tvButtonEvent == null) {
+        break missingId;
+      }
+
       id = R.id.tv_h_acc;
       TextView tvHAcc = ViewBindings.findChildViewById(rootView, id);
       if (tvHAcc == null) {
@@ -117,6 +142,12 @@ public final class ActivityBleTestBinding implements ViewBinding {
       id = R.id.tv_h_gyro;
       TextView tvHGyro = ViewBindings.findChildViewById(rootView, id);
       if (tvHGyro == null) {
+        break missingId;
+      }
+
+      id = R.id.tv_measure_timer;
+      TextView tvMeasureTimer = ViewBindings.findChildViewById(rootView, id);
+      if (tvMeasureTimer == null) {
         break missingId;
       }
 
@@ -144,8 +175,9 @@ public final class ActivityBleTestBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ActivityBleTestBinding((ScrollView) rootView, btnConnect, btnSendData, tvHAcc,
-          tvHEuler, tvHGyro, tvStatus, tvTAcc, tvTEuler, tvTGyro);
+      return new ActivityBleTestBinding((ScrollView) rootView, btnConnect, btnSendData,
+          tvBatteryLevel, tvButtonEvent, tvHAcc, tvHEuler, tvHGyro, tvMeasureTimer, tvStatus,
+          tvTAcc, tvTEuler, tvTGyro);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

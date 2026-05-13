@@ -89,7 +89,7 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- ══ 타격 훈련 통계 ══ -->
+            <!-- 타격 훈련 통계 -->
             <TextView
                 android:id="@+id/tv_batting_label"
                 android:layout_width="wrap_content"
@@ -303,7 +303,7 @@
 
             </GridLayout>
 
-            <!-- ══ 수비 훈련 통계 ══ -->
+            <!-- 수비 훈련 통계 -->
             <TextView
                 android:id="@+id/tv_defense_label"
                 android:layout_width="wrap_content"
@@ -359,6 +359,7 @@
         android:paddingTop="10dp"
         android:elevation="10dp">
 
+        <!-- ✅ 홈 아이콘 하얀색으로 변경 -->
         <LinearLayout
             android:id="@+id/navHome"
             android:layout_width="0dp"
@@ -376,7 +377,8 @@
                 android:backgroundTint="#441111"
                 android:padding="8dp"
                 android:src="@drawable/ic_home"
-                android:importantForAccessibility="no" />
+                android:importantForAccessibility="no"
+                app:tint="#FFFFFF" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

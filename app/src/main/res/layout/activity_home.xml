@@ -228,7 +228,6 @@
 
     </LinearLayout>
 
-    <!-- paddingBottom 제거 → Kotlin에서 inset 동적 처리 -->
     <LinearLayout
         android:id="@+id/layoutBottomNav"
         android:layout_width="match_parent"
@@ -239,6 +238,7 @@
         android:paddingTop="10dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- ✅ 홈 아이콘 하얀색으로 변경 -->
         <LinearLayout
             android:id="@+id/navHome"
             android:layout_width="0dp"
@@ -255,7 +255,8 @@
                 android:background="@drawable/bg_nav_red"
                 android:padding="8dp"
                 android:src="@drawable/ic_home"
-                android:importantForAccessibility="no" />
+                android:importantForAccessibility="no"
+                app:tint="#FFFFFF" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
