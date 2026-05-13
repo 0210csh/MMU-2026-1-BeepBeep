@@ -3948,6 +3948,7 @@ id decelerate
 id decelerateAndComplete
 id decor_content_parent
 id default_activity_button
+id defenseStatsGrid
 id deltaRelative
 id dependency_ordering
 id design_bottom_sheet
@@ -4069,7 +4070,6 @@ id line3
 id linear
 id listMode
 id list_item
-id ll_defense_coming_soon
 id ll_login_header
 id ll_record_header
 id ll_setting_header
@@ -4340,6 +4340,11 @@ id tvBase1Label
 id tvBase3Label
 id tvBleStatus
 id tvDebug
+id tvDefenseStatCount
+id tvDefenseStatFail
+id tvDefenseStatReaction
+id tvDefenseStatSuccess
+id tvDefenseStatSuccessRate
 id tvPhase
 id tvResult
 id tvScore

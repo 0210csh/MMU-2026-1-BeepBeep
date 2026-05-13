@@ -150,10 +150,15 @@ class MainActivity : AppCompatActivity() {
             val state = gameEngine.state.value
             if (state.phase == GamePhase.IDLE) {
                 baseAzimuth = null
-                if (gameEngine.isSessionComplete() || state.totalAttempts == 0) {
-                    gameEngine.startSession(getBallCount(), getDifficulty())
-                } else {
-                    gameEngine.launchRandom(getDifficulty())
+                when {
+                    // 세션 완료됐거나 아직 시작 안 한 경우 → 새 세션 시작
+                    gameEngine.isSessionComplete() || state.totalAttempts == 0 -> {
+                        gameEngine.startSession(getBallCount(), getDifficulty())
+                    }
+                    // 세션 진행 중 → 다음 판 시작
+                    else -> {
+                        gameEngine.launchNextInSession(getDifficulty())
+                    }
                 }
             }
         }

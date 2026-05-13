@@ -26,10 +26,10 @@ public final class ActivityRecordBinding implements ViewBinding {
   public final ImageButton btnSetting;
 
   @NonNull
-  public final LinearLayout layoutBottomNav;
+  public final GridLayout defenseStatsGrid;
 
   @NonNull
-  public final LinearLayout llDefenseComingSoon;
+  public final LinearLayout layoutBottomNav;
 
   @NonNull
   public final LinearLayout llRecordHeader;
@@ -54,6 +54,21 @@ public final class ActivityRecordBinding implements ViewBinding {
 
   @NonNull
   public final TextView tvDefenseLabel;
+
+  @NonNull
+  public final TextView tvDefenseStatCount;
+
+  @NonNull
+  public final TextView tvDefenseStatFail;
+
+  @NonNull
+  public final TextView tvDefenseStatReaction;
+
+  @NonNull
+  public final TextView tvDefenseStatSuccess;
+
+  @NonNull
+  public final TextView tvDefenseStatSuccessRate;
 
   @NonNull
   public final TextView tvStatBaseCorrect;
@@ -83,19 +98,22 @@ public final class ActivityRecordBinding implements ViewBinding {
   public final TextView tvUserName;
 
   private ActivityRecordBinding(@NonNull RelativeLayout rootView, @NonNull ImageButton btnSetting,
-      @NonNull LinearLayout layoutBottomNav, @NonNull LinearLayout llDefenseComingSoon,
+      @NonNull GridLayout defenseStatsGrid, @NonNull LinearLayout layoutBottomNav,
       @NonNull LinearLayout llRecordHeader, @NonNull LinearLayout llUserProfile,
       @NonNull LinearLayout navHome, @NonNull LinearLayout navRecord,
       @NonNull LinearLayout navTraining, @NonNull GridLayout statsGrid,
       @NonNull TextView tvBattingLabel, @NonNull TextView tvDefenseLabel,
-      @NonNull TextView tvStatBaseCorrect, @NonNull TextView tvStatBaseCorrectPct,
-      @NonNull TextView tvStatBattingAvg, @NonNull TextView tvStatCount,
-      @NonNull TextView tvStatFoul, @NonNull TextView tvStatHit, @NonNull TextView tvStatReaction,
-      @NonNull TextView tvStatStrike, @NonNull TextView tvUserName) {
+      @NonNull TextView tvDefenseStatCount, @NonNull TextView tvDefenseStatFail,
+      @NonNull TextView tvDefenseStatReaction, @NonNull TextView tvDefenseStatSuccess,
+      @NonNull TextView tvDefenseStatSuccessRate, @NonNull TextView tvStatBaseCorrect,
+      @NonNull TextView tvStatBaseCorrectPct, @NonNull TextView tvStatBattingAvg,
+      @NonNull TextView tvStatCount, @NonNull TextView tvStatFoul, @NonNull TextView tvStatHit,
+      @NonNull TextView tvStatReaction, @NonNull TextView tvStatStrike,
+      @NonNull TextView tvUserName) {
     this.rootView = rootView;
     this.btnSetting = btnSetting;
+    this.defenseStatsGrid = defenseStatsGrid;
     this.layoutBottomNav = layoutBottomNav;
-    this.llDefenseComingSoon = llDefenseComingSoon;
     this.llRecordHeader = llRecordHeader;
     this.llUserProfile = llUserProfile;
     this.navHome = navHome;
@@ -104,6 +122,11 @@ public final class ActivityRecordBinding implements ViewBinding {
     this.statsGrid = statsGrid;
     this.tvBattingLabel = tvBattingLabel;
     this.tvDefenseLabel = tvDefenseLabel;
+    this.tvDefenseStatCount = tvDefenseStatCount;
+    this.tvDefenseStatFail = tvDefenseStatFail;
+    this.tvDefenseStatReaction = tvDefenseStatReaction;
+    this.tvDefenseStatSuccess = tvDefenseStatSuccess;
+    this.tvDefenseStatSuccessRate = tvDefenseStatSuccessRate;
     this.tvStatBaseCorrect = tvStatBaseCorrect;
     this.tvStatBaseCorrectPct = tvStatBaseCorrectPct;
     this.tvStatBattingAvg = tvStatBattingAvg;
@@ -148,15 +171,15 @@ public final class ActivityRecordBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.layoutBottomNav;
-      LinearLayout layoutBottomNav = ViewBindings.findChildViewById(rootView, id);
-      if (layoutBottomNav == null) {
+      id = R.id.defenseStatsGrid;
+      GridLayout defenseStatsGrid = ViewBindings.findChildViewById(rootView, id);
+      if (defenseStatsGrid == null) {
         break missingId;
       }
 
-      id = R.id.ll_defense_coming_soon;
-      LinearLayout llDefenseComingSoon = ViewBindings.findChildViewById(rootView, id);
-      if (llDefenseComingSoon == null) {
+      id = R.id.layoutBottomNav;
+      LinearLayout layoutBottomNav = ViewBindings.findChildViewById(rootView, id);
+      if (layoutBottomNav == null) {
         break missingId;
       }
 
@@ -205,6 +228,36 @@ public final class ActivityRecordBinding implements ViewBinding {
       id = R.id.tv_defense_label;
       TextView tvDefenseLabel = ViewBindings.findChildViewById(rootView, id);
       if (tvDefenseLabel == null) {
+        break missingId;
+      }
+
+      id = R.id.tvDefenseStatCount;
+      TextView tvDefenseStatCount = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefenseStatCount == null) {
+        break missingId;
+      }
+
+      id = R.id.tvDefenseStatFail;
+      TextView tvDefenseStatFail = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefenseStatFail == null) {
+        break missingId;
+      }
+
+      id = R.id.tvDefenseStatReaction;
+      TextView tvDefenseStatReaction = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefenseStatReaction == null) {
+        break missingId;
+      }
+
+      id = R.id.tvDefenseStatSuccess;
+      TextView tvDefenseStatSuccess = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefenseStatSuccess == null) {
+        break missingId;
+      }
+
+      id = R.id.tvDefenseStatSuccessRate;
+      TextView tvDefenseStatSuccessRate = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefenseStatSuccessRate == null) {
         break missingId;
       }
 
@@ -262,11 +315,12 @@ public final class ActivityRecordBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ActivityRecordBinding((RelativeLayout) rootView, btnSetting, layoutBottomNav,
-          llDefenseComingSoon, llRecordHeader, llUserProfile, navHome, navRecord, navTraining,
-          statsGrid, tvBattingLabel, tvDefenseLabel, tvStatBaseCorrect, tvStatBaseCorrectPct,
-          tvStatBattingAvg, tvStatCount, tvStatFoul, tvStatHit, tvStatReaction, tvStatStrike,
-          tvUserName);
+      return new ActivityRecordBinding((RelativeLayout) rootView, btnSetting, defenseStatsGrid,
+          layoutBottomNav, llRecordHeader, llUserProfile, navHome, navRecord, navTraining,
+          statsGrid, tvBattingLabel, tvDefenseLabel, tvDefenseStatCount, tvDefenseStatFail,
+          tvDefenseStatReaction, tvDefenseStatSuccess, tvDefenseStatSuccessRate, tvStatBaseCorrect,
+          tvStatBaseCorrectPct, tvStatBattingAvg, tvStatCount, tvStatFoul, tvStatHit,
+          tvStatReaction, tvStatStrike, tvUserName);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

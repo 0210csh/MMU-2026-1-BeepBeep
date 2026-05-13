@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BeepDefense</string>
+    <string name="app_name">BEEP BALL</string>
     <string name="action_settings">Settings</string>
 
     <string-array name="difficulty_levels">

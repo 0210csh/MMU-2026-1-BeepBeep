@@ -28,7 +28,7 @@
     <color name="white">#FFFFFFFF</color>
     <dimen name="fab_margin">16dp</dimen>
     <string name="action_settings">Settings</string>
-    <string name="app_name">BeepDefense</string>
+    <string name="app_name">BEEP BALL</string>
     <string name="gcm_defaultSenderId" translatable="false">1078675195810</string>
     <string name="google_api_key" translatable="false">AIzaSyA5PcbNDYT6m9fJjBNIyqiDcfIG99SkMVc</string>
     <string name="google_app_id" translatable="false">1:1078675195810:android:8d6f86bda1f4b75ffc94fb</string>

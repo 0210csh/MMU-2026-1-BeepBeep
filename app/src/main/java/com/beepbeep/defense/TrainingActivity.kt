@@ -44,7 +44,10 @@ class TrainingActivity : AppCompatActivity() {
     }
 
     private fun loadRecentRecords() {
-        val userId = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
+        val userId = getSharedPreferences("UserInfo", MODE_PRIVATE)
+            .getString("id", "anonymous") ?: "anonymous"
+
+        // ── 타격 훈련 최근 기록 ──
         val statsPref = getSharedPreferences("TrainingStats_$userId", Context.MODE_PRIVATE)
         val count = statsPref.getInt("count", 0)
 
@@ -70,10 +73,32 @@ class TrainingActivity : AppCompatActivity() {
             binding.tvBatRate.text = "기록 없음"
             binding.tvBatRate.setTextColor(0xFF5CF387.toInt())
         }
+
+        // ── 수비 훈련 최근 기록 ──
+        val defensePref = getSharedPreferences("DefenseStats_$userId", Context.MODE_PRIVATE)
+        val defenseCount = defensePref.getInt("count", 0)
+
+        if (defenseCount > 0) {
+            val avgSuccessRate = defensePref.getFloat("sum_success_rate", 0f) / defenseCount
+            val avgReaction    = defensePref.getFloat("sum_reaction",     0f) / defenseCount
+            val avgSuccess     = defensePref.getFloat("sum_success",      0f) / defenseCount
+            val avgFail        = defensePref.getFloat("sum_fail",         0f) / defenseCount
+
+            binding.tvDefRate.text = buildString {
+                appendLine("${defenseCount}판 평균")
+                appendLine("성공률: ${"%.0f".format(avgSuccessRate)}%")
+                appendLine("성공횟수: ${"%.1f".format(avgSuccess)}")
+                appendLine("실패횟수: ${"%.1f".format(avgFail)}")
+                append("반응속도 평균: ${"%.0f".format(avgReaction)}ms")
+            }
+            binding.tvDefRate.setTextColor(resources.getColor(android.R.color.white, null))
+        } else {
+            binding.tvDefRate.text = "기록 없음"
+            binding.tvDefRate.setTextColor(0xFF38BDF8.toInt())
+        }
     }
 
     private fun setupClickListeners() {
-
         binding.btnSetting.setOnClickListener {
             startActivity(Intent(this, SettingActivity::class.java))
         }

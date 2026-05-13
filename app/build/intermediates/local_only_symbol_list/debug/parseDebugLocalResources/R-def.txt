@@ -98,6 +98,7 @@ id cb_auto_login
 id contentHome
 id controlLayout
 id debugControllerLayout
+id defenseStatsGrid
 id et_id
 id et_login_id
 id et_login_pw
@@ -115,7 +116,6 @@ id itemResetRecord
 id joystickView
 id layoutBottomNav
 id layoutHeader
-id ll_defense_coming_soon
 id ll_login_header
 id ll_record_header
 id ll_setting_header
@@ -140,6 +140,11 @@ id tvBase1Label
 id tvBase3Label
 id tvBleStatus
 id tvDebug
+id tvDefenseStatCount
+id tvDefenseStatFail
+id tvDefenseStatReaction
+id tvDefenseStatSuccess
+id tvDefenseStatSuccessRate
 id tvPhase
 id tvResult
 id tvScore

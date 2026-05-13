@@ -47,6 +47,8 @@ class RecordActivity : AppCompatActivity() {
         binding.tvUserName.text = userPref.getString("name", "로그인이 필요합니다")
 
         val userId = userPref.getString("id", "anonymous") ?: "anonymous"
+
+        // ── 타격 훈련 통계 ──
         val statsPref = getSharedPreferences("TrainingStats_$userId", Context.MODE_PRIVATE)
         val count = statsPref.getInt("total_count", 0)
 
@@ -61,13 +63,13 @@ class RecordActivity : AppCompatActivity() {
             val avgBaseCorrectPct = statsPref.getFloat("total_sum_base_correct_pct", 0f) / count
             val avgBaseCorrect    = statsPref.getFloat("total_sum_base_correct", 0f) / count
 
-            binding.tvStatBattingAvg.text    = "%.3f".format(avgBattingAvg)
-            binding.tvStatReaction.text      = "${"%.0f".format(avgReaction)}ms"
-            binding.tvStatHit.text           = "%.1f".format(avgHit)
-            binding.tvStatFoul.text          = "%.1f".format(avgFoul)
-            binding.tvStatStrike.text        = "%.1f".format(avgStrike)
+            binding.tvStatBattingAvg.text     = "%.3f".format(avgBattingAvg)
+            binding.tvStatReaction.text       = "${"%.0f".format(avgReaction)}ms"
+            binding.tvStatHit.text            = "%.1f".format(avgHit)
+            binding.tvStatFoul.text           = "%.1f".format(avgFoul)
+            binding.tvStatStrike.text         = "%.1f".format(avgStrike)
             binding.tvStatBaseCorrectPct.text = "${"%.0f".format(avgBaseCorrectPct)}%"
-            binding.tvStatBaseCorrect.text   = "%.1f".format(avgBaseCorrect)
+            binding.tvStatBaseCorrect.text    = "%.1f".format(avgBaseCorrect)
         } else {
             binding.tvStatCount.text          = "기록 없음"
             binding.tvStatBattingAvg.text     = "-"
@@ -77,6 +79,30 @@ class RecordActivity : AppCompatActivity() {
             binding.tvStatStrike.text         = "-"
             binding.tvStatBaseCorrectPct.text = "-"
             binding.tvStatBaseCorrect.text    = "-"
+        }
+
+        // ── 수비 훈련 통계 ──
+        val defensePref = getSharedPreferences("DefenseStats_$userId", Context.MODE_PRIVATE)
+        val defenseCount = defensePref.getInt("total_count", 0)
+
+        if (defenseCount > 0) {
+            binding.tvDefenseStatCount.text = "전체 ${defenseCount}판 평균"
+
+            val avgSuccessRate = defensePref.getFloat("total_sum_success_rate", 0f) / defenseCount
+            val avgReaction    = defensePref.getFloat("total_sum_reaction", 0f) / defenseCount
+            val avgSuccess     = defensePref.getFloat("total_sum_success", 0f) / defenseCount
+            val avgFail        = defensePref.getFloat("total_sum_fail", 0f) / defenseCount
+
+            binding.tvDefenseStatSuccessRate.text = "${"%.0f".format(avgSuccessRate)}%"
+            binding.tvDefenseStatReaction.text    = "${"%.0f".format(avgReaction)}ms"
+            binding.tvDefenseStatSuccess.text     = "%.1f".format(avgSuccess)
+            binding.tvDefenseStatFail.text        = "%.1f".format(avgFail)
+        } else {
+            binding.tvDefenseStatCount.text       = "기록 없음"
+            binding.tvDefenseStatSuccessRate.text = "-"
+            binding.tvDefenseStatReaction.text    = "-"
+            binding.tvDefenseStatSuccess.text     = "-"
+            binding.tvDefenseStatFail.text        = "-"
         }
     }
 

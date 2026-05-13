@@ -1,4 +1,4 @@
-#Wed May 13 11:12:11 KST 2026
+#Thu May 14 08:33:20 KST 2026
 base.0=C\:\\Users\\ufidf\\AndroidStudioProjects\\MyApplication5\\MMU-2026-1-BeepBeep\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
 base.1=C\:\\Users\\ufidf\\AndroidStudioProjects\\MyApplication5\\MMU-2026-1-BeepBeep\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
 base.2=C\:\\Users\\ufidf\\AndroidStudioProjects\\MyApplication5\\MMU-2026-1-BeepBeep\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\10\\classes.dex

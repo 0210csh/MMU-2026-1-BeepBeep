@@ -97,6 +97,7 @@
                 android:layout_below="@id/ll_user_profile"
                 android:layout_marginTop="30dp"
                 android:text="⚾ 타격 훈련 통계"
+                android:contentDescription="타격 훈련 통계"
                 android:textColor="#5CF387"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -311,39 +312,139 @@
                 android:layout_below="@id/statsGrid"
                 android:layout_marginTop="30dp"
                 android:text="🛡 수비 훈련 통계"
+                android:contentDescription="수비 훈련 통계"
                 android:textColor="#38BDF8"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
-            <LinearLayout
-                android:id="@+id/ll_defense_coming_soon"
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tvDefenseStatCount"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/tv_defense_label"
+                android:layout_marginTop="6dp"
+                android:text="기록 없음"
+                android:textColor="#AAAAAA"
+                android:textSize="13sp" />
+
+            <GridLayout
+                android:id="@+id/defenseStatsGrid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/tvDefenseStatCount"
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="40dp"
-                android:background="#1A1A1A"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="30dp">
+                android:columnCount="2">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- 성공률 -->
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="준비 중"
-                    android:textColor="#555555"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
+                    android:minHeight="100dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="5dp"
+                    android:background="#1A1A1A"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:id="@+id/tvDefenseStatSuccessRate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="-"
+                        android:textColor="#38BDF8"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="성공률"
+                        android:textColor="#8F8F8F"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- 반응속도 평균 -->
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="수비 훈련 통계는 추후 업데이트 예정입니다"
-                    android:textColor="#444444"
-                    android:textSize="13sp" />
+                    android:minHeight="100dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="5dp"
+                    android:background="#1A1A1A"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:id="@+id/tvDefenseStatReaction"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="-"
+                        android:textColor="#FFB74D"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="반응속도 평균"
+                        android:textColor="#8F8F8F"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
-            </LinearLayout>
+                <!-- 성공횟수 -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:minHeight="100dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="5dp"
+                    android:background="#1A1A1A"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:id="@+id/tvDefenseStatSuccess"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="-"
+                        android:textColor="#5CF387"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="성공횟수 (평균)"
+                        android:textColor="#8F8F8F"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- ✅ 실패횟수 추가 -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:minHeight="100dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="5dp"
+                    android:background="#1A1A1A"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:id="@+id/tvDefenseStatFail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="-"
+                        android:textColor="#F87171"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="실패횟수 (평균)"
+                        android:textColor="#8F8F8F"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+            </GridLayout>
 
         </RelativeLayout>
     </ScrollView>
@@ -359,7 +460,6 @@
         android:paddingTop="10dp"
         android:elevation="10dp">
 
-        <!-- ✅ 홈 아이콘 하얀색으로 변경 -->
         <LinearLayout
             android:id="@+id/navHome"
             android:layout_width="0dp"
