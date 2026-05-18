@@ -815,6 +815,12 @@ class SwingTestActivity : AppCompatActivity() {
             hitWindowCloseAbsMs      = System.currentTimeMillis()
             graphHitWindowCloseRelMs = hitWindowCloseAbsMs - pitchRecordStart
             windowClosePitchDeg      = currentPitchDeg
+
+            // 윈도우 닫히는 순간의 minBatAngleDeg 스냅샷 — postWindow 동안 배트가
+            // 계속 내려가도 최종 판정이 흔들리지 않도록 이 시점 값을 고정해서 사용
+            val snapMinAngleDeg    = minBatAngleDeg
+            val snapMinAngleAbsMs  = minBatAngleAbsMs
+
             withContext(Dispatchers.Main) {
                 tvStatus.text = ""
                 swingGraphView.setHitWindowClose(graphHitWindowCloseRelMs)
@@ -823,12 +829,12 @@ class SwingTestActivity : AppCompatActivity() {
             if (bleConnected) bleManager.sendControl(0)
 
             // 윈도우 마감 직후 정타 조건 즉시 평가 — postWindow 1000ms 기다리지 않음
-            // minBatAngleDeg는 실시간 갱신 중이므로 이 시점에 이미 유효한 값
-            val earlyMinInWindow = minBatAngleDeg < Float.MAX_VALUE &&
-                                   minBatAngleAbsMs >= hitWindowOpenAbsMs &&
-                                   minBatAngleAbsMs <= hitWindowCloseAbsMs
-            val earlyAngleDiff   = if (minBatAngleDeg < Float.MAX_VALUE)
-                                       minBatAngleDeg - BATTING_ANGLE_DEG
+            // 스냅샷 값 사용 → postWindow 중 배트가 더 내려가도 조기 판정과 최종 판정이 일치
+            val earlyMinInWindow = snapMinAngleDeg < Float.MAX_VALUE &&
+                                   snapMinAngleAbsMs >= hitWindowOpenAbsMs &&
+                                   snapMinAngleAbsMs <= hitWindowCloseAbsMs
+            val earlyAngleDiff   = if (snapMinAngleDeg < Float.MAX_VALUE)
+                                       snapMinAngleDeg - BATTING_ANGLE_DEG
                                    else Float.MAX_VALUE
 
             if (earlyMinInWindow && swingWasStrong && abs(earlyAngleDiff) <= PITCH_TOLERANCE) {
@@ -892,12 +898,13 @@ class SwingTestActivity : AppCompatActivity() {
             }
 
             // ━━━ 4단계: 결과 판정 (최저각도 기반) ━━━
-            val hasValidMin   = minBatAngleDeg < Float.MAX_VALUE
+            // 스냅샷 값 사용 → 조기 판정(earlyMinInWindow)과 동일 기준으로 평가
+            val hasValidMin   = snapMinAngleDeg < Float.MAX_VALUE
             val minInWindow   = hasValidMin &&
-                                minBatAngleAbsMs >= hitWindowOpenAbsMs &&
-                                minBatAngleAbsMs <= hitWindowCloseAbsMs
-            val minBeforeWin  = hasValidMin && minBatAngleAbsMs < hitWindowOpenAbsMs
-            val angleDiff     = if (hasValidMin) minBatAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
+                                snapMinAngleAbsMs >= hitWindowOpenAbsMs &&
+                                snapMinAngleAbsMs <= hitWindowCloseAbsMs
+            val minBeforeWin  = hasValidMin && snapMinAngleAbsMs < hitWindowOpenAbsMs
+            val angleDiff     = if (hasValidMin) snapMinAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
             val winDelta      = windowClosePitchDeg - windowOpenPitchDeg
             val winSign       = if (winDelta >= 0f) "+" else ""
 
@@ -1217,14 +1224,8 @@ class SwingTestActivity : AppCompatActivity() {
             liveBallParabolaView.updateLiveBat(batH)
 
             // 스윙 궤적 기록 (메인 스레드에서 실행 — BleManager가 mainHandler.post 사용)
-            // BLE 는 여러 패킷을 묶어 한 번에 전달하므로 동시 도착 패킷이
-            // 같은 타임스탬프를 갖게 된다 → 그래프에 수직 점프(계단) 발생.
-            // 최소 8 ms 간격을 강제해 버스트 수신 시에도 균등하게 분산시킨다.
             if (isRecording) {
-                val nowMs   = System.currentTimeMillis() - pitchRecordStart
-                val lastMs  = pitchHistory.lastOrNull()?.first ?: (nowMs - 10L)
-                val adjMs   = maxOf(nowMs, lastMs + 8L)
-                pitchHistory.add(Pair(adjMs, currentPitchDeg))
+                pitchHistory.add(Pair(System.currentTimeMillis() - pitchRecordStart, currentPitchDeg))
                 swingGraphView.postInvalidate()
             }
             val phaseElapsed = System.currentTimeMillis() - phaseRecordStartTime
