@@ -21,11 +21,13 @@ import java.util.UUID
 class BleManager(private val context: Context) {
 
     companion object {
-        const val DEVICE_NAME = "SmartBat_Pro"
-        val SERVICE_UUID = UUID.fromString("0000180C-0000-1000-8000-00805f9b34fb")
-        val DATA_UUID    = UUID.fromString("00002A56-0000-1000-8000-00805f9b34fb")
-        val CONTROL_UUID = UUID.fromString("00002A57-0000-1000-8000-00805f9b34fb")
-        val CCCD_UUID    = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+        const val DEVICE_NAME    = "SmartBat_Pro"
+        val SERVICE_UUID         = UUID.fromString("0000180C-0000-1000-8000-00805f9b34fb")
+        val DATA_UUID            = UUID.fromString("00002A56-0000-1000-8000-00805f9b34fb")
+        val CONTROL_UUID         = UUID.fromString("00002A57-0000-1000-8000-00805f9b34fb")
+        val CCCD_UUID            = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+        val BATTERY_SERVICE_UUID = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb")
+        val BATTERY_LEVEL_UUID   = UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb")
     }
 
     data class SensorPacket(
@@ -43,6 +45,7 @@ class BleManager(private val context: Context) {
         fun onConnected()
         fun onDisconnected()
         fun onPacket(packet: SensorPacket)
+        fun onBatteryLevel(level: Int) {}
     }
 
     private var callback: Callback? = null
@@ -70,8 +73,12 @@ class BleManager(private val context: Context) {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             this@BleManager.gatt = gatt
             when (newState) {
-                BluetoothProfile.STATE_CONNECTED -> gatt.requestMtu(512)
+                BluetoothProfile.STATE_CONNECTED    -> {
+                    gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                    gatt.requestMtu(512)
+                }
                 BluetoothProfile.STATE_DISCONNECTED -> {
+                    gatt.close()                        // GATT 리소스 해제 — 없으면 재연결 루프 발생
                     this@BleManager.gatt = null
                     mainHandler.post { callback?.onDisconnected() }
                 }
@@ -95,7 +102,72 @@ class BleManager(private val context: Context) {
                 @Suppress("DEPRECATION")
                 gatt.writeDescriptor(cccd)
             }
-            mainHandler.post { callback?.onConnected() }
+            // onConnected는 DATA CCCD 완료 후 onDescriptorWrite에서 호출
+
+            // 배터리 서비스 구독 (연결 직후 1초 후)
+            mainHandler.postDelayed({
+                val bService = gatt.getService(BATTERY_SERVICE_UUID)
+                val bChar    = bService?.getCharacteristic(BATTERY_LEVEL_UUID) ?: return@postDelayed
+                gatt.setCharacteristicNotification(bChar, true)
+                val bCccd = bChar.getDescriptor(CCCD_UUID) ?: return@postDelayed
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    gatt.writeDescriptor(bCccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    bCccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    @Suppress("DEPRECATION")
+                    gatt.writeDescriptor(bCccd)
+                }
+            }, 1000)
+        }
+
+        // CCCD 쓰기 완료 처리
+        override fun onDescriptorWrite(
+            gatt: BluetoothGatt,
+            descriptor: BluetoothGattDescriptor,
+            status: Int
+        ) {
+            when (descriptor.characteristic?.uuid) {
+                DATA_UUID -> {
+                    // DATA 노티피케이션 활성화 완료 → 이제 버튼 신호 수신 가능
+                    mainHandler.post { callback?.onConnected() }
+                }
+                BATTERY_LEVEL_UUID -> {
+                    // 배터리 CCCD 완료 → 즉시 현재 배터리 값 읽기
+                    val bChar = gatt.getService(BATTERY_SERVICE_UUID)
+                        ?.getCharacteristic(BATTERY_LEVEL_UUID) ?: return
+                    gatt.readCharacteristic(bChar)
+                }
+            }
+        }
+
+        // 배터리 즉시 읽기 결과 처리
+        @Suppress("DEPRECATION")
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            status: Int
+        ) {
+            if (status != BluetoothGatt.GATT_SUCCESS) return
+            if (characteristic.uuid == BATTERY_LEVEL_UUID) {
+                val raw = characteristic.value?.getOrNull(0) ?: return
+                val level = raw.toInt() and 0xFF
+                mainHandler.post { callback?.onBatteryLevel(level) }
+            }
+        }
+
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray,
+            status: Int
+        ) {
+            if (status != BluetoothGatt.GATT_SUCCESS) return
+            if (characteristic.uuid == BATTERY_LEVEL_UUID) {
+                val raw = value.getOrNull(0) ?: return
+                val level = raw.toInt() and 0xFF
+                mainHandler.post { callback?.onBatteryLevel(level) }
+            }
         }
 
         @Suppress("DEPRECATION")
@@ -104,8 +176,14 @@ class BleManager(private val context: Context) {
             characteristic: BluetoothGattCharacteristic
         ) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
-            if (characteristic.uuid != DATA_UUID) return
-            parseAndDeliver(characteristic.value?.toString(Charsets.UTF_8) ?: return)
+            when (characteristic.uuid) {
+                BATTERY_LEVEL_UUID -> {
+                    val raw = characteristic.value?.getOrNull(0) ?: return
+                    val level = raw.toInt() and 0xFF
+                    mainHandler.post { callback?.onBatteryLevel(level) }
+                }
+                DATA_UUID -> parseAndDeliver(characteristic.value?.toString(Charsets.UTF_8) ?: return)
+            }
         }
 
         override fun onCharacteristicChanged(
@@ -113,8 +191,14 @@ class BleManager(private val context: Context) {
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
-            if (characteristic.uuid != DATA_UUID) return
-            parseAndDeliver(value.toString(Charsets.UTF_8))
+            when (characteristic.uuid) {
+                BATTERY_LEVEL_UUID -> {
+                    val raw = value.getOrNull(0) ?: return
+                    val level = raw.toInt() and 0xFF
+                    mainHandler.post { callback?.onBatteryLevel(level) }
+                }
+                DATA_UUID -> parseAndDeliver(value.toString(Charsets.UTF_8))
+            }
         }
     }
 
@@ -171,8 +255,6 @@ class BleManager(private val context: Context) {
         scanning = true
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
-        // 이름 필터 없이 전체 스캔 후 콜백에서 기기명 확인
-        // (ArduinoBLE가 이름을 Scan Response에 넣는 경우 필터에 안 걸릴 수 있음)
         bluetoothAdapter?.bluetoothLeScanner?.startScan(null, settings, scanCallback)
     }
 
