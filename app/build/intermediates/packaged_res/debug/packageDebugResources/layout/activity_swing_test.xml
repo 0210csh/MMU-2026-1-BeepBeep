@@ -193,6 +193,15 @@
             android:textSize="11sp"
             android:layout_marginStart="8dp"
             android:gravity="start"/>
+
+        <TextView
+            android:id="@+id/tvBatteryLevel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="배터리 --%"
+            android:textColor="#64748B"
+            android:textSize="11sp"
+            android:layout_marginStart="8dp"/>
     </LinearLayout>
 
     <!-- 투구 횟수 설정 + 진행 표시 -->
@@ -205,7 +214,7 @@
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="4dp"
-        app:layout_constraintBottom_toTopOf="@id/btnV2Start"
+        app:layout_constraintBottom_toTopOf="@id/bottomBtnRow"
         app:layout_constraintStart_toEndOf="@id/v2Base3Container"
         app:layout_constraintEnd_toStartOf="@id/v2Base1Container">
 
@@ -255,19 +264,41 @@
             android:gravity="end"/>
     </LinearLayout>
 
-    <!-- 시작 버튼 -->
-    <Button
-        android:id="@+id/btnV2Start"
-        android:layout_width="120dp"
-        android:layout_height="40dp"
-        android:text="시작"
-        android:textSize="15sp"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#16A34A"
-        android:elevation="4dp"
+    <!-- 하단 버튼 행 -->
+    <LinearLayout
+        android:id="@+id/bottomBtnRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:layout_marginBottom="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@id/v2Base3Container"
-        app:layout_constraintEnd_toStartOf="@id/v2Base1Container"/>
+        app:layout_constraintEnd_toStartOf="@id/v2Base1Container">
+
+        <Button
+            android:id="@+id/btnResultView"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="결과 보기"
+            android:textSize="13sp"
+            android:textColor="#64B4FF"
+            android:padding="8dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:layout_marginEnd="12dp"
+            android:visibility="gone"/>
+
+        <Button
+            android:id="@+id/btnV2Start"
+            android:layout_width="120dp"
+            android:layout_height="40dp"
+            android:text="시작"
+            android:textSize="15sp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#16A34A"
+            android:elevation="4dp"/>
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

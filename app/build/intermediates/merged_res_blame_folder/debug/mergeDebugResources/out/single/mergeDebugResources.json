@@ -1,302 +1,294 @@
 [
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\layout_activity_swing_test.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_swing_test.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_card_batting.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_card_batting.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\layout_activity_home.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_home.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_baseline_person_24.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/baseline_person_24.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_nav_green_vivid.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_nav_green_vivid.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_rounded_green.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_rounded_green.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_white_rounded_input.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_white_rounded_input.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_circle_green_vivid.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_circle_green_vivid.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\layout_activity_base_run_reaction.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_base_run_reaction.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_baseline_speaker_phone_24.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/baseline_speaker_phone_24.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\layout_activity_training.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_training.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_stat_card.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_stat_card.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_circle_target_pink.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\circle_target_pink.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_circle_dark.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_circle_dark.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_rounded_green.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_rounded_green.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_login.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_login.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_ic_launcher_foreground.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\ic_launcher_foreground.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_nav_yellow_vivid.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_nav_yellow_vivid.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-mdpi_ic_launcher.webp.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-mdpi\\ic_launcher.webp"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_ic_baseball.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/ic_baseball.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_circle_green_vivid.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_circle_green_vivid.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-xxhdpi_ic_launcher.webp.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-xxhdpi/ic_launcher.webp"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_outline_account_box_24.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\outline_account_box_24.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-xxhdpi_ic_launcher_round.webp.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-xxhdpi/ic_launcher_round.webp"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_circle_dark.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_circle_dark.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_rounded_blue.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_rounded_blue.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_nav_green_dark.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_nav_green_dark.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_circle_green.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/circle_green.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_menu_card_record.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_menu_card_record.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_swing_test.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_swing_test.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-anydpi_ic_launcher.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-anydpi\\ic_launcher.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_baseline_lock_24.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/baseline_lock_24.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\layout_activity_main.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_main.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_nav_red.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_nav_red.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\layout_activity_signup.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_signup.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_phase_active.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_phase_active.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-xxxhdpi_ic_launcher.webp.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-xxxhdpi\\ic_launcher.webp"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_base_diamond_active.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/base_diamond_active.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_training.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\training.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_card_defense.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_card_defense.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_baseline_chevron_right_24.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\baseline_chevron_right_24.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_baseline_height_24.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/baseline_height_24.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\layout_activity_record.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_record.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-anydpi_ic_launcher_round.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-anydpi/ic_launcher_round.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-mdpi_ic_launcher_round.webp.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-mdpi\\ic_launcher_round.webp"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_circle_gray.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_circle_gray.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\layout_activity_ble_test.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_ble_test.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-anydpi_ic_launcher.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-anydpi/ic_launcher.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_card_batting.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_card_batting.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_ic_shield.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/ic_shield.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\xml_backup_rules.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\xml\\backup_rules.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_training.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_training.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_ic_home.png.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\ic_home.png"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-mdpi_ic_launcher_round.webp.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-mdpi/ic_launcher_round.webp"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_menu_card_defense.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_menu_card_defense.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_nav_green_dark.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_nav_green_dark.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_baseline_info_24.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\baseline_info_24.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_baseline_check_24.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/baseline_check_24.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_neon_border_card.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\neon_border_card.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_baseline_chevron_right_24.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/baseline_chevron_right_24.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_ic_launcher_background.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\ic_launcher_background.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_baseline_mail_24.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/baseline_mail_24.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-xxhdpi_ic_launcher_round.webp.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-xxhdpi\\ic_launcher_round.webp"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_circle_blue_vivid.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_circle_blue_vivid.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_nav_yellow_vivid.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_nav_yellow_vivid.xml"
-    },
-    {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_blue_border_card.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\blue_border_card.xml"
-    },
-    {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-xxxhdpi_ic_launcher_round.webp.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-xxxhdpi\\ic_launcher_round.webp"
-    },
-    {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\layout_activity_login.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\activity_login.xml"
-    },
-    {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_baseline_speaker_phone_24.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\baseline_speaker_phone_24.xml"
-    },
-    {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_baseline_person_24.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\baseline_person_24.xml"
-    },
-    {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_baseline_height_24.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\baseline_height_24.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_radar_graphic.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/radar_graphic.xml"
     },
     {
         "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_home.xml.flat",
         "source": "com.beepbeep.defense.app-main-44:/layout/activity_home.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_account.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\account.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/ic_launcher_background.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-xhdpi_ic_launcher.webp.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-xhdpi\\ic_launcher.webp"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_nav_orange_dark.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_nav_orange_dark.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-xhdpi_ic_launcher_round.webp.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-xhdpi\\ic_launcher_round.webp"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-xhdpi_ic_launcher_round.webp.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-xhdpi/ic_launcher_round.webp"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_card_defense.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_card_defense.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_menu_card_batting.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_menu_card_batting.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\xml_data_extraction_rules.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\xml\\data_extraction_rules.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_main.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_main.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_ic_pause.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\ic_pause.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_ble_test.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_ble_test.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_baseline_check_24.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\baseline_check_24.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_signup.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_signup.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_menu_card_batting.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_menu_card_batting.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_outline_account_box_24.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/outline_account_box_24.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-anydpi_ic_launcher_round.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-anydpi\\ic_launcher_round.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-hdpi_ic_launcher.webp.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-hdpi/ic_launcher.webp"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_nav_orange_dark.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_nav_orange_dark.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/menu_menu_main.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/menu/menu_main.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_ic_home.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\ic_home.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_baseline_add_box_24.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/baseline_add_box_24.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_baseline_mail_24.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\baseline_mail_24.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_menu_card_defense.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_menu_card_defense.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_phase_active.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_phase_active.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_training.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/training.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\menu_menu_main.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\menu\\menu_main.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_setting.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/setting.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_base_diamond_active.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\base_diamond_active.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_white_rounded_input.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_white_rounded_input.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_ic_shield.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\ic_shield.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-xxxhdpi_ic_launcher_round.webp.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-xxxhdpi/ic_launcher_round.webp"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-hdpi_ic_launcher.webp.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-hdpi\\ic_launcher.webp"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_rounded_border_gray.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/rounded_border_gray.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_baseline_add_box_24.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\baseline_add_box_24.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_circle_target_pink.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/circle_target_pink.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_radar_graphic.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\radar_graphic.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_base_run_reaction.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_base_run_reaction.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_circle_gray.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_circle_gray.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_blue_border_card.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/blue_border_card.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_circle_blue_vivid.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_circle_blue_vivid.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_nav_green_vivid.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_nav_green_vivid.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-xxhdpi_ic_launcher.webp.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-xxhdpi\\ic_launcher.webp"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_ic_person.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/ic_person.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\mipmap-hdpi_ic_launcher_round.webp.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\mipmap-hdpi\\ic_launcher_round.webp"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_menu_card_record.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_menu_card_record.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_stat_card.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_stat_card.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/xml_backup_rules.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/xml/backup_rules.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_ic_baseball.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\ic_baseball.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_bg_circle_orange_vivid.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/bg_circle_orange_vivid.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_base_diamond_normal.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\base_diamond_normal.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-xhdpi_ic_launcher.webp.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-xhdpi/ic_launcher.webp"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_settings.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\settings.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-xxxhdpi_ic_launcher.webp.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-xxxhdpi/ic_launcher.webp"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_ic_person.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\ic_person.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_ic_home.png.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/ic_home.png"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_circle_green.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\circle_green.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/ic_launcher_foreground.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_baseline_lock_24.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\baseline_lock_24.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_neon_border_card.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/neon_border_card.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_nav_red.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_nav_red.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_base_diamond_normal.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/base_diamond_normal.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_rounded_blue.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_rounded_blue.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_settings.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/settings.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\layout_setting.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\layout\\setting.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-hdpi_ic_launcher_round.webp.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-hdpi/ic_launcher_round.webp"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_rounded_border_gray.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\rounded_border_gray.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_baseline_info_24.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/baseline_info_24.xml"
     },
     {
-        "merged": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-debug-42:\\drawable_bg_circle_orange_vivid.xml.flat",
-        "source": "C:\\Users\\ufidf\\.gradle\\daemon\\8.13\\com.beepbeep.defense.app-main-44:\\drawable\\bg_circle_orange_vivid.xml"
+        "merged": "com.beepbeep.defense.app-debug-42:/xml_data_extraction_rules.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_record.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_record.xml"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-debug-42:/mipmap-mdpi_ic_launcher.webp.flat",
+        "source": "com.beepbeep.defense.app-main-44:/mipmap-mdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_ic_pause.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/ic_pause.xml"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-debug-42:/drawable_account.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/drawable/account.xml"
     }
 ]

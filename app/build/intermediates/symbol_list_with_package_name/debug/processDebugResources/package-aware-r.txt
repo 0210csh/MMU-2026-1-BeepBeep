@@ -3870,6 +3870,7 @@ id bestChoice
 id bleControlLayout
 id blocking
 id bottom
+id bottomBtnRow
 id bounce
 id bounceBoth
 id bounceEnd
@@ -3884,6 +3885,7 @@ id btnBallCountDown
 id btnBallCountUp
 id btnBleConnect
 id btnCatch
+id btnResultView
 id btnSetting
 id btnStart
 id btnSwingPitchMinus
@@ -4338,6 +4340,7 @@ id triangle
 id tvBallCount
 id tvBase1Label
 id tvBase3Label
+id tvBatteryLevel
 id tvBleStatus
 id tvDebug
 id tvDefenseStatCount
