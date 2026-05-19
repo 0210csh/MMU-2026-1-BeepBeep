@@ -327,6 +327,15 @@ class SwingTestActivity : AppCompatActivity() {
     @Volatile private var bleConnected = false
     // BLE 연결 여부. true 이면 폰 센서 대신 BLE 센서 데이터 사용
 
+    // BLE 그래프 타임스탬프 균등 분배용
+    // MCU 는 정확히 10ms 마다 전송하지만 BLE 연결 간격에 따라 여러 패킷이
+    // 동시에 도착해 같은 타임스탬프를 갖는 계단 현상이 발생함.
+    // 기록 시작 시점을 기준으로 패킷 수 × 10ms 로 표시 시각을 계산하면
+    // 폰 기종과 무관하게 균등하게 분배되고 마커 위치도 틀어지지 않음.
+    private var bleGraphBaseMs:       Long = 0L   // 기록 시작 시 실제 경과ms 기준점
+    private var bleGraphPacketCount:  Long = 0L   // 기록 시작 후 수신 패킷 수
+    private var bleGraphStarted:    Boolean = false // 현재 기록 구간 첫 패킷 여부
+
     @Volatile private var prevBtn1 = false
     @Volatile private var prevBtn2 = false
     private var batBtn1Job: Job? = null
@@ -1224,8 +1233,19 @@ class SwingTestActivity : AppCompatActivity() {
             liveBallParabolaView.updateLiveBat(batH)
 
             // 스윙 궤적 기록 (메인 스레드에서 실행 — BleManager가 mainHandler.post 사용)
+            // BLE 버스트 수신 시 여러 패킷이 동시에 도착해 같은 타임스탬프를 가짐 → 계단 현상.
+            // 패킷 카운터 × MCU 전송 주기(10ms) 로 표시 시각을 균등 분배.
+            // 기준점(bleGraphBaseMs)을 첫 패킷의 실제 경과시각으로 맞춰
+            // 히트 윈도우 등 마커와 시간축이 어긋나지 않도록 함.
             if (isRecording) {
-                pitchHistory.add(Pair(System.currentTimeMillis() - pitchRecordStart, currentPitchDeg))
+                val realMs = System.currentTimeMillis() - pitchRecordStart
+                if (!bleGraphStarted) {
+                    bleGraphBaseMs  = realMs
+                    bleGraphStarted = true
+                }
+                val displayMs = bleGraphBaseMs + bleGraphPacketCount * 10L
+                bleGraphPacketCount++
+                pitchHistory.add(Pair(displayMs, currentPitchDeg))
                 swingGraphView.postInvalidate()
             }
             val phaseElapsed = System.currentTimeMillis() - phaseRecordStartTime
@@ -1699,9 +1719,11 @@ class SwingTestActivity : AppCompatActivity() {
 
     private fun resetAndShowLiveGraphs() {
         pitchHistory.clear()
-        hitTimeRelMs     = -1L
-        pitchRecordStart = System.currentTimeMillis()
-        isRecording      = true
+        hitTimeRelMs       = -1L
+        pitchRecordStart   = System.currentTimeMillis()
+        bleGraphStarted    = false   // BLE 패킷 카운터 리셋
+        bleGraphPacketCount = 0L
+        isRecording        = true
         swingGraphView.setLiveSource(pitchHistory, BATTING_ANGLE_DEG)
         swingGraphView.setTolerance(PITCH_TOLERANCE)
         swingGraphView.visibility = View.VISIBLE
