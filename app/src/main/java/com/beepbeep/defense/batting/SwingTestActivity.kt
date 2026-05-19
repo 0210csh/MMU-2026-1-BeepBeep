@@ -1233,19 +1233,14 @@ class SwingTestActivity : AppCompatActivity() {
             liveBallParabolaView.updateLiveBat(batH)
 
             // 스윙 궤적 기록 (메인 스레드에서 실행 — BleManager가 mainHandler.post 사용)
-            // BLE 버스트 수신 시 여러 패킷이 동시에 도착해 같은 타임스탬프를 가짐 → 계단 현상.
-            // 패킷 카운터 × MCU 전송 주기(10ms) 로 표시 시각을 균등 분배.
-            // 기준점(bleGraphBaseMs)을 첫 패킷의 실제 경과시각으로 맞춰
-            // 히트 윈도우 등 마커와 시간축이 어긋나지 않도록 함.
+            // 실제 시각 기반으로 기록해 히트 윈도우 등 마커와 시간축을 일치시킴.
+            // 동시 도착 패킷(버스트)은 +1ms 씩 밀어 수직 점프를 방지하되
+            // 실제 시각을 절대 앞지르지 않아 마커 위치가 틀어지지 않음.
             if (isRecording) {
-                val realMs = System.currentTimeMillis() - pitchRecordStart
-                if (!bleGraphStarted) {
-                    bleGraphBaseMs  = realMs
-                    bleGraphStarted = true
-                }
-                val displayMs = bleGraphBaseMs + bleGraphPacketCount * 10L
-                bleGraphPacketCount++
-                pitchHistory.add(Pair(displayMs, currentPitchDeg))
+                val nowMs  = System.currentTimeMillis() - pitchRecordStart
+                val lastMs = pitchHistory.lastOrNull()?.first ?: 0L
+                val adjMs  = if (nowMs <= lastMs) lastMs + 1L else nowMs
+                pitchHistory.add(Pair(adjMs, currentPitchDeg))
                 swingGraphView.postInvalidate()
             }
             val phaseElapsed = System.currentTimeMillis() - phaseRecordStartTime
