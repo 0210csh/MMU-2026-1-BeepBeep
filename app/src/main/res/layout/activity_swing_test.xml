@@ -234,7 +234,7 @@
             android:id="@+id/tvSwingPitchCount"
             android:layout_width="36dp"
             android:layout_height="wrap_content"
-            android:text="10"
+            android:text="3"
             android:textColor="#FFFFFF"
             android:textSize="13sp"
             android:textStyle="bold"

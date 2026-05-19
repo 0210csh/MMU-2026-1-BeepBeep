@@ -30,6 +30,17 @@ class SwingTtsManager(private val context: Context) {
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tts_kr")
     }
 
+    fun speakWithDone(text: String, onDone: () -> Unit) {
+        if (!isReady) { onDone(); return }
+        tts?.setLanguage(Locale.KOREAN)
+        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(id: String?) {}
+            override fun onDone(id: String?)  { onDone() }
+            override fun onError(id: String?) { onDone() }
+        })
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tts_done")
+    }
+
     fun speakEnglish(text: String, speechRate: Float = 1.0f) {
         if (!isReady) return
         tts?.setLanguage(Locale.ENGLISH)
@@ -83,6 +94,10 @@ class SwingTtsManager(private val context: Context) {
             tts?.speak(second, TextToSpeech.QUEUE_ADD,   null, "tts_seq_2")
         }
         deferred.await()
+    }
+
+    fun stop() {
+        tts?.stop()
     }
 
     fun shutdown() {

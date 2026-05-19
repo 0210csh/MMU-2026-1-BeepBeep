@@ -387,30 +387,6 @@ class SwingGraphView @JvmOverloads constructor(
             }
         }
 
-        // ── PITCH TTS 시작 수직선 (노란색) ──────────────────
-        if (pitchTtsStartMs >= 0L) {
-            val px = sx(pitchTtsStartMs).coerceIn(padL, padL + gW)
-            canvas.drawLine(px, padT, px, padT + gH, pitchTtsStartPaint)
-            labelPaint.color     = Color.argb(200, 253, 224, 71)
-            labelPaint.textSize  = 19f
-            labelPaint.textAlign = Paint.Align.LEFT
-            canvas.drawText("PITCH↑", px + 4f, padT + 48f, labelPaint)
-            labelPaint.textSize  = 17f
-            canvas.drawText("${pitchTtsStartMs}ms", px + 4f, padT + 66f, labelPaint)
-        }
-
-        // ── PITCH TTS 종료 수직선 (진한 노란색) ─────────────
-        if (pitchWindowStartMs >= 0L) {
-            val ex = sx(pitchWindowStartMs).coerceIn(padL, padL + gW)
-            canvas.drawLine(ex, padT, ex, padT + gH, pitchTtsEndPaint)
-            labelPaint.color     = Color.argb(200, 251, 191, 36)
-            labelPaint.textSize  = 19f
-            labelPaint.textAlign = Paint.Align.RIGHT
-            canvas.drawText("PITCH↓", ex - 4f, padT + 48f, labelPaint)
-            labelPaint.textSize  = 17f
-            canvas.drawText("${pitchWindowStartMs}ms", ex - 4f, padT + 66f, labelPaint)
-        }
-
         // ── 필요 각도 점선 ───────────────────────────────────
         val rqY = sy(requiredPitch)
         canvas.drawLine(padL, rqY, padL + gW, rqY, reqLinePaint)
@@ -418,21 +394,6 @@ class SwingGraphView @JvmOverloads constructor(
         labelPaint.textSize  = 22f
         labelPaint.textAlign = Paint.Align.RIGHT
         canvas.drawText("필요 ${requiredPitch.toInt()}° ±${tolerance.toInt()}°", padL + gW - 4f, rqY - 6f, labelPaint)
-
-        // ── 논문 기준 궤적 (초록 점선) ───────────────────────
-        if (pitchWindowStartMs >= 0L) {
-            val refPath = Path()
-            var started = false
-            for ((relMs, deg) in REF_WAYPOINTS) {
-                val absMs = pitchWindowStartMs + relMs
-                if (absMs < 0L) continue
-                val px = sx(absMs).coerceIn(padL, padL + gW)
-                val py = sy(deg).coerceIn(padT, padT + gH)
-                if (!started) { refPath.moveTo(px, py); started = true }
-                else refPath.lineTo(px, py)
-            }
-            if (started) canvas.drawPath(refPath, refCurvePaint)
-        }
 
         // ── 타격 윈도우 OPEN / CLOSE 수직선 ─────────────────
         if (hitWindowOpenMs >= 0L) {
@@ -465,18 +426,6 @@ class SwingGraphView @JvmOverloads constructor(
                 if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
             }
             canvas.drawPath(path, trajectoryPaint)
-        }
-
-        // ── 최저각 측정 시작 수직선 (보라색) ────────────────
-        if (minSearchStartMs >= 0L) {
-            val mx = sx(minSearchStartMs).coerceIn(padL, padL + gW)
-            canvas.drawLine(mx, padT, mx, padT + gH, minSearchLinePaint)
-            labelPaint.color     = Color.argb(200, 167, 139, 250)
-            labelPaint.textSize  = 19f
-            labelPaint.textAlign = Paint.Align.LEFT
-            canvas.drawText("측정↓", mx + 3f, padT + 66f, labelPaint)
-            labelPaint.textSize  = 17f
-            canvas.drawText("${minSearchStartMs}ms", mx + 3f, padT + 84f, labelPaint)
         }
 
         // ── 최저각 마커 (오렌지 점) ──────────────────────────
@@ -514,23 +463,5 @@ class SwingGraphView @JvmOverloads constructor(
         labelPaint.textAlign = Paint.Align.CENTER
         canvas.drawText("스윙 궤적", padL + gW / 2f, padT - 12f, labelPaint)
 
-        // ── 하단 요약 텍스트 (윈도우 구간 각도 변화) ────────
-        if (showSummary) {
-            val summaryText = if (!winOpenAngleDeg.isNaN() && !winCloseAngleDeg.isNaN()) {
-                "윈도우 각도  %.0f°  →  %.0f°  (Δ%.0f°)"
-                    .format(winOpenAngleDeg, winCloseAngleDeg, winCloseAngleDeg - winOpenAngleDeg)
-            } else {
-                ""
-            }
-            val diff = abs(hitActualPitch - requiredPitch)
-            summaryPaint.color = when {
-                hitTimeMs < 0L   -> Color.argb(200, 248, 113, 113)
-                diff < tolerance -> Color.argb(220, 74, 222, 128)
-                else             -> Color.argb(220, 251, 191, 36)
-            }
-            if (summaryText.isNotEmpty()) {
-                canvas.drawText(summaryText, padL + gW / 2f, padT + gH + 58f, summaryPaint)
-            }
-        }
     }
 }

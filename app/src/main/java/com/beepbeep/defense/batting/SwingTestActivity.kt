@@ -114,7 +114,7 @@ class SwingTestActivity : AppCompatActivity() {
     private lateinit var btnResultView:        Button
     private var lastResultDialog:              android.app.AlertDialog? = null
 
-    private var targetPitches  = 10
+    private var targetPitches  = 3
     private var currentPitchNum = 0
     private var successCount   = 0
     private var isTraining     = false
@@ -195,7 +195,7 @@ class SwingTestActivity : AppCompatActivity() {
     private val MIN_ACCEL_THRESHOLD  = 48f
     private val MIN_GYRO_THRESHOLD   = 30f
 
-    private val PITCH_TOLERANCE      = 10f
+    private val PITCH_TOLERANCE      = 5f
     // 각도 허용 오차 (도). 현재 HEIGHT_TOLERANCE 기반 판정을 사용하나 참고용으로 보존
 
     // ── 물리 상수 (공·배트 3D 위치 계산) ──────────────────
@@ -309,7 +309,6 @@ class SwingTestActivity : AppCompatActivity() {
     // 게임 전체 흐름 코루틴. startGame() 에서 이전 gameJob 취소 후 새로 launch
 
     private var audioJob: Job? = null
-    // 베이스 도착음 반복 재생 코루틴. startBaseBeep() 에서 launch, stopAudio() 에서 cancel
 
     // ── TTS ─────────────────────────────────────────────
     private val ttsManager = SwingTtsManager(this)
@@ -673,8 +672,13 @@ class SwingTestActivity : AppCompatActivity() {
             // ━━━ 1단계: SET 발화 + 초기 각도 기록 ━━━
             setAngleThisPitch = currentPitchDeg
             allSetAngles.add(setAngleThisPitch)
-            // BLE: SET 단계부터 측정 시작 + phase1(SET→READY) 기록 시작
-            if (bleConnected) bleManager.sendControl(1)
+            // BLE: MCU 상태 리셋 후 측정 시작 — 이전 세션이 끊어졌을 때 isMeasuring=true가 남아
+            // sendControl(1)이 무시되는 버그를 방지하기 위해 0→200ms→1 순서로 전송
+            if (bleConnected) {
+                bleManager.sendControl(0)
+                delay(200L)
+                bleManager.sendControl(1)
+            }
             recordingPhase = 1
             startPhaseRecording()
             withContext(Dispatchers.Main) {
@@ -793,7 +797,6 @@ class SwingTestActivity : AppCompatActivity() {
             }
             animJob.join()
 
-            // 애니메이션 종료(0ms): 공이 타자 위치에 도달
             spatialAudio.stopBeep()
             audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
 
@@ -856,6 +859,12 @@ class SwingTestActivity : AppCompatActivity() {
                     ttsManager.speak("깡")
                     tvStatus.text = "소리 들어봐!"
                     tvStatus.setTextColor(0xFFFBBF24.toInt())
+                }
+                launch {
+                    delay((300L..1000L).random())
+                    withContext(Dispatchers.Main) { activateBothBases() }
+                    startBaseBeep()
+                    isWaitingForInput = true
                 }
             }
 
@@ -930,8 +939,7 @@ class SwingTestActivity : AppCompatActivity() {
                         strikeCount++
                         tvStatus.text = "스트라이크!"
                         tvStatus.setTextColor(0xFFF87171.toInt())
-                        tvResult.text = "스윙 없음\n필요 각도: %.0f°\n윈도우 각도 변화: $winSign%.1f°"
-                            .format(BATTING_ANGLE_DEG, winDelta)
+                        tvResult.text = "스윙 없음"
                         if (!isTraining) {
                             showSwingGraph()
                             btnStart.isEnabled = true
@@ -960,8 +968,15 @@ class SwingTestActivity : AppCompatActivity() {
                             tvStatus.text = "소리 들어봐!"
                             tvStatus.setTextColor(0xFFFBBF24.toInt())
                         }
-                        tvResult.text = "최저 각도: %.0f°  /  필요 각도: %.0f°\n윈도우 각도 변화: $winSign%.1f°"
-                            .format(minBatAngleDeg, BATTING_ANGLE_DEG, winDelta)
+                        tvResult.text = "최저 각도: %.0f°".format(minBatAngleDeg)
+                    }
+                    if (!gangSpoken) {
+                        launch {
+                            delay((300L..1000L).random())
+                            withContext(Dispatchers.Main) { activateBothBases() }
+                            startBaseBeep()
+                            isWaitingForInput = true
+                        }
                     }
 
                     val divMs      = 1500L
@@ -994,13 +1009,9 @@ class SwingTestActivity : AppCompatActivity() {
 
                     withContext(Dispatchers.Main) {
                         ballTrackView.reset()
-                        activateBothBases()
                         tvStatus.text = ""
                         hitCount++
                     }
-
-                    startBaseBeep()
-                    isWaitingForInput = true
                 }
 
                 // ── 4b: 파울 — 최저각이 윈도우 안이지만 각도 불일치 or 힘 부족 ──
@@ -1021,8 +1032,7 @@ class SwingTestActivity : AppCompatActivity() {
                         tvStatus.text = "파울!"
                         tvStatus.setTextColor(0xFFFBBF24.toInt())
                         val resultLabel = if (!swingWasStrong) "파울 — 힘 부족" else "파울 — 각도 불일치"
-                        tvResult.text = "$resultLabel\n최저 각도: %.0f°  /  필요 각도: %.0f°\n윈도우 각도 변화: $winSign%.1f°"
-                            .format(minBatAngleDeg, BATTING_ANGLE_DEG, winDelta)
+                        tvResult.text = "$resultLabel\n최저 각도: %.0f°".format(minBatAngleDeg)
                         if (!isTraining) {
                             showSwingGraph()
                             btnStart.isEnabled = true
@@ -1047,8 +1057,7 @@ class SwingTestActivity : AppCompatActivity() {
                         strikeCount++
                         tvStatus.text = "스트라이크!"
                         tvStatus.setTextColor(0xFFF87171.toInt())
-                        tvResult.text = "타격 윈도우 전 스윙\n최저 각도: %.0f°  /  필요 각도: %.0f°\n윈도우 각도 변화: $winSign%.1f°"
-                            .format(minBatAngleDeg, BATTING_ANGLE_DEG, winDelta)
+                        tvResult.text = "타격 윈도우 전 스윙\n최저 각도: %.0f°".format(minBatAngleDeg)
                         if (!isTraining) {
                             showSwingGraph()
                             btnStart.isEnabled = true
@@ -1073,8 +1082,7 @@ class SwingTestActivity : AppCompatActivity() {
                         strikeCount++
                         tvStatus.text = "스트라이크!"
                         tvStatus.setTextColor(0xFFF87171.toInt())
-                        tvResult.text = "타격 윈도우 후 스윙 / 무스윙\n필요 각도: %.0f°\n윈도우 각도 변화: $winSign%.1f°"
-                            .format(BATTING_ANGLE_DEG, winDelta)
+                        tvResult.text = "타격 윈도우 후 스윙 / 무스윙"
                         if (!isTraining) {
                             showSwingGraph()
                             btnStart.isEnabled = true
@@ -1096,18 +1104,16 @@ class SwingTestActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────
     private fun startBaseBeep() {
         val finalPan = if (targetBase == 3) -1.0f else 1.0f
-        // 3루=왼쪽(-1.0), 1루=오른쪽(+1.0). 베이스 방향의 기본 패닝값
 
         audioJob?.cancel()
 
         audioJob = scope.launch {
             val sr          = 44100
-            val beepSamples = sr * 200 / 1000   // 200ms 비프음 샘플 수
-            val silSamples  = sr * 0 / 1000     // 무음 샘플 수
+            val beepSamples = sr * 200 / 1000
+            val silSamples  = sr * 0 / 1000
 
             while (isActive) {
                 val rAngle = finalPan * 90f + currentHeadingDeg
-                // 베이스 방향(±90°) + 현재 머리 방향 = 실제 음원 각도
                 val pan    = sin(Math.toRadians(rAngle.toDouble())).toFloat().coerceIn(-1f, 1f)
                 audioTrack?.write(tone(beepSamples, 880f, pan, 1.0f), 0, beepSamples * 2)
                 if (!isActive) break
@@ -1267,10 +1273,31 @@ class SwingTestActivity : AppCompatActivity() {
         val wasBtn1 = prevBtn1
         val wasBtn2 = prevBtn2
 
+        // 양쪽 버튼 동시 상승 에지 (같은 패킷에서 동시에 눌린 경우)
+        if (btn1 && !wasBtn1 && btn2 && !wasBtn2) {
+            batBtn1Job?.cancel(); batBtn2Job?.cancel()
+            when {
+                isTraining -> earlyFinishTraining(speakTts = true)
+                else       -> if (btnStart.isEnabled) btnStart.performClick()
+            }
+            prevBtn1 = btn1; prevBtn2 = btn2
+            return
+        }
+
         // 오른쪽 버튼 상승 에지
         if (btn1 && !wasBtn1) {
             when {
                 isWaitingForInput -> { batBtn2Job?.cancel(); onBasePressed(1) }
+                isTraining -> {
+                    // 왼쪽 타이머 대기 중 → 200ms 내 동시 누름 → 조기종료
+                    if (batBtn2Job?.isActive == true) {
+                        batBtn1Job?.cancel(); batBtn2Job?.cancel()
+                        earlyFinishTraining(speakTts = true)
+                    } else {
+                        batBtn1Job?.cancel()
+                        batBtn1Job = scope.launch { delay(200L) }
+                    }
+                }
                 !isTraining -> {
                     if (batBtn2Job?.isActive == true) {
                         // 왼쪽 타이머 대기 중 → 동시 누름 → 훈련 시작
@@ -1281,7 +1308,7 @@ class SwingTestActivity : AppCompatActivity() {
                         batBtn1Job = scope.launch {
                             delay(200L)
                             withContext(Dispatchers.Main) {
-                                if (batBtn2Job?.isActive != true && targetPitches < 30) {
+                                if (batBtn2Job?.isActive != true && btnStart.isEnabled && targetPitches < 30) {
                                     targetPitches++
                                     tvSwingPitchCount.text = targetPitches.toString()
                                     ttsManager.speak("${targetPitches}회")
@@ -1297,6 +1324,16 @@ class SwingTestActivity : AppCompatActivity() {
         if (btn2 && !wasBtn2) {
             when {
                 isWaitingForInput -> { batBtn1Job?.cancel(); onBasePressed(3) }
+                isTraining -> {
+                    // 오른쪽 타이머 대기 중 → 200ms 내 동시 누름 → 조기종료
+                    if (batBtn1Job?.isActive == true) {
+                        batBtn1Job?.cancel(); batBtn2Job?.cancel()
+                        earlyFinishTraining(speakTts = true)
+                    } else {
+                        batBtn2Job?.cancel()
+                        batBtn2Job = scope.launch { delay(200L) }
+                    }
+                }
                 !isTraining -> {
                     if (batBtn1Job?.isActive == true) {
                         // 오른쪽 타이머 대기 중 → 동시 누름 → 훈련 시작
@@ -1307,7 +1344,7 @@ class SwingTestActivity : AppCompatActivity() {
                         batBtn2Job = scope.launch {
                             delay(200L)
                             withContext(Dispatchers.Main) {
-                                if (batBtn1Job?.isActive != true && targetPitches > 1) {
+                                if (batBtn1Job?.isActive != true && btnStart.isEnabled && targetPitches > 1) {
                                     targetPitches--
                                     tvSwingPitchCount.text = targetPitches.toString()
                                     ttsManager.speak("${targetPitches}회")
@@ -1321,6 +1358,162 @@ class SwingTestActivity : AppCompatActivity() {
 
         prevBtn1 = btn1
         prevBtn2 = btn2
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 조기종료 처리
+    //   speakTts=true  : "조기종료" TTS 출력 (양쪽 버튼 동시 누름 시)
+    //   speakTts=false : TTS 없음 (뒤로가기 / 앱 종료 시)
+    //
+    // DB 업로드에 사용할 변수 위치:
+    //   perPitchRecords  — 완료된 투구별 기록 List<HashMap<String,Any?>> (멤버변수 126번 줄)
+    //   actualPitches    — 실제 완료 투구 수 (perPitchRecords.size, 아래 지역변수)
+    //   hitCount         — 정타 수            (멤버변수 121번 줄)
+    //   foulCount        — 파울 수            (멤버변수 122번 줄)
+    //   strikeCount      — 스트라이크 수      (멤버변수 123번 줄)
+    //   successCount     — 베이스 정답 수     (멤버변수 119번 줄)
+    //   reactionTimes    — 반응속도 목록      (멤버변수 124번 줄)
+    //   battingAvg       — 타율 (아래 지역변수)
+    //   avgReaction      — 평균 반응속도 ms   (아래 지역변수)
+    //   baseCorrectPct   — 베이스 정답률 %    (아래 지역변수)
+    //
+    // Firebase 업로드 코드 삽입 위치:
+    //   아래 주석 "← Firebase 업로드 코드 여기에 삽입" 위치에 추가
+    // ─────────────────────────────────────────────────────
+    private fun earlyFinishTraining(speakTts: Boolean, showSummary: Boolean = true) {
+        if (!isTraining) return
+        isTraining = false
+
+        gameJob?.cancel()
+        ttsManager.stop()
+        stopAudio()
+        spatialAudio.stopBeep()
+        audioTrack?.stop()
+        isRecording           = false
+        isWaitingForInput     = false
+        hitWindowActive       = false
+        preWindowActive       = false
+        postWindowActive      = false
+        minAngleSearchActive  = false
+
+        val actualPitches = perPitchRecords.size
+        if (actualPitches > 0) {
+            val battingAvg        = hitCount.toFloat() / actualPitches
+            val avgReaction       = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
+            val baseCorrectPct    = if (hitCount > 0) successCount.toFloat() / hitCount * 100f else 0f
+            val battingAvgPct     = (battingAvg * 100).toInt()
+
+            if (showSummary) {
+                val ttsText = buildString {
+                    if (speakTts) append("조기종료. ")
+                    append("정타 ${hitCount}개, 타율 ${battingAvgPct}퍼센트. ")
+                    if (avgReaction >= 0L) append("평균 반응속도 %.1f초.".format(avgReaction / 1000.0))
+                }
+                ttsManager.speakWithDone(ttsText) {
+                    runOnUiThread {
+                        btnStart.isEnabled           = true
+                        btnSwingPitchMinus.isEnabled = true
+                        btnSwingPitchPlus.isEnabled  = true
+                    }
+                }
+            }
+
+            val userId    = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
+
+            val db        = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            val sessionId = System.currentTimeMillis().toString()
+            val sessionData = hashMapOf(
+                "생성일시"   to com.google.firebase.Timestamp.now(),
+                "목표투구수" to targetPitches,
+                "실제투구수" to actualPitches,
+                "조기종료"   to true,
+                "허용오차"   to PITCH_TOLERANCE,
+                "종합결과"   to hashMapOf(
+                    "정타수"       to hitCount,
+                    "파울수"       to foulCount,
+                    "스트라이크수" to strikeCount,
+                    "타율"         to battingAvg,
+                    "베이스정답수" to successCount,
+                    "베이스정답률" to baseCorrectPct,
+                    "반응속도평균" to avgReaction,
+                    "반응속도최소" to (reactionTimes.minOrNull() ?: -1L),
+                    "반응속도최대" to (reactionTimes.maxOrNull() ?: -1L)
+                )
+            )
+            val sessionRef = db.collection("users")
+                .document(userId)
+                .collection("훈련기록")
+                .document(sessionId)
+            sessionRef.set(sessionData)
+                .addOnSuccessListener {
+                    perPitchRecords.forEachIndexed { index, record ->
+                        sessionRef.collection("투구별기록")
+                            .document("${index + 1}번투구")
+                            .set(record)
+                    }
+                }
+                .addOnFailureListener { e ->
+                    android.util.Log.e("Firebase", "조기종료 업로드 실패: ${e.message}")
+                }
+
+            val statsPref = getSharedPreferences("TrainingStats_$userId", MODE_PRIVATE)
+            val editor    = statsPref.edit()
+            val count     = statsPref.getInt("count", 0)
+            editor.putInt  ("count",                minOf(count + 1, 10))
+            editor.putFloat("sum_batting_avg",       statsPref.getFloat("sum_batting_avg",       0f) + battingAvg)
+            editor.putFloat("sum_base_correct_pct",  statsPref.getFloat("sum_base_correct_pct",  0f) + baseCorrectPct)
+            editor.putFloat("sum_reaction",          statsPref.getFloat("sum_reaction",          0f) + avgReaction.toFloat())
+            editor.putFloat("sum_hit",               statsPref.getFloat("sum_hit",               0f) + hitCount.toFloat())
+            editor.putFloat("sum_foul",              statsPref.getFloat("sum_foul",              0f) + foulCount.toFloat())
+            editor.putFloat("sum_strike",            statsPref.getFloat("sum_strike",            0f) + strikeCount.toFloat())
+            editor.putFloat("sum_base_correct",      statsPref.getFloat("sum_base_correct",      0f) + successCount.toFloat())
+            val totalCount = statsPref.getInt("total_count", 0) + 1
+            editor.putInt  ("total_count",                totalCount)
+            editor.putFloat("total_sum_batting_avg",      statsPref.getFloat("total_sum_batting_avg",      0f) + battingAvg)
+            editor.putFloat("total_sum_base_correct_pct", statsPref.getFloat("total_sum_base_correct_pct", 0f) + baseCorrectPct)
+            editor.putFloat("total_sum_reaction",         statsPref.getFloat("total_sum_reaction",         0f) + avgReaction.toFloat())
+            editor.putFloat("total_sum_hit",              statsPref.getFloat("total_sum_hit",              0f) + hitCount.toFloat())
+            editor.putFloat("total_sum_foul",             statsPref.getFloat("total_sum_foul",             0f) + foulCount.toFloat())
+            editor.putFloat("total_sum_strike",           statsPref.getFloat("total_sum_strike",           0f) + strikeCount.toFloat())
+            editor.putFloat("total_sum_base_correct",     statsPref.getFloat("total_sum_base_correct",     0f) + successCount.toFloat())
+            editor.apply()
+        } else if (speakTts) {
+            // 첫 투구 조기종료: 통계 없어도 "조기종료" TTS는 출력
+            ttsManager.speakWithDone("조기종료") {
+                runOnUiThread {
+                    btnStart.isEnabled           = true
+                    btnSwingPitchMinus.isEnabled = true
+                    btnSwingPitchPlus.isEnabled  = true
+                }
+            }
+        }
+
+        val ttsWillPlay = (actualPitches > 0 && showSummary) || (actualPitches == 0 && speakTts)
+
+        runOnUiThread {
+            tvStatus.text = if (speakTts) "조기 종료" else ""
+            if (speakTts) tvStatus.setTextColor(0xFFF87171.toInt())
+            tvResult.text             = ""
+            tvSwingPitchProgress.text = ""
+            btnStart.isEnabled        = false
+            btnStart.text             = "다시 훈련"
+            btnSwingPitchMinus.isEnabled = false
+            btnSwingPitchPlus.isEnabled  = false
+            resetBaseVisuals()
+            ballTrackView.reset()
+            if (actualPitches > 0 && showSummary) {
+                showTrainingSummary(
+                    displayCount = actualPitches,
+                    dialogTitle  = "조기 종료 결과 (${actualPitches}/${targetPitches}회)"
+                )
+            } else if (!ttsWillPlay) {
+                // TTS 없는 케이스(뒤로가기 등): 즉시 활성화
+                btnStart.isEnabled           = true
+                btnSwingPitchMinus.isEnabled = true
+                btnSwingPitchPlus.isEnabled  = true
+            }
+            // ttsWillPlay && !showSummary 케이스: speakWithDone 콜백에서 활성화
+        }
     }
 
     // ─────────────────────────────────────────────────────
@@ -1362,7 +1555,7 @@ class SwingTestActivity : AppCompatActivity() {
     private fun startBleScan() {
         btnBleConnect.isEnabled = false
         btnBleConnect.text = "연결 중..."
-        bleManager.startScan()
+        bleManager?.startScan()
     }
 
     private fun scheduleNextOrFinish(success: Boolean) {
@@ -1387,10 +1580,10 @@ class SwingTestActivity : AppCompatActivity() {
         tvStatus.setTextColor(0xFF4ADE80.toInt())
         tvResult.text = ""
         tvSwingPitchProgress.text = ""
-        btnStart.isEnabled = true
+        btnStart.isEnabled = false
         btnStart.text = "다시 훈련"
-        btnSwingPitchMinus.isEnabled = true
-        btnSwingPitchPlus.isEnabled = true
+        btnSwingPitchMinus.isEnabled = false
+        btnSwingPitchPlus.isEnabled = false
 
         audioTrack?.stop()  // ✅ 팀원 코드에서 추가타율,주루반응속도
         audioTrack?.stop()  // 기존 오디오 정지
@@ -1401,7 +1594,13 @@ class SwingTestActivity : AppCompatActivity() {
             append("정타 ${hitCount}개, 타율 ${battingAvgPct}퍼센트. ")
             if (avgReactionForTts >= 0L) append("평균 반응속도 %.1f초.".format(avgReactionForTts / 1000.0))
         }
-        ttsManager.speak(ttsText)
+        ttsManager.speakWithDone(ttsText) {
+            runOnUiThread {
+                btnStart.isEnabled           = true
+                btnSwingPitchMinus.isEnabled = true
+                btnSwingPitchPlus.isEnabled  = true
+            }
+        }
 
         val battingAvg     = if (targetPitches > 0) hitCount.toFloat() / targetPitches else 0f
         val avgReaction    = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
@@ -1476,13 +1675,16 @@ class SwingTestActivity : AppCompatActivity() {
     }
 
 
-    private fun showTrainingSummary() {
-        val battingAvg     = if (targetPitches > 0) hitCount.toFloat() / targetPitches else 0f
+    private fun showTrainingSummary(
+        displayCount: Int = targetPitches,
+        dialogTitle: String = "훈련 종합 결과"
+    ) {
+        val battingAvg     = if (displayCount > 0) hitCount.toFloat() / displayCount else 0f
         val avgReaction    = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
         val baseCorrectPct = if (hitCount > 0) successCount.toFloat() / hitCount * 100f else 0f
 
         val summaryText = buildString {
-            appendLine("총 타석         ${targetPitches}회")
+            appendLine("총 타석         ${displayCount}회")
             appendLine()
             appendLine("정타 (볼 맞힘)   ${hitCount}회")
             appendLine("파울            ${foulCount}회")
@@ -1493,7 +1695,7 @@ class SwingTestActivity : AppCompatActivity() {
                 appendLine("베이스 정답률   ${"%.0f".format(baseCorrectPct)}%  (${successCount}/${hitCount})")
             }
             appendLine()
-            appendLine("타율            ${"%.3f".format(battingAvg)}  (${hitCount}/${targetPitches})")
+            appendLine("타율            ${"%.3f".format(battingAvg)}  (${hitCount}/${displayCount})")
             appendLine()
             if (avgReaction >= 0L) {
                 appendLine("주루 반응속도 평균   ${avgReaction} ms")
@@ -1684,7 +1886,7 @@ class SwingTestActivity : AppCompatActivity() {
         scroll.addView(container)
 
         lastResultDialog = AlertDialog.Builder(this)
-            .setTitle("훈련 종합 결과")
+            .setTitle(dialogTitle)
             .setView(scroll)
             .setPositiveButton("확인", null)
             .create()
@@ -1874,6 +2076,17 @@ class SwingTestActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────
     // 센서 등록 / 해제
     // ─────────────────────────────────────────────────────
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (isTraining) earlyFinishTraining(speakTts = false, showSummary = false)
+        super.onBackPressed()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (isTraining) earlyFinishTraining(speakTts = false, showSummary = false)
+    }
+
     override fun onResume() {
         super.onResume()
         initAudioTrack()
@@ -1909,6 +2122,5 @@ class SwingTestActivity : AppCompatActivity() {
         spatialAudio.release()
         bleManager.disconnect()
         scope.cancel()
-        // 스코프 취소 → gameJob, audioJob, btn1TapJob 등 모든 하위 코루틴 일괄 종료
     }
 }

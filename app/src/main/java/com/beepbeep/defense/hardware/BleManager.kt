@@ -129,11 +129,12 @@ class BleManager(private val context: Context) {
         ) {
             when (descriptor.characteristic?.uuid) {
                 DATA_UUID -> {
-                    // DATA 노티피케이션 활성화 완료 → 이제 버튼 신호 수신 가능
-                    mainHandler.post { callback?.onConnected() }
+                    // DATA CCCD 완료 — 배터리 CCCD가 끝난 뒤 onConnected()를 호출하므로 여기선 아무것도 하지 않음
                 }
                 BATTERY_LEVEL_UUID -> {
-                    // 배터리 CCCD 완료 → 즉시 현재 배터리 값 읽기
+                    // 배터리 CCCD 완료 → GATT 충돌 없는 시점이므로 여기서 onConnected() 호출
+                    mainHandler.post { callback?.onConnected() }
+                    // 현재 배터리 값 즉시 읽기
                     val bChar = gatt.getService(BATTERY_SERVICE_UUID)
                         ?.getCharacteristic(BATTERY_LEVEL_UUID) ?: return
                     gatt.readCharacteristic(bChar)
