@@ -916,13 +916,16 @@ class SwingTestActivity : AppCompatActivity() {
             }
 
             // ━━━ 4단계: 결과 판정 (최저각도 기반) ━━━
-            // 스냅샷 값 사용 → 조기 판정(earlyMinInWindow)과 동일 기준으로 평가
-            val hasValidMin   = snapMinAngleDeg < Float.MAX_VALUE
+            // post-window 1000ms 후의 최종 최저각으로 판정
+            // → 윈도우 닫힐 때 배트가 아직 내려가는 중이면 최저각이 window close 이후에 찍히므로
+            //   minAfterWin=true → 4d(늦은 스윙) 처리됨 (잘못된 각도 피드백 방지)
+            val hasValidMin   = minBatAngleDeg < Float.MAX_VALUE
             val minInWindow   = hasValidMin &&
-                                snapMinAngleAbsMs >= hitWindowOpenAbsMs &&
-                                snapMinAngleAbsMs <= hitWindowCloseAbsMs
-            val minBeforeWin  = hasValidMin && snapMinAngleAbsMs < hitWindowOpenAbsMs
-            val angleDiff     = if (hasValidMin) snapMinAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
+                                minBatAngleAbsMs >= hitWindowOpenAbsMs &&
+                                minBatAngleAbsMs <= hitWindowCloseAbsMs
+            val minBeforeWin  = hasValidMin && minBatAngleAbsMs < hitWindowOpenAbsMs
+            val minAfterWin   = hasValidMin && minBatAngleAbsMs > hitWindowCloseAbsMs
+            val angleDiff     = if (hasValidMin) minBatAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
             val winDelta      = windowClosePitchDeg - windowOpenPitchDeg
             val winSign       = if (winDelta >= 0f) "+" else ""
 
@@ -1071,9 +1074,35 @@ class SwingTestActivity : AppCompatActivity() {
                     }
                 }
 
-                // ── 4d: 스트라이크 — 무스윙 or 윈도우 마감 후 ──
-                else -> {
+                // ── 4d: 스트라이크 — 윈도우 마감 후 최저각 도달 (늦은 스윙) ──
+                // 윈도우가 닫힐 때 배트가 아직 이동 중 → 피치TTS 듣고 스윙이 늦음
+                minAfterWin -> {
                     currentPitchRecord["판정"] = "스트라이크(늦음)"
+                    currentPitchRecord["피드백"] = "더 빨리 스윙하세요"
+                    withContext(Dispatchers.Main) {
+                        perPitchRecords.add(HashMap(currentPitchRecord))
+                        ballTrackView.reset()
+                        ttsManager.speak("스트라이크")
+                        strikeCount++
+                        tvStatus.text = "스트라이크!"
+                        tvStatus.setTextColor(0xFFF87171.toInt())
+                        tvResult.text = "스윙이 늦음\n최저 각도: %.0f° (윈도우 마감 후)".format(minBatAngleDeg)
+                        if (!isTraining) {
+                            showSwingGraph()
+                            btnStart.isEnabled = true
+                            btnStart.text = "다시하기"
+                        }
+                    }
+                    delay(1000L)
+                    ttsManager.speakAndWait("더 빨리 스윙하세요", Locale.KOREAN)
+                    if (isTraining) {
+                        withContext(Dispatchers.Main) { scheduleNextOrFinish(false) }
+                    }
+                }
+
+                // ── 4e: 스트라이크 — 무스윙 or 스윙 미감지 ──
+                else -> {
+                    currentPitchRecord["판정"] = "스트라이크(무스윙)"
                     currentPitchRecord["피드백"] = "더 빨리 스윙하세요"
                     withContext(Dispatchers.Main) {
                         perPitchRecords.add(HashMap(currentPitchRecord))

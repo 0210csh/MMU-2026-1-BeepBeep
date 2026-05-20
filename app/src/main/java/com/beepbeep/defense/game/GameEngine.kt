@@ -20,9 +20,6 @@ data class GameState(
     val lastResult: CatchResult? = null,
     val catchTimeMs: Long? = null,
     val debugInfo: String = "시작 버튼을 누르세요",
-    val isTrainingMode: Boolean = false,
-    val targetPitches: Int = 0,
-    val currentPitchNum: Int = 0,
     val targetBallCount: Int = 0
 )
 
@@ -46,6 +43,7 @@ class GameEngine(private val context: Context) {
     }
 
     var onSessionComplete: ((SessionResult) -> Unit)? = null
+    var onTtsReady: (() -> Unit)? = null
     private val audioEngine = SpatialAudioEngine(context)
 
     var onHeadingChanged: ((Float) -> Unit)? = null
@@ -73,13 +71,9 @@ class GameEngine(private val context: Context) {
     private var attempts = 0
     private var launchTime = 0L
 
-    private var isTrainingMode = false
-    private var targetPitches = 0
-    private var currentPitchNum = 0
-    private var trainingDifficulty = 0.5f
-
     private var targetBallCount = 5
-    private var sessionActive   = false
+    var sessionActive   = false
+        private set
     private val catchTimes      = mutableListOf<Long>()
 
     @Volatile var joystickDx = 0f
@@ -91,6 +85,7 @@ class GameEngine(private val context: Context) {
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.KOREAN
                 ttsReady = true
+                onTtsReady?.invoke()
             }
         }
         startGameLoop()
@@ -157,7 +152,7 @@ class GameEngine(private val context: Context) {
         }
     }
 
-    fun startSession(ballCount: Int, difficulty: Float = 0.5f) {
+    fun startSession(ballCount: Int) {
         if (_state.value.phase != GamePhase.IDLE) return
         targetBallCount = ballCount
         sessionActive   = true
@@ -166,23 +161,32 @@ class GameEngine(private val context: Context) {
         catchTimes.clear()
         _state.value = _state.value.copy(
             score = 0, totalAttempts = 0, targetBallCount = ballCount, phase = GamePhase.IDLE)
-        launchRandom(difficulty)
+        if (ttsReady) {
+            tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {}
+                override fun onDone(utteranceId: String?)  { gameScope.launch { launchRandom() } }
+                override fun onError(utteranceId: String?) { gameScope.launch { launchRandom() } }
+            })
+            tts?.speak("훈련 시작", TextToSpeech.QUEUE_FLUSH, null, "training_start")
+        } else {
+            launchRandom()
+        }
     }
 
-    fun launchNextInSession(difficulty: Float = 0.5f) {
+    fun launchNextInSession() {
         if (!sessionActive) return
         if (isSessionComplete()) return
         if (_state.value.phase != GamePhase.IDLE) return
-        ballSim.launchRandom(difficulty)
+        ballSim.launchRandom(0.5f)
         audioEngine.startBeep()
         launchTime = System.currentTimeMillis()
         _state.value = _state.value.copy(
             phase = GamePhase.LAUNCHED, lastResult = null, catchTimeMs = null)
     }
 
-    fun launchRandom(difficulty: Float = 0.5f) {
+    fun launchRandom() {
         if (isSessionComplete()) return
-        ballSim.launchRandom(difficulty)
+        ballSim.launchRandom(0.5f)
         audioEngine.startBeep()
         launchTime = System.currentTimeMillis()
         _state.value = _state.value.copy(
@@ -212,15 +216,16 @@ class GameEngine(private val context: Context) {
             speak("포구 성공! ${msToKoreanTime(elapsedMs)}!")
         } else {
             val dist = ballSim.distanceToDefender(defX, defZ)
+            val dir  = getBallDirection(ballSim.currentPos.x, ballSim.currentPos.z, defX, defZ)
             _state.value = _state.value.copy(
                 phase = GamePhase.RESULT,
                 score = score,
                 totalAttempts = attempts,
                 lastResult = CatchResult.MISS,
                 catchTimeMs = null,
-                debugInfo = "❌ 포구 실패 (${"%.1f".format(dist)}m)"
+                debugInfo = "❌ 포구 실패 (${"%.1f".format(dist)}m, $dir)"
             )
-            speak("포구 실패. 공까지 ${"%.0f".format(dist)}미터 차이였습니다")
+            speak("포구 실패. $dir 방향으로 ${"%.0f".format(dist)}미터 차이였습니다")
         }
 
         gameScope.launch {
@@ -261,13 +266,60 @@ class GameEngine(private val context: Context) {
         }
     }
 
-    fun fullReset() {
-        audioEngine.stopBeep()
-        sessionActive = false
-        isTrainingMode = false
-        score = 0; attempts = 0; catchTimes.clear()
-        defX = 0f; defZ = 25f
-        _state.value = GameState()
+    fun forceStopSession() {
+        val phase = _state.value.phase
+        if (!sessionActive) return
+
+        // 케이스 1: 공이 날고 있거나 착지한 상태 → 즉시 포구 판정
+        if (phase == GamePhase.LAUNCHED || phase == GamePhase.LANDED) {
+            attempts++
+            val caught    = ballSim.checkCatch(defX, defZ)
+            val elapsedMs = System.currentTimeMillis() - launchTime
+            audioEngine.stopBeep()
+
+            if (caught) {
+                score++
+                catchTimes.add(elapsedMs)
+                _state.value = _state.value.copy(
+                    phase         = GamePhase.CAUGHT,
+                    score         = score,
+                    totalAttempts = attempts,
+                    lastResult    = CatchResult.SUCCESS,
+                    catchTimeMs   = elapsedMs,
+                    debugInfo     = "✅ 포구 성공! (조기종료)"
+                )
+            } else {
+                val dist = ballSim.distanceToDefender(defX, defZ)
+                val dir  = getBallDirection(ballSim.currentPos.x, ballSim.currentPos.z, defX, defZ)
+                _state.value = _state.value.copy(
+                    phase         = GamePhase.RESULT,
+                    score         = score,
+                    totalAttempts = attempts,
+                    lastResult    = CatchResult.MISS,
+                    catchTimeMs   = null,
+                    debugInfo     = "❌ 포구 실패 (조기종료, ${"%.1f".format(dist)}m, $dir)"
+                )
+            }
+        }
+
+        // 실제 완료 횟수 기준으로 통계 계산
+        targetBallCount = attempts
+        sessionActive   = false
+
+        if (phase == GamePhase.LAUNCHED || phase == GamePhase.LANDED) {
+            // 공 판정 결과를 잠깐 보여준 후 결과창
+            gameScope.launch {
+                delay(500L)
+                speakSessionSummary()
+                withContext(Dispatchers.Main) {
+                    resetToIdle(sessionDone = true)
+                }
+            }
+        } else {
+            // 대기 중 → 즉시 결과창
+            speakSessionSummary()
+            resetToIdle(sessionDone = true)
+        }
     }
 
     fun isSessionComplete() = sessionActive && attempts >= targetBallCount
@@ -278,7 +330,12 @@ class GameEngine(private val context: Context) {
         val worstMs    = catchTimes.maxOrNull()
         val successRate = if (targetBallCount > 0) score.toFloat() / targetBallCount * 100f else 0f
 
-        speak("훈련 종료. 총 ${targetBallCount}회 중 ${score}회 성공.")
+        val sb = StringBuilder("훈련 종료. 총 ${targetBallCount}회 중 ${score}회 성공.")
+        sb.append(" 성공률 ${"%.0f".format(successRate)}퍼센트.")
+        if (avgMs  != null) sb.append(" 평균 ${msToKoreanTime(avgMs)}.")
+        if (bestMs != null) sb.append(" 최단 시간 ${msToKoreanTime(bestMs)}.")
+        if (worstMs != null) sb.append(" 최장 시간 ${msToKoreanTime(worstMs)}.")
+        speak(sb.toString())
 
         uploadToFirebase(avgMs, bestMs, worstMs, successRate)
         saveToSharedPreferences(avgMs, successRate)
@@ -366,13 +423,35 @@ class GameEngine(private val context: Context) {
 
     private val Float.f get() = "%.1f".format(this)
 
+    /** 수비수 기준으로 공이 어느 방향에 있는지 반환 (앞 = 외야 방향, 뒤 = 홈 방향) */
+    private fun getBallDirection(ballX: Float, ballZ: Float, defX: Float, defZ: Float): String {
+        val dx    = ballX - defX
+        val dz    = ballZ - defZ
+        val absDx = kotlin.math.abs(dx)
+        val absDz = kotlin.math.abs(dz)
+
+        val lr = if (dx < 0f) "왼쪽" else "오른쪽"
+        val fb = if (dz > 0f) "앞"   else "뒤"
+
+        return when {
+            absDx < 1f && absDz < 1f  -> "정면"        // 거의 정면
+            absDx < absDz * 0.4f      -> fb             // 앞/뒤가 지배적
+            absDz < absDx * 0.4f      -> lr             // 좌/우가 지배적
+            else                       -> "$lr $fb"      // 대각선
+        }
+    }
+
     private fun speak(text: String) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
     fun stopSpeak() { tts?.stop() }
 
-    private fun msToKoreanTime(ms: Long): String = "${"%.1f".format(ms / 1000.0)}초"
+    private fun msToKoreanTime(ms: Long): String {
+        val formatted = "%.1f".format(ms / 1000.0)
+        val parts = formatted.split(".")
+        return if (parts.size == 2) "${parts[0]}점${parts[1]}초" else "${formatted}초"
+    }
 
     fun updateHeadingDirectly(deg: Float) {
         audioEngine.updateHeading(deg)
@@ -382,12 +461,7 @@ class GameEngine(private val context: Context) {
     fun speakControllerWarning()      { speak("컨트롤러를 연결해주세요") }
     fun speakControllerConnected()    { speak("컨트롤러 연결됨") }
     fun speakControllerDisconnected() { speak("컨트롤러 연결 끊김") }
-    fun speakBallCount(count: Int)    { speak("훈련 횟수 ${count}개") }
-    fun speakDifficulty(pos: Int) {
-        val name = when (pos) { 0 -> "쉬움"; 1 -> "보통"; 2 -> "어려움"; else -> "보통" }
-        speak("난이도 $name")
-    }
-
+    fun speakBallCount(count: Int)    { speak("${count}회") }
     fun reinitAudio() {
         val wasBeeping = _state.value.phase == GamePhase.LAUNCHED || _state.value.phase == GamePhase.LANDED
         audioEngine.reinitAudioTrack()

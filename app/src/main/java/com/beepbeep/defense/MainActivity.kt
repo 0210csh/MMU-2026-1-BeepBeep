@@ -52,7 +52,6 @@ class MainActivity : AppCompatActivity() {
     private var headingVelocity = 0f
     private var signedVelocity  = 0f
     private var ballCount = 5
-    private var prevHatX  = 0f
     private val HEADING_SENSITIVITY = 1.0f
 
     private val orientationListener = object : SensorEventListener {
@@ -121,6 +120,12 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread { showSessionResultDialog(result) }
         }
 
+        // TTS 준비 전까지 시작 버튼 잠금
+        binding.btnStart.isEnabled = false
+        gameEngine.onTtsReady = {
+            runOnUiThread { binding.btnStart.isEnabled = true }
+        }
+
         setupButtons()
         observeGameState()
     }
@@ -153,17 +158,18 @@ class MainActivity : AppCompatActivity() {
                 when {
                     // 세션 완료됐거나 아직 시작 안 한 경우 → 새 세션 시작
                     gameEngine.isSessionComplete() || state.totalAttempts == 0 -> {
-                        gameEngine.startSession(getBallCount(), getDifficulty())
+                        gameEngine.startSession(getBallCount())
                     }
                     // 세션 진행 중 → 다음 판 시작
                     else -> {
-                        gameEngine.launchNextInSession(getDifficulty())
+                        gameEngine.launchNextInSession()
                     }
                 }
             }
         }
 
         binding.btnCatch.setOnClickListener { gameEngine.onCatchPressed() }
+        binding.btnEarlyStop.setOnClickListener { gameEngine.forceStopSession() }
         binding.btnBallCountDown.setOnClickListener { adjustBallCount(-1) }
         binding.btnBallCountUp.setOnClickListener   { adjustBallCount(+1) }
 
@@ -178,16 +184,6 @@ class MainActivity : AppCompatActivity() {
         ballCount = (ballCount + delta).coerceIn(1, 20)
         binding.tvBallCount.text = ballCount.toString()
         gameEngine.speakBallCount(ballCount)
-    }
-
-    private fun adjustDifficulty(delta: Int) {
-        val next = (binding.spinnerDifficulty.selectedItemPosition + delta).coerceIn(0, 2)
-        binding.spinnerDifficulty.setSelection(next)
-        gameEngine.speakDifficulty(next)
-    }
-
-    private fun getDifficulty() = when (binding.spinnerDifficulty.selectedItemPosition) {
-        0 -> 0.3f; 1 -> 0.5f; 2 -> 0.8f; else -> 0.5f
     }
 
     private fun getBallCount(): Int = ballCount
@@ -224,7 +220,15 @@ class MainActivity : AppCompatActivity() {
                 binding.btnCatch.isEnabled = catchEnabled
                 binding.btnCatch.alpha = if (catchEnabled) 1f else 0.4f
 
-                val ballCountEditable = state.totalAttempts == 0 && state.phase == GamePhase.IDLE
+                // 조기종료: 세션 진행 중이고 1회 이상 완료됐거나 공이 날고 있을 때
+                val earlyStopEnabled = gameEngine.sessionActive &&
+                    (state.totalAttempts > 0 ||
+                     state.phase == GamePhase.LAUNCHED ||
+                     state.phase == GamePhase.LANDED)
+                binding.btnEarlyStop.isEnabled = earlyStopEnabled
+                binding.btnEarlyStop.alpha     = if (earlyStopEnabled) 1f else 0.4f
+
+                val ballCountEditable = state.phase == GamePhase.IDLE && !gameEngine.sessionActive
                 binding.btnBallCountDown.isEnabled = ballCountEditable
                 binding.btnBallCountUp.isEnabled   = ballCountEditable
                 binding.tvBallCount.alpha = if (ballCountEditable) 1f else 0.4f
@@ -269,11 +273,6 @@ class MainActivity : AppCompatActivity() {
             gameEngine.joystickDz = dy
             binding.joystickView.setExternalInput(dx, -dy)
 
-            val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
-            if (prevHatX == 0f && hatX == -1f) adjustDifficulty(-1)
-            if (prevHatX == 0f && hatX ==  1f) adjustDifficulty(+1)
-            prevHatX = hatX
-
             return true
         }
         return super.dispatchGenericMotionEvent(event)
@@ -291,21 +290,19 @@ class MainActivity : AppCompatActivity() {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (event.keyCode) {
                     KeyEvent.KEYCODE_BUTTON_A -> { gameEngine.onCatchPressed(); return true }
-                    KeyEvent.KEYCODE_BUTTON_B -> { gameEngine.fullReset(); baseAzimuth = null; return true }
+                    KeyEvent.KEYCODE_BUTTON_B -> { gameEngine.forceStopSession(); return true }
                     KeyEvent.KEYCODE_BUTTON_X -> {
                         val st = gameEngine.state.value
                         if (st.phase == GamePhase.IDLE) {
                             if (gameEngine.isSessionComplete() || st.totalAttempts == 0)
-                                gameEngine.startSession(getBallCount(), getDifficulty())
+                                gameEngine.startSession(getBallCount())
                             else
-                                gameEngine.launchRandom(getDifficulty())
+                                gameEngine.launchRandom()
                         }
                         return true
                     }
                     KeyEvent.KEYCODE_BUTTON_L1 -> { adjustBallCount(-1); return true }
                     KeyEvent.KEYCODE_BUTTON_R1 -> { adjustBallCount(+1); return true }
-                    KeyEvent.KEYCODE_DPAD_LEFT  -> { adjustDifficulty(-1); return true }
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> { adjustDifficulty(+1); return true }
                 }
             }
             return true
