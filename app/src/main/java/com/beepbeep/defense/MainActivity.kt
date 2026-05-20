@@ -25,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var gameEngine: GameEngine
     private lateinit var sensorManager: SensorManager
     private lateinit var inputManager: InputManager
+    private var resultDialog: android.app.AlertDialog? = null
 
     private val inputDeviceListener = object : InputManager.InputDeviceListener {
         override fun onInputDeviceAdded(deviceId: Int) {
@@ -154,7 +155,11 @@ class MainActivity : AppCompatActivity() {
             }
             val state = gameEngine.state.value
             if (state.phase == GamePhase.IDLE) {
-                baseAzimuth = null
+                baseAzimuth     = null
+                smoothedHeading = 0f
+                prevAmplified   = 0f
+                headingVelocity = 0f
+                signedVelocity  = 0f
                 when {
                     // 세션 완료됐거나 아직 시작 안 한 경우 → 새 세션 시작
                     gameEngine.isSessionComplete() || state.totalAttempts == 0 -> {
@@ -289,7 +294,15 @@ class MainActivity : AppCompatActivity() {
         if (event.source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD) {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (event.keyCode) {
-                    KeyEvent.KEYCODE_BUTTON_A -> { gameEngine.onCatchPressed(); return true }
+                    KeyEvent.KEYCODE_BUTTON_A -> {
+                        val d = resultDialog
+                        if (d != null && d.isShowing) {
+                            d.dismiss(); gameEngine.stopSpeak(); resultDialog = null
+                        } else {
+                            gameEngine.onCatchPressed()
+                        }
+                        return true
+                    }
                     KeyEvent.KEYCODE_BUTTON_B -> { gameEngine.forceStopSession(); return true }
                     KeyEvent.KEYCODE_BUTTON_X -> {
                         val st = gameEngine.state.value
@@ -327,12 +340,26 @@ class MainActivity : AppCompatActivity() {
             append(    "━━━━━━━━━━━━━━━━")
         }
 
-        android.app.AlertDialog.Builder(this)
+        resultDialog = android.app.AlertDialog.Builder(this)
             .setTitle("🏅 훈련 결과")
             .setMessage(msg)
-            .setPositiveButton("확인") { _, _ -> gameEngine.stopSpeak() }
-            .setOnCancelListener { gameEngine.stopSpeak() }
+            .setPositiveButton("확인") { _, _ -> gameEngine.stopSpeak(); resultDialog = null }
+            .setOnCancelListener { gameEngine.stopSpeak(); resultDialog = null }
             .show()
+            .also { dialog ->
+                // AlertDialog는 별도 Window → Activity dispatchKeyEvent 미호출
+                // 다이얼로그에 직접 키 리스너 등록해서 A 버튼 한 번에 닫기
+                dialog.setOnKeyListener { _, keyCode, event ->
+                    if (event.source and android.view.InputDevice.SOURCE_GAMEPAD == android.view.InputDevice.SOURCE_GAMEPAD
+                        && keyCode == android.view.KeyEvent.KEYCODE_BUTTON_A
+                        && event.action == android.view.KeyEvent.ACTION_DOWN) {
+                        dialog.dismiss()
+                        gameEngine.stopSpeak()
+                        resultDialog = null
+                        true
+                    } else false
+                }
+            }
     }
 
     override fun onDestroy() {

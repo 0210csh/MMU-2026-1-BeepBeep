@@ -195,7 +195,7 @@ class SwingTestActivity : AppCompatActivity() {
     private val MIN_ACCEL_THRESHOLD  = 48f
     private val MIN_GYRO_THRESHOLD   = 30f
 
-    private val PITCH_TOLERANCE      = 5f
+    private val PITCH_TOLERANCE      = 15f
     // 각도 허용 오차 (도). 현재 HEIGHT_TOLERANCE 기반 판정을 사용하나 참고용으로 보존
 
     // ── 물리 상수 (공·배트 3D 위치 계산) ──────────────────
@@ -1226,16 +1226,26 @@ class SwingTestActivity : AppCompatActivity() {
             // sendControl(1) 은 게임 SET 단계(startPitchSequence)에서만 전송.
         }
 
+        override fun onReconnecting() {
+            // BleManager 가 직접 재연결 시도 중 (스캔 없이) — UI만 업데이트
+            bleConnected = false
+            btnBleConnect.isEnabled = false
+            btnBleConnect.text = "재연결 중..."
+            tvBleStatus.text = "● 재연결 중..."
+            tvBleStatus.setTextColor(0xFFFBBF24.toInt())  // 노란색
+        }
+
         override fun onDisconnected() {
+            // BleManager 직접 재연결 3회 모두 실패한 경우 → 앱에서 스캔 재시도
             bleConnected = false
             btnBleConnect.isEnabled = true
             btnBleConnect.text = "배트 센서 연결"
             tvBleStatus.text = "● 미연결"
             tvBleStatus.setTextColor(0xFFF87171.toInt())
             ttsManager.speak("배트 연결이 끊겼습니다")
-            // 2초 후 자동 재스캔
+            // 1초 후 자동 재스캔 (이전 2초에서 단축)
             scope.launch {
-                delay(2000)
+                delay(1000)
                 withContext(Dispatchers.Main) {
                     if (!bleConnected && hasBlePermissions()) startBleScan()
                 }

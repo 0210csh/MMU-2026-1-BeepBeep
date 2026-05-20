@@ -231,9 +231,9 @@ class GameEngine(private val context: Context) {
         gameScope.launch {
             delay(2000)
             if (isSessionComplete()) {
-                speakSessionSummary()
-                sessionActive = false
                 withContext(Dispatchers.Main) {
+                    speakSessionSummary()   // 메인 스레드 호출 → runOnUiThread 동기 실행 → 다이얼로그 즉시 표시
+                    sessionActive = false
                     resetToIdle(sessionDone = true)
                 }
             } else {
@@ -310,13 +310,13 @@ class GameEngine(private val context: Context) {
             // 공 판정 결과를 잠깐 보여준 후 결과창
             gameScope.launch {
                 delay(500L)
-                speakSessionSummary()
                 withContext(Dispatchers.Main) {
+                    speakSessionSummary()   // 메인 스레드 호출 → runOnUiThread 동기 실행 → 다이얼로그 즉시 표시
                     resetToIdle(sessionDone = true)
                 }
             }
         } else {
-            // 대기 중 → 즉시 결과창
+            // 대기 중 → 이미 메인 스레드이므로 즉시 결과창
             speakSessionSummary()
             resetToIdle(sessionDone = true)
         }

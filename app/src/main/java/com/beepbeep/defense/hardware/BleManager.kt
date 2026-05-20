@@ -44,6 +44,7 @@ class BleManager(private val context: Context) {
     interface Callback {
         fun onConnected()
         fun onDisconnected()
+        fun onReconnecting() {}   // 자동 재연결 시도 중 — UI 피드백용 (optional override)
         fun onPacket(packet: SensorPacket)
         fun onBatteryLevel(level: Int) {}
     }
@@ -52,6 +53,15 @@ class BleManager(private val context: Context) {
     private var gatt: BluetoothGatt? = null
     private var scanning = false
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    /** 최초 연결 성공 시 저장 → 이후 재연결 시 스캔 없이 직접 connectGatt() 호출 */
+    private var knownDevice: BluetoothDevice? = null
+
+    /** 직접 재연결 실패 횟수. 3회 초과 시 스캔으로 폴백 */
+    private var directReconnectFails = 0
+
+    /** true면 disconnect() 가 직접 호출된 것 → 자동 재연결 억제 */
+    private var intentionalDisconnect = false
 
     private val bluetoothAdapter by lazy {
         (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
@@ -64,23 +74,45 @@ class BleManager(private val context: Context) {
                 ?: return
             if (name == DEVICE_NAME) {
                 stopScan()
+                knownDevice = result.device   // MAC 주소 캐싱
                 result.device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
             }
         }
     }
 
-    private val gattCallback = object : BluetoothGattCallback() {
+    private val gattCallback: BluetoothGattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             this@BleManager.gatt = gatt
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED    -> {
+                    directReconnectFails = 0            // 재연결 성공 → 실패 카운터 초기화
                     gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
                     gatt.requestMtu(512)
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     gatt.close()                        // GATT 리소스 해제 — 없으면 재연결 루프 발생
                     this@BleManager.gatt = null
-                    mainHandler.post { callback?.onDisconnected() }
+                    if (intentionalDisconnect) {
+                        // 사용자가 직접 해제 → 재연결 없이 콜백만
+                        intentionalDisconnect = false
+                        mainHandler.post { callback?.onDisconnected() }
+                        return
+                    }
+                    val known = knownDevice
+                    if (known != null && directReconnectFails < 3) {
+                        // 알려진 기기 → 스캔 없이 직접 재연결 (스캔 시간 ~5-8초 절약)
+                        directReconnectFails++
+                        mainHandler.post { callback?.onReconnecting() }
+                        mainHandler.postDelayed({
+                            if (this@BleManager.gatt == null && !intentionalDisconnect) {
+                                known.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+                            }
+                        }, 800L)
+                    } else {
+                        // 직접 재연결 3회 실패 또는 알 수 없는 기기 → 스캔으로 폴백
+                        directReconnectFails = 0
+                        mainHandler.post { callback?.onDisconnected() }
+                    }
                 }
             }
         }
@@ -253,6 +285,12 @@ class BleManager(private val context: Context) {
 
     fun startScan() {
         if (scanning || gatt != null) return
+        val known = knownDevice
+        if (known != null) {
+            // 이미 알고 있는 기기 → 스캔 없이 직접 연결 시도
+            known.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+            return
+        }
         scanning = true
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
@@ -267,6 +305,8 @@ class BleManager(private val context: Context) {
 
     fun sendControl(value: Int) {
         val g    = gatt ?: return
+        // 측정 시작 시 HIGH 우선순위 재요청 — 버즈 등 다른 BLE 기기 연결 후 우선순위가 낮아지는 문제 방지
+        if (value == 1) g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
         val ctrl = g.getService(SERVICE_UUID)?.getCharacteristic(CONTROL_UUID) ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             g.writeCharacteristic(ctrl, byteArrayOf(value.toByte()), BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
@@ -280,6 +320,7 @@ class BleManager(private val context: Context) {
 
     fun disconnect() {
         stopScan()
+        intentionalDisconnect = true    // 자동 재연결 억제
         gatt?.disconnect()
         gatt?.close()
         gatt = null
