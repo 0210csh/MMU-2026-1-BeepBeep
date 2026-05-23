@@ -38,8 +38,11 @@ data class SessionResult(
 class GameEngine(private val context: Context) {
 
     companion object {
-        private const val TICK_MS = 16L
-        private const val MOVE_SPEED = 0.2f
+        private const val TICK_MS = 8L           // 16ms → 8ms: 좌표 업데이트 2배 빠름 (125Hz)
+        private const val MOVE_SPEED = 0.1f      // 0.2f → 0.1f: 실제 이동속도 동일 (0.1×125Hz = 12.5/s)
+        // BT LE Audio 레이턴시 보상
+        const val BT_AUDIO_PREDICT_MS  = 40f     // 공 궤적 예측 (ms)
+        private const val BT_DEF_PREDICT_TICKS = 12  // 수비수 이동 추가 예측 (6틱 × 8ms = 48ms)
     }
 
     var onSessionComplete: ((SessionResult) -> Unit)? = null
@@ -78,6 +81,29 @@ class GameEngine(private val context: Context) {
 
     @Volatile var joystickDx = 0f
     @Volatile var joystickDz = 0f
+
+    /**
+     * 조이스틱 입력 시 즉시 호출 — tick() 16ms 대기 없이 오디오 위치를 바로 갱신
+     * 수비수가 다음 tick에서 이동할 위치를 미리 예측해 relX/relZ 계산
+     */
+    fun setJoystick(dx: Float, dz: Float) {
+        joystickDx = dx
+        joystickDz = dz
+        val phase = _state.value.phase
+        if (phase != GamePhase.LAUNCHED && phase != GamePhase.LANDED) return
+        val headingRad = Math.toRadians(-audioEngine.currentHeadingDeg.toDouble())
+        val cosH = cos(headingRad).toFloat()
+        val sinH = sin(headingRad).toFloat()
+        val worldDx = dx * cosH - dz * sinH
+        val worldDz = dx * sinH + dz * cosH
+        // 수비수: 1틱 이동(nextDef) + BT_DEF_PREDICT_TICKS 추가 예측
+        val nextDefX = (defX + worldDx * MOVE_SPEED).coerceIn(-40f, 40f)
+        val nextDefZ = (defZ + worldDz * MOVE_SPEED).coerceIn(10f, 50f)
+        val audioDefX = (nextDefX + worldDx * MOVE_SPEED * BT_DEF_PREDICT_TICKS).coerceIn(-40f, 40f)
+        val audioDefZ = (nextDefZ + worldDz * MOVE_SPEED * BT_DEF_PREDICT_TICKS).coerceIn(10f, 50f)
+        val audioPos = ballSim.positionAhead(BT_AUDIO_PREDICT_MS)
+        audioEngine.updateBallPosition(audioPos.x - audioDefX, audioPos.y, audioPos.z - audioDefZ)
+    }
 
     fun init() {
         audioEngine.init()
@@ -118,11 +144,14 @@ class GameEngine(private val context: Context) {
         defX = (defX + worldDx * MOVE_SPEED).coerceIn(-40f, 40f)
         defZ = (defZ + worldDz * MOVE_SPEED).coerceIn(10f, 50f)
 
+        // 오디오용 수비수 예측 위치: 현재 이동 후 + BT 레이턴시만큼 추가 이동 예측
+        val audioDefX = (defX + worldDx * MOVE_SPEED * BT_DEF_PREDICT_TICKS).coerceIn(-40f, 40f)
+        val audioDefZ = (defZ + worldDz * MOVE_SPEED * BT_DEF_PREDICT_TICKS).coerceIn(10f, 50f)
+
         if (phase == GamePhase.LAUNCHED) {
             val stillFlying = ballSim.update(deltaMs)
-            val relX = ballSim.currentPos.x - defX
-            val relZ = ballSim.currentPos.z - defZ
-            audioEngine.updateBallPosition(x = relX, y = ballSim.currentPos.y, z = relZ)
+            val audioPos = ballSim.positionAhead(BT_AUDIO_PREDICT_MS)
+            audioEngine.updateBallPosition(x = audioPos.x - audioDefX, y = audioPos.y, z = audioPos.z - audioDefZ)
 
             if (!stillFlying) {
                 _state.value = _state.value.copy(
@@ -141,9 +170,11 @@ class GameEngine(private val context: Context) {
                 )
             }
         } else if (phase == GamePhase.LANDED) {
-            val relX = ballSim.currentPos.x - defX
-            val relZ = ballSim.currentPos.z - defZ
-            audioEngine.updateBallPosition(x = relX, y = ballSim.currentPos.y, z = relZ)
+            // 착지 후: 공은 고정, 수비수 이동만 예측
+            audioEngine.updateBallPosition(
+                x = ballSim.currentPos.x - audioDefX,
+                y = ballSim.currentPos.y,
+                z = ballSim.currentPos.z - audioDefZ)
             _state.value = _state.value.copy(
                 defenderX = defX,
                 defenderZ = defZ,
@@ -178,6 +209,9 @@ class GameEngine(private val context: Context) {
         if (isSessionComplete()) return
         if (_state.value.phase != GamePhase.IDLE) return
         ballSim.launchRandom(0.5f)
+        // startBeep() 전에 시작 위치 설정 → 첫 청크부터 올바른 HRTF 위치 적용
+        val startPos = ballSim.positionAhead(BT_AUDIO_PREDICT_MS)
+        audioEngine.updateBallPosition(startPos.x - defX, startPos.y, startPos.z - defZ)
         audioEngine.startBeep()
         launchTime = System.currentTimeMillis()
         _state.value = _state.value.copy(
@@ -187,6 +221,9 @@ class GameEngine(private val context: Context) {
     fun launchRandom() {
         if (isSessionComplete()) return
         ballSim.launchRandom(0.5f)
+        // startBeep() 전에 시작 위치 설정 → 첫 청크부터 올바른 HRTF 위치 적용
+        val startPos = ballSim.positionAhead(BT_AUDIO_PREDICT_MS)
+        audioEngine.updateBallPosition(startPos.x - defX, startPos.y, startPos.z - defZ)
         audioEngine.startBeep()
         launchTime = System.currentTimeMillis()
         _state.value = _state.value.copy(
@@ -231,8 +268,10 @@ class GameEngine(private val context: Context) {
         gameScope.launch {
             delay(2000)
             if (isSessionComplete()) {
+                // 포구 결과 TTS가 끝날 때까지 대기 후 훈련 결과 출력
+                while (tts?.isSpeaking == true) delay(100)
                 withContext(Dispatchers.Main) {
-                    speakSessionSummary()   // 메인 스레드 호출 → runOnUiThread 동기 실행 → 다이얼로그 즉시 표시
+                    speakSessionSummary()
                     sessionActive = false
                     resetToIdle(sessionDone = true)
                 }
@@ -431,7 +470,7 @@ class GameEngine(private val context: Context) {
         val absDz = kotlin.math.abs(dz)
 
         val lr = if (dx < 0f) "왼쪽" else "오른쪽"
-        val fb = if (dz > 0f) "앞"   else "뒤"
+        val fb = if (dz > 0f) "뒤"   else "앞"
 
         return when {
             absDx < 1f && absDz < 1f  -> "정면"        // 거의 정면
@@ -454,8 +493,23 @@ class GameEngine(private val context: Context) {
     }
 
     fun updateHeadingDirectly(deg: Float) {
-        audioEngine.updateHeading(deg)
+        // 시각적 예측값 → FieldView 콜백 (오디오는 updateAudioHeading으로 별도 처리)
         onHeadingChanged?.invoke(deg)
+    }
+
+    /** 오디오 전용 빠른 필터 헤딩 — updateHeadingDirectly의 시각 예측값과 분리 */
+    fun updateAudioHeading(deg: Float) {
+        audioEngine.updateHeading(deg)
+    }
+
+    /** 센서에서 받은 pitch/roll(라디안)을 오디오 엔진에 전달 */
+    fun updateAudioPitchRoll(pitchRad: Float, rollRad: Float) {
+        audioEngine.updatePitchRoll(pitchRad, rollRad)
+    }
+
+    /** 현재 pitch/roll을 중립 기준으로 캡처 — 세션 시작(헤딩 리셋) 시 호출 */
+    fun captureAudioNeutralOrientation() {
+        audioEngine.captureNeutralPitchRoll()
     }
 
     fun speakControllerWarning()      { speak("컨트롤러를 연결해주세요") }

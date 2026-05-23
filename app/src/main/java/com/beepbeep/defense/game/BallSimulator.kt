@@ -85,5 +85,18 @@ class BallSimulator {
         )
     }
 
+    /**
+     * 현재 시각으로부터 deltaMs 뒤의 공 위치 반환 (BT 레이턴시 보상용)
+     * update()를 호출하지 않으므로 시뮬레이션 상태에 영향 없음
+     */
+    fun positionAhead(deltaMs: Float): BallPosition {
+        if (!isFlying) return currentPos
+        val futureProgress = ((elapsed + deltaMs) / totalTime).coerceIn(0f, 1f)
+        val x = targetX * futureProgress
+        val z = targetZ * futureProgress
+        val y = if (futureProgress < 1f) sin(futureProgress * PI.toFloat()) * maxHeight else 0f
+        return BallPosition(x, y, z, futureProgress)
+    }
+
     private fun Float.pow(exp: Int) = toDouble().pow(exp).toFloat()
 }

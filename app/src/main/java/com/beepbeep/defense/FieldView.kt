@@ -69,9 +69,14 @@ class FieldView @JvmOverloads constructor(
 
         drawFov(canvas)
 
-        val catchPx = 3f / (xRange.endInclusive - xRange.start) * width
-        canvas.drawCircle(sx(defenderX), sy(defenderZ), catchPx, catchPaint)
-        canvas.drawCircle(sx(defenderX), sy(defenderZ), catchPx, catchRingPaint)
+        // X/Z 스케일이 다르므로 타원으로 정확하게 표시
+        val catchRx = 3f / (xRange.endInclusive - xRange.start) * width
+        val catchRz = 3f / (zRange.endInclusive - zRange.start) * height
+        val defCx = sx(defenderX)
+        val defCy = sy(defenderZ)
+        val catchOval = android.graphics.RectF(defCx - catchRx, defCy - catchRz, defCx + catchRx, defCy + catchRz)
+        canvas.drawOval(catchOval, catchPaint)
+        canvas.drawOval(catchOval, catchRingPaint)
         canvas.drawCircle(sx(defenderX), sy(defenderZ), 18f, defPaint)
         canvas.drawText("🧤", sx(defenderX), sy(defenderZ) + 8f, textPaint)
 

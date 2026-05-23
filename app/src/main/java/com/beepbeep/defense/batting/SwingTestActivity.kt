@@ -195,7 +195,7 @@ class SwingTestActivity : AppCompatActivity() {
     private val MIN_ACCEL_THRESHOLD  = 48f
     private val MIN_GYRO_THRESHOLD   = 30f
 
-    private val PITCH_TOLERANCE      = 15f
+    private val PITCH_TOLERANCE      = 10f
     // 각도 허용 오차 (도). 현재 HEIGHT_TOLERANCE 기반 판정을 사용하나 참고용으로 보존
 
     // ── 물리 상수 (공·배트 3D 위치 계산) ──────────────────
@@ -216,6 +216,10 @@ class SwingTestActivity : AppCompatActivity() {
 
     private val HEIGHT_TOLERANCE = 0.2f
     // 높이 허용 오차 (m). |배트높이 - 공높이| < HEIGHT_TOLERANCE → HIT 판정
+
+    // ── 테스트 옵션 ──────────────────────────────────────
+    // 정타 강제 스위치 ON → 스윙 판정 완전 무시하고 무조건 4a(정타) 경로 진입
+    @Volatile private var testForceHit = false
 
     // ── 게임 상태 ────────────────────────────────────────
     private var targetBase = 1
@@ -393,13 +397,18 @@ class SwingTestActivity : AppCompatActivity() {
 
             // ── 방위각 → 헤드트래킹 패닝 계산 (BLE 연결 여부와 무관하게 항상 계산) ──
             val azimuthDeg = Math.toDegrees(orientation[0].toDouble()).toFloat()
-            if (baseAzimuth == null) baseAzimuth = azimuthDeg
+            val isFirstOrientFrame = (baseAzimuth == null)
+            if (isFirstOrientFrame) baseAzimuth = azimuthDeg
             // 버튼 클릭 후 첫 이벤트에서 기준 방위각 저장
             var rel = azimuthDeg - (baseAzimuth ?: azimuthDeg)
             while (rel > 180f)  rel -= 360f
             while (rel < -180f) rel += 360f
             currentHeadingDeg = -rel
             // -180~+180° 정규화 후 부호 반전 → 오른쪽=양수, 왼쪽=음수
+
+            // 3축 HRTF: pitch/roll 매 프레임 전달. 첫 프레임에서 중립 캡처
+            spatialAudio.updatePitchRoll(orientation[1], orientation[2])
+            if (isFirstOrientFrame) spatialAudio.captureNeutralPitchRoll()
 
             if (bleConnected) return
             // BLE 연결 시 피치각·배트 높이·기록은 BLE 콜백에서 담당
@@ -523,6 +532,10 @@ class SwingTestActivity : AppCompatActivity() {
 
         btnResultView.setOnClickListener { lastResultDialog?.show() }
 
+        // 테스트용 정타 강제 스위치
+        findViewById<android.widget.Switch>(R.id.switchTestForceHit)
+            .setOnCheckedChangeListener { _, isChecked -> testForceHit = isChecked }
+
         ballTrackView.setShowStrikeZone(false)
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
@@ -556,7 +569,7 @@ class SwingTestActivity : AppCompatActivity() {
             }
         }
         btnSwingPitchPlus.setOnClickListener {
-            if (targetPitches < 30) {
+            if (targetPitches < 20) {
                 targetPitches++
                 tvSwingPitchCount.text = targetPitches.toString()
             }
@@ -738,6 +751,8 @@ class SwingTestActivity : AppCompatActivity() {
             delay(500L)
             val tApproach = System.currentTimeMillis()
 
+            // 타격: 6.5m 범위에서 접근감 극대화 (수비 기본값 0.092보다 큰 값 사용)
+            spatialAudio.gainCoeff = 0.30f
             spatialAudio.updateBallPosition(0f, 0f, -PITCHER_DIST)
             spatialAudio.updateHeading(currentHeadingDeg)
             spatialAudio.startBeep()
@@ -796,8 +811,10 @@ class SwingTestActivity : AppCompatActivity() {
                 delay(1)
             }
             animJob.join()
-
-            spatialAudio.stopBeep()
+            // stopBeep()를 타격 윈도우 이후로 이동:
+            // 공 도착(1300ms) 시점에 마지막 ON 구간이 시작(gain≈86%)되는데
+            // 즉시 stopBeep()하면 50ms만 재생되고 잘림 → "커지기 전에 사라지는" 느낌
+            // 윈도우 닫힌 후 멈춰야 마지막 큰 소리가 충분히 들림
             audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
 
             stopPhaseRecording()
@@ -824,6 +841,7 @@ class SwingTestActivity : AppCompatActivity() {
                 delay(8)
             }
             hitWindowActive          = false
+            spatialAudio.stopBeep()  // 마지막 ON 구간(공 도착 후 ~100ms)이 다 울린 뒤 종료
             hitWindowCloseAbsMs      = System.currentTimeMillis()
             graphHitWindowCloseRelMs = hitWindowCloseAbsMs - pitchRecordStart
             windowClosePitchDeg      = currentPitchDeg
@@ -919,20 +937,28 @@ class SwingTestActivity : AppCompatActivity() {
             // post-window 1000ms 후의 최종 최저각으로 판정
             // → 윈도우 닫힐 때 배트가 아직 내려가는 중이면 최저각이 window close 이후에 찍히므로
             //   minAfterWin=true → 4d(늦은 스윙) 처리됨 (잘못된 각도 피드백 방지)
-            val hasValidMin   = minBatAngleDeg < Float.MAX_VALUE
-            val minInWindow   = hasValidMin &&
-                                minBatAngleAbsMs >= hitWindowOpenAbsMs &&
-                                minBatAngleAbsMs <= hitWindowCloseAbsMs
-            val minBeforeWin  = hasValidMin && minBatAngleAbsMs < hitWindowOpenAbsMs
-            val minAfterWin   = hasValidMin && minBatAngleAbsMs > hitWindowCloseAbsMs
-            val angleDiff     = if (hasValidMin) minBatAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
-            val winDelta      = windowClosePitchDeg - windowOpenPitchDeg
-            val winSign       = if (winDelta >= 0f) "+" else ""
+            //
+            // batStillMovingAtClose: 윈도우 마감 시점에 배트가 아직 내려가는 중인지 여부
+            // → windowClosePitchDeg(마감 순간 각도) > minBatAngleDeg(최저각)이면
+            //   최저각이 아직 찍히지 않은 것 → 실질적으로 늦은 스윙
+            // → 센서 10ms 샘플링 오차로 minInWindow가 true여도 이 경우 4d(늦은 스윙)로 처리
+            val hasValidMin          = minBatAngleDeg < Float.MAX_VALUE
+            val minInWindow          = hasValidMin &&
+                                       minBatAngleAbsMs >= hitWindowOpenAbsMs &&
+                                       minBatAngleAbsMs <= hitWindowCloseAbsMs
+            val minBeforeWin         = hasValidMin && minBatAngleAbsMs < hitWindowOpenAbsMs
+            val minAfterWin          = hasValidMin && minBatAngleAbsMs > hitWindowCloseAbsMs
+            val batStillMovingAtClose = hasValidMin &&
+                                        (windowClosePitchDeg - minBatAngleDeg) > 10f
+            val angleDiff            = if (hasValidMin) minBatAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
+            val winDelta             = windowClosePitchDeg - windowOpenPitchDeg
+            val winSign              = if (winDelta >= 0f) "+" else ""
 
             when {
 
                 // ── 4x: 최소 스윙 미달 — 스트라이크(늦음)와 동일 처리 ──
-                !minSwingDetected -> {
+                // testForceHit=true 면 스윙 미달 무시 → 아래 4a(정타) 로 직행
+                !minSwingDetected && !testForceHit -> {
                     currentPitchRecord["판정"] = "스트라이크(무스윙)"
                     currentPitchRecord["피드백"] = "더 빨리 스윙하세요"
                     withContext(Dispatchers.Main) {
@@ -956,11 +982,15 @@ class SwingTestActivity : AppCompatActivity() {
                     }
                 }
 
-                // ── 4a: 정타 — 최저각이 윈도우 안 + 각도 일치 + 강한 스윙 ──
-                minInWindow && swingWasStrong && abs(angleDiff) <= PITCH_TOLERANCE -> {
+                // ── 4a: 정타 — 강제 모드 or 조기 판정 or 정상 판정 ──
+                testForceHit || gangSpoken || (minInWindow && swingWasStrong && abs(angleDiff) <= PITCH_TOLERANCE) -> {
                     currentPitchRecord["판정"] = "정타"
                     currentPitchRecord["피드백"] = "정타 — 베이스 선택"
                     withContext(Dispatchers.Main) {
+                        // hitCount/기록은 DIVERGE 애니메이션 이전에 처리
+                        // → onBasePressed에서 gameJob?.cancel() 호출 시 카운트 누락 방지
+                        perPitchRecords.add(HashMap(currentPitchRecord))
+                        hitCount++
                         // gangSpoken=false면 조기 발화가 안 된 경우 — 여기서 fallback 발화
                         if (!gangSpoken) {
                             val impactSamples = 44100 * 150 / 1000
@@ -1007,18 +1037,20 @@ class SwingTestActivity : AppCompatActivity() {
                         delay(16)
                     }
 
-                    spatialAudio.stopBeep()
+                    // spatialAudio.stopBeep() 제거:
+                    // startBaseBeep()이 이미 prevJob?.cancelAndJoin()으로 divBase 비프를 취소함
+                    // 여기서 stopBeep()하면 베이스 방향 비프가 교체된 뒤 바로 죽어버림 → "비프 사라짐"
                     audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
 
                     withContext(Dispatchers.Main) {
                         ballTrackView.reset()
                         tvStatus.text = ""
-                        hitCount++
                     }
                 }
 
-                // ── 4b: 파울 — 최저각이 윈도우 안이지만 각도 불일치 or 힘 부족 ──
-                minInWindow -> {
+                // ── 4b: 파울 — 최저각이 윈도우 안이고 배트가 정지 후 최저각 확정 ──
+                // batStillMovingAtClose=true면 실제 최저각은 윈도우 마감 이후 → 4d로 빠짐
+                minInWindow && !batStillMovingAtClose -> {
                     val absDiff = abs(angleDiff).toInt()
                     val foulAdvice = when {
                         !swingWasStrong  -> "더 강하게 휘두르세요"
@@ -1074,9 +1106,11 @@ class SwingTestActivity : AppCompatActivity() {
                     }
                 }
 
-                // ── 4d: 스트라이크 — 윈도우 마감 후 최저각 도달 (늦은 스윙) ──
-                // 윈도우가 닫힐 때 배트가 아직 이동 중 → 피치TTS 듣고 스윙이 늦음
-                minAfterWin -> {
+                // ── 4d: 스트라이크 — 늦은 스윙 ──
+                // 케이스 1: minAfterWin — 최저각이 윈도우 마감 이후에 찍힘
+                // 케이스 2: minInWindow && batStillMovingAtClose — 윈도우 마감 시 배트가 아직 내려가는 중
+                //           (센서 10ms 샘플링 오차로 minInWindow=true여도 실질적으로 늦은 스윙)
+                minAfterWin || (minInWindow && batStillMovingAtClose) -> {
                     currentPitchRecord["판정"] = "스트라이크(늦음)"
                     currentPitchRecord["피드백"] = "더 빨리 스윙하세요"
                     withContext(Dispatchers.Main) {
@@ -1086,7 +1120,8 @@ class SwingTestActivity : AppCompatActivity() {
                         strikeCount++
                         tvStatus.text = "스트라이크!"
                         tvStatus.setTextColor(0xFFF87171.toInt())
-                        tvResult.text = "스윙이 늦음\n최저 각도: %.0f° (윈도우 마감 후)".format(minBatAngleDeg)
+                        val lateLabel = if (batStillMovingAtClose) "스윙이 늦음 (마감 시 이동 중)" else "스윙이 늦음"
+                        tvResult.text = "$lateLabel\n최저 각도: %.0f°".format(minBatAngleDeg)
                         if (!isTraining) {
                             showSwingGraph()
                             btnStart.isEnabled = true
@@ -1129,24 +1164,26 @@ class SwingTestActivity : AppCompatActivity() {
     }
 
     // ─────────────────────────────────────────────────────
-    // 베이스 도착음 — 베이스 선택 전까지 반복 재생 (헤드트래킹 스테레오 패닝)
+    // 베이스 도착음 — 수비 훈련과 동일한 SpatialAudio 엔진 사용 (HRTF 3D 음향)
+    // 3루 = 왼쪽(-X 5m), 1루 = 오른쪽(+X 5m)
     // ─────────────────────────────────────────────────────
     private fun startBaseBeep() {
-        val finalPan = if (targetBase == 3) -1.0f else 1.0f
-
         audioJob?.cancel()
 
-        audioJob = scope.launch {
-            val sr          = 44100
-            val beepSamples = sr * 200 / 1000
-            val silSamples  = sr * 0 / 1000
+        // 3루=왼쪽(-X), 1루=오른쪽(+X), 5m 거리 — HRTF로 방향 표현
+        // Z=0 이면 방위각 ±90° → HRTF 앞/뒤 반구 경계선 = 노이즈 발생
+        // Z=-1f 로 약간 앞쪽으로 이동 → 방위각 ≈79° (경계 회피, 소리 체감 차이 없음)
+        // sectorFade도 고개를 ~79° 이상 돌릴 때만 발동 → 정면 응시 중 안 터짐
+        val dirX = if (targetBase == 3) -5f else 5f
+        spatialAudio.updateBallPosition(dirX, 0f, -1f)
+        spatialAudio.updateHeading(currentHeadingDeg)
+        spatialAudio.startBeep()
 
+        // spatialAudio 내부 beep 루프에 헤딩 변화를 전달 (16ms마다 갱신)
+        audioJob = scope.launch {
             while (isActive) {
-                val rAngle = finalPan * 90f + currentHeadingDeg
-                val pan    = sin(Math.toRadians(rAngle.toDouble())).toFloat().coerceIn(-1f, 1f)
-                audioTrack?.write(tone(beepSamples, 880f, pan, 1.0f), 0, beepSamples * 2)
-                if (!isActive) break
-                audioTrack?.write(ShortArray(silSamples * 2), 0, silSamples * 2)
+                spatialAudio.updateHeading(currentHeadingDeg)
+                delay(16)
             }
         }
         beepStartTime = SystemClock.elapsedRealtimeNanos()
@@ -1165,6 +1202,7 @@ class SwingTestActivity : AppCompatActivity() {
         // 중복 입력 방지 (한 번 선택하면 더 이상 처리 안 함)
 
         stopAudio()
+        spatialAudio.stopBeep()
         gameJob?.cancel()
         resetBaseVisuals()
         ballTrackView.reset()
@@ -1193,7 +1231,17 @@ class SwingTestActivity : AppCompatActivity() {
             Toast.makeText(this, "알맞지 않은 베이스 선택입니다", Toast.LENGTH_SHORT).show()
             ttsManager.speak("베이스 선택이 틀렸습니다")
         }
-        perPitchRecords.add(HashMap(currentPitchRecord))
+        // 4a 판정 블록에서 이미 perPitchRecords에 추가됨 → 새로 추가하지 않고 마지막 레코드를 갱신
+        // (중복 add 시 인덱스 어긋남으로 엉뚱한 피드백이 표시되는 버그 방지)
+        if (perPitchRecords.isNotEmpty()) {
+            val last = perPitchRecords.last()
+            last["피드백"]         = currentPitchRecord["피드백"] ?: ""
+            last["선택베이스"]     = currentPitchRecord["선택베이스"] ?: 0
+            last["베이스정답여부"] = currentPitchRecord["베이스정답여부"] ?: false
+            if (success) last["주루반응속도"] = currentPitchRecord["주루반응속도"] ?: 0L
+        } else {
+            perPitchRecords.add(HashMap(currentPitchRecord))
+        }
 
         if (isTraining) {
             scope.launch {
@@ -1347,7 +1395,7 @@ class SwingTestActivity : AppCompatActivity() {
                         batBtn1Job = scope.launch {
                             delay(200L)
                             withContext(Dispatchers.Main) {
-                                if (batBtn2Job?.isActive != true && btnStart.isEnabled && targetPitches < 30) {
+                                if (batBtn2Job?.isActive != true && btnStart.isEnabled && targetPitches < 20) {
                                     targetPitches++
                                     tvSwingPitchCount.text = targetPitches.toString()
                                     ttsManager.speak("${targetPitches}회")
@@ -1598,6 +1646,7 @@ class SwingTestActivity : AppCompatActivity() {
     }
 
     private fun scheduleNextOrFinish(success: Boolean) {
+        if (!isTraining) return
         if (success) successCount++
         if (currentPitchNum >= targetPitches) {
             finishTraining()
@@ -1624,8 +1673,7 @@ class SwingTestActivity : AppCompatActivity() {
         btnSwingPitchMinus.isEnabled = false
         btnSwingPitchPlus.isEnabled = false
 
-        audioTrack?.stop()  // ✅ 팀원 코드에서 추가타율,주루반응속도
-        audioTrack?.stop()  // 기존 오디오 정지
+        audioTrack?.stop()
         val battingAvgPct = if (targetPitches > 0) (hitCount.toFloat() / targetPitches * 100).toInt() else 0
         val avgReactionForTts = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
         val ttsText = buildString {
@@ -1752,7 +1800,7 @@ class SwingTestActivity : AppCompatActivity() {
         }
 
         val totalData   = perPitchFullHistory.size
-        val heightPx    = (220 * resources.displayMetrics.density).toInt()
+        val heightPx    = (340 * resources.displayMetrics.density).toInt()
         var currentIdx  = 0
 
         val tv = TextView(this)
@@ -1794,31 +1842,13 @@ class SwingTestActivity : AppCompatActivity() {
         tvFeedback.setPadding(56, 4, 56, 8)
         tvFeedback.typeface = android.graphics.Typeface.DEFAULT_BOLD
 
-        val tvLabel1 = TextView(this)
-        tvLabel1.text = "SET → READY 구간 배트 각도"
-        tvLabel1.textSize = 13f
-        tvLabel1.setTextColor(0xFF86EFAC.toInt())
-        tvLabel1.setPadding(56, 4, 56, 4)
+        val tvLabelCombined = TextView(this)
+        tvLabelCombined.text = "READY 이후 배트 각도 궤적"
+        tvLabelCombined.textSize = 13f
+        tvLabelCombined.setTextColor(0xFF93C5FD.toInt())
+        tvLabelCombined.setPadding(56, 4, 56, 4)
 
-        val graph1 = SwingGraphView(this)
-        graph1.setShowSummary(false)
-
-        val tvLabel2 = TextView(this)
-        tvLabel2.text = "READY → PITCH 구간 배트 각도  (보라: 최저각 측정 시작)"
-        tvLabel2.textSize = 13f
-        tvLabel2.setTextColor(0xFF93C5FD.toInt())
-        tvLabel2.setPadding(56, 8, 56, 4)
-
-        val graph2 = SwingGraphView(this)
-        graph2.setShowSummary(false)
-
-        val tvLabel3 = TextView(this)
-        tvLabel3.text = "PITCH 이후 구간 배트 각도"
-        tvLabel3.textSize = 13f
-        tvLabel3.setTextColor(0xFFFBBF24.toInt())
-        tvLabel3.setPadding(56, 8, 56, 4)
-
-        val graph3 = SwingGraphView(this)
+        val graphCombined = SwingGraphView(this)
 
         fun updateGraphs(idx: Int) {
             tvPitchNum.text = "${idx + 1} / $totalData"
@@ -1852,47 +1882,27 @@ class SwingTestActivity : AppCompatActivity() {
             tvFeedback.text = "💬 $feedback"
             tvFeedback.setTextColor(feedbackColor)
 
-            // fullHist 를 phase 경계로 분할 (각 그래프 내부 시간 기준으로 정규화)
-            val seg1 = ArrayList(fullHist.filter { it.first < phase2Rel }
-                .map { Pair(it.first, it.second) })
-            val seg2 = ArrayList(fullHist.filter { it.first in phase2Rel until phase3Rel }
+            // READY 이후 전체 데이터 — phase2Rel 기준으로 타임스탬프 정규화
+            val segCombined = ArrayList(fullHist.filter { it.first >= phase2Rel }
                 .map { Pair(it.first - phase2Rel, it.second) })
-            val seg3 = ArrayList(fullHist.filter { it.first >= phase3Rel }
-                .map { Pair(it.first - phase3Rel, it.second) })
 
-            // graph2 기준 마커 (pitchRecordStart relative → phase2 relative)
-            fun toG2(ms: Long) = ms - phase2Rel
-            // minSearch 는 phase2 구간 중(-900ms)에 시작 → graph2에 표시
-            val g2MinSearch   = if (minSearch    >= 0L) toG2(minSearch)   else -1L
-            // hitWindowOpen 도 PITCH TTS 완료 시점(~phase2 말미)에 발생 → graph2 우측에 표시
-            val g2WinOpen     = if (winOpen      >= 0L) toG2(winOpen)     else -1L
-            // PITCH 발화 시작/종료 → graph2 후반부에 표시
-            val g2PitchTtsSt  = if (pitchTtsSt   >= 0L) toG2(pitchTtsSt)  else -1L
-            val g2PitchWin    = if (pitchWinSt   >= 0L) toG2(pitchWinSt)  else -1L
+            // 모든 마커를 READY(phase2Rel) 기준으로 변환
+            fun toCombined(ms: Long) = ms - phase2Rel
+            val cHit        = if (hitTime     >= 0L) toCombined(hitTime)     else -1L
+            val cWinOpen    = if (winOpen     >= 0L) maxOf(0L, toCombined(winOpen)) else -1L
+            val cWinClose   = if (winClose    >= 0L) toCombined(winClose)    else -1L
+            val cMinAngle   = if (minAngleRel >= 0L) toCombined(minAngleRel) else -1L
+            val cPitchTtsSt = if (pitchTtsSt  >= 0L) toCombined(pitchTtsSt)  else -1L
+            val cPitchWin   = if (pitchWinSt  >= 0L) toCombined(pitchWinSt)  else -1L
 
-            // graph3 기준 마커 (pitchRecordStart relative → phase3 relative)
-            fun toG3(ms: Long) = ms - phase3Rel
-            val g3Hit       = if (hitTime     >= 0L) toG3(hitTime)     else -1L
-            val g3WinOpen   = if (winOpen     >= 0L) maxOf(0L, toG3(winOpen)) else -1L
-            val g3WinClose  = if (winClose    >= 0L) toG3(winClose)    else -1L
-            val g3MinAngle  = if (minAngleRel >= 0L) toG3(minAngleRel) else -1L
-            val g3PitchWin  = if (pitchWinSt  >= 0L) toG3(pitchWinSt)  else -1L
-
-            graph1.setData(seg1, -1L, BATTING_ANGLE_DEG)
-
-            graph2.setData(seg2, -1L, BATTING_ANGLE_DEG)
-            if (g2MinSearch  >= 0L) graph2.setMinAngleSearch(g2MinSearch)
-            if (g2WinOpen    >= 0L) graph2.setHitWindowOpen(g2WinOpen)
-            if (g2PitchTtsSt >= 0L) graph2.setPitchTtsStart(g2PitchTtsSt)
-            if (g2PitchWin   >= 0L) graph2.setPitchWindowStart(g2PitchWin)
-
-            graph3.setData(seg3, g3Hit, BATTING_ANGLE_DEG)
-            graph3.setTolerance(PITCH_TOLERANCE)
-            graph3.setWindowAngles(winOpenDeg, winCloseDeg)
-            if (g3PitchWin >= 0L)                               graph3.setPitchWindowStart(g3PitchWin)
-            if (g3WinOpen  >= 0L)                               graph3.setHitWindowOpen(g3WinOpen)
-            if (g3WinClose >= 0L)                               graph3.setHitWindowClose(g3WinClose)
-            if (g3MinAngle >= 0L && minDeg < Float.MAX_VALUE)   graph3.setMinAngle(g3MinAngle, minDeg)
+            graphCombined.setData(segCombined, cHit, BATTING_ANGLE_DEG)
+            graphCombined.setTolerance(PITCH_TOLERANCE)
+            graphCombined.setWindowAngles(winOpenDeg, winCloseDeg)
+            if (cPitchTtsSt >= 0L)                              graphCombined.setPitchTtsStart(cPitchTtsSt)
+            if (cPitchWin   >= 0L)                              graphCombined.setPitchWindowStart(cPitchWin)
+            if (cWinOpen    >= 0L)                              graphCombined.setHitWindowOpen(cWinOpen)
+            if (cWinClose   >= 0L)                              graphCombined.setHitWindowClose(cWinClose)
+            if (cMinAngle   >= 0L && minDeg < Float.MAX_VALUE)  graphCombined.setMinAngle(cMinAngle, minDeg)
 
             btnPrev.isEnabled = idx > 0
             btnNext.isEnabled = idx < totalData - 1
@@ -1913,12 +1923,8 @@ class SwingTestActivity : AppCompatActivity() {
         container.addView(tv)
         container.addView(navRow)
         container.addView(tvFeedback)
-        container.addView(tvLabel1)
-        container.addView(graph1, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
-        container.addView(tvLabel2)
-        container.addView(graph2, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
-        container.addView(tvLabel3)
-        container.addView(graph3, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
+        container.addView(tvLabelCombined)
+        container.addView(graphCombined, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
 
         val scroll = ScrollView(this)
         scroll.setBackgroundColor(0xFF0A1423.toInt())
@@ -1932,22 +1938,10 @@ class SwingTestActivity : AppCompatActivity() {
         lastResultDialog?.show()
         btnResultView.visibility = View.VISIBLE
         if (totalData > 0) {
-            graph1.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            graphCombined.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
                 override fun onGlobalLayout() {
-                    graph1.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    graph1.invalidate()
-                }
-            })
-            graph2.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-                override fun onGlobalLayout() {
-                    graph2.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    graph2.invalidate()
-                }
-            })
-            graph3.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-                override fun onGlobalLayout() {
-                    graph3.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    graph3.invalidate()
+                    graphCombined.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    graphCombined.invalidate()
                 }
             })
         }

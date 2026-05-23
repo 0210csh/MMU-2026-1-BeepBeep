@@ -276,6 +276,16 @@
         app:layout_constraintStart_toEndOf="@id/v2Base3Container"
         app:layout_constraintEnd_toStartOf="@id/v2Base1Container">
 
+        <!-- 테스트용 정타 강제 스위치 — 스윙 판정 무시하고 무조건 정타 처리 -->
+        <Switch
+            android:id="@+id/switchTestForceHit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="정타 강제"
+            android:textColor="#FBBF24"
+            android:textSize="11sp"
+            android:layout_marginEnd="10dp"/>
+
         <Button
             android:id="@+id/btnResultView"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"

@@ -48,10 +48,12 @@ class MainActivity : AppCompatActivity() {
     private val orientation = FloatArray(3)
     private var baseAzimuth: Float? = null
     private var controllerCheckedOnStart = false
-    private var smoothedHeading = 0f
+    private var smoothedHeading      = 0f
+    private var audioSmoothedHeading = 0f   // 오디오 전용 헤딩 (시각 예측값과 분리)
     private var prevAmplified   = 0f
     private var headingVelocity = 0f
     private var signedVelocity  = 0f
+    private var audioSignedVel  = 0f   // 오디오 전용 속도 (더 빠른 감쇠, 오버슈트 방지)
     private var ballCount = 5
     private val HEADING_SENSITIVITY = 1.0f
 
@@ -72,6 +74,7 @@ class MainActivity : AppCompatActivity() {
             val instantSignedVel = amplified - prevAmplified
             headingVelocity = headingVelocity * 0.4f + instantVel       * 0.6f
             signedVelocity  = signedVelocity  * 0.3f + instantSignedVel * 0.7f
+            audioSignedVel  = audioSignedVel  * 0.15f + instantSignedVel * 0.85f  // 빠른 감쇠
             prevAmplified   = amplified
 
             val factor = when {
@@ -85,6 +88,14 @@ class MainActivity : AppCompatActivity() {
             val predictionScale = (headingVelocity / 1.2f).coerceIn(0f, 1f)
             val predicted = (smoothedHeading + signedVelocity * 12f * predictionScale).coerceIn(-180f, 180f)
             gameEngine.updateHeadingDirectly(predicted)
+
+            // 오디오 헤딩: BT 레이턴시 보상 예측 (~40ms)
+            // audioSignedVel: 빠른 감쇠(0.15) → 멈추면 즉시 수렴, ±20° 캡 → 오버슈트 방지
+            val audioHeading = (amplified + audioSignedVel.coerceIn(-20f, 20f)).coerceIn(-180f, 180f)
+            gameEngine.updateAudioHeading(audioHeading)
+
+            // 3축 HRTF: pitch/roll 매 프레임 전달 (라디안 그대로)
+            gameEngine.updateAudioPitchRoll(orientation[1], orientation[2])
         }
         override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
     }
@@ -155,17 +166,14 @@ class MainActivity : AppCompatActivity() {
             }
             val state = gameEngine.state.value
             if (state.phase == GamePhase.IDLE) {
-                baseAzimuth     = null
-                smoothedHeading = 0f
-                prevAmplified   = 0f
-                headingVelocity = 0f
-                signedVelocity  = 0f
                 when {
                     // 세션 완료됐거나 아직 시작 안 한 경우 → 새 세션 시작
+                    // 버튼 누르는 순간의 방향을 즉시 정면으로 설정
                     gameEngine.isSessionComplete() || state.totalAttempts == 0 -> {
+                        resetHeading()
                         gameEngine.startSession(getBallCount())
                     }
-                    // 세션 진행 중 → 다음 판 시작
+                    // 세션 진행 중 → 다음 판 시작 (정면 기준 유지)
                     else -> {
                         gameEngine.launchNextInSession()
                     }
@@ -179,8 +187,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnBallCountUp.setOnClickListener   { adjustBallCount(+1) }
 
         binding.joystickView.onMove = { dx, dz ->
-            gameEngine.joystickDx = dx
-            gameEngine.joystickDz = -dz
+            gameEngine.setJoystick(dx, -dz)  // 즉시 오디오 위치 갱신 (tick 16ms 대기 없음)
         }
     }
 
@@ -192,6 +199,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getBallCount(): Int = ballCount
+
+    /** 버튼 누르는 순간의 방향을 정면(0°)으로 즉시 설정 — null 대기 방식 대신 직접 할당 */
+    private fun resetHeading() {
+        baseAzimuth     = Math.toDegrees(orientation[0].toDouble()).toFloat()
+        smoothedHeading = 0f
+        prevAmplified   = 0f
+        headingVelocity = 0f
+        signedVelocity  = 0f
+        audioSignedVel  = 0f
+        // 현재 pitch/roll을 중립으로 캡처 → 모자 착용 각도(~45°)를 기준으로 상대 회전만 HRTF에 전달
+        gameEngine.captureAudioNeutralOrientation()
+    }
 
     private fun observeGameState() {
         lifecycleScope.launch {
@@ -274,8 +293,7 @@ class MainActivity : AppCompatActivity() {
             val ry = getCenteredAxis(event, MotionEvent.AXIS_RZ)
             val dx = if (abs(lx) > 0.01f) lx else rx
             val dy = if (abs(ly) > 0.01f) ly else ry
-            gameEngine.joystickDx = dx
-            gameEngine.joystickDz = dy
+            gameEngine.setJoystick(dx, dy)  // 즉시 오디오 위치 갱신
             binding.joystickView.setExternalInput(dx, -dy)
 
             return true
@@ -287,7 +305,7 @@ class MainActivity : AppCompatActivity() {
         val device = event.device ?: return 0f
         val range = device.getMotionRange(axis, event.source) ?: return 0f
         val value = event.getAxisValue(axis)
-        return if (abs(value) > range.flat.coerceAtLeast(0.15f)) value else 0f
+        return if (abs(value) > range.flat.coerceAtLeast(0.05f)) value else 0f
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -307,10 +325,12 @@ class MainActivity : AppCompatActivity() {
                     KeyEvent.KEYCODE_BUTTON_X -> {
                         val st = gameEngine.state.value
                         if (st.phase == GamePhase.IDLE) {
-                            if (gameEngine.isSessionComplete() || st.totalAttempts == 0)
+                            if (gameEngine.isSessionComplete() || st.totalAttempts == 0) {
+                                resetHeading()
                                 gameEngine.startSession(getBallCount())
-                            else
+                            } else {
                                 gameEngine.launchRandom()
+                            }
                         }
                         return true
                     }

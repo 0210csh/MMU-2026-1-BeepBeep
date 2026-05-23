@@ -19,6 +19,15 @@ class SwingTtsManager(private val context: Context) {
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.KOREAN
                 isReady = true
+                // 워밍업: 영어/한국어 음성 모델 모두 미리 로드 → 첫 SET 딜레이 제거
+                val params = android.os.Bundle()
+                params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 0f)
+                tts?.setLanguage(Locale.ENGLISH)
+                tts?.setSpeechRate(1.2f)
+                tts?.speak("SET", TextToSpeech.QUEUE_FLUSH, params, "warmup_en")
+                tts?.setLanguage(Locale.KOREAN)
+                tts?.setSpeechRate(1.0f)
+                tts?.speak(" ", TextToSpeech.QUEUE_ADD, params, "warmup_kr")
                 onReady()
             }
         }
