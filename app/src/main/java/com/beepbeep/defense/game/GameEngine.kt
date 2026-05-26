@@ -79,6 +79,8 @@ class GameEngine(private val context: Context) {
         private set
     private val catchTimes      = mutableListOf<Long>()
 
+    var isTutorialMode: Boolean = false
+
     @Volatile var joystickDx = 0f
     @Volatile var joystickDz = 0f
 
@@ -183,7 +185,7 @@ class GameEngine(private val context: Context) {
         }
     }
 
-    fun startSession(ballCount: Int) {
+    fun startSession(ballCount: Int, difficulty: Float = 0.5f) {
         if (_state.value.phase != GamePhase.IDLE) return
         targetBallCount = ballCount
         sessionActive   = true
@@ -195,20 +197,20 @@ class GameEngine(private val context: Context) {
         if (ttsReady) {
             tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {}
-                override fun onDone(utteranceId: String?)  { gameScope.launch { launchRandom() } }
-                override fun onError(utteranceId: String?) { gameScope.launch { launchRandom() } }
+                override fun onDone(utteranceId: String?)  { gameScope.launch { launchRandom(difficulty) } }
+                override fun onError(utteranceId: String?) { gameScope.launch { launchRandom(difficulty) } }
             })
             tts?.speak("훈련 시작", TextToSpeech.QUEUE_FLUSH, null, "training_start")
         } else {
-            launchRandom()
+            launchRandom(difficulty)
         }
     }
 
-    fun launchNextInSession() {
+    fun launchNextInSession(difficulty: Float = 0.5f) {
         if (!sessionActive) return
         if (isSessionComplete()) return
         if (_state.value.phase != GamePhase.IDLE) return
-        ballSim.launchRandom(0.5f)
+        ballSim.launchRandom(difficulty)
         // startBeep() 전에 시작 위치 설정 → 첫 청크부터 올바른 HRTF 위치 적용
         val startPos = ballSim.positionAhead(BT_AUDIO_PREDICT_MS)
         audioEngine.updateBallPosition(startPos.x - defX, startPos.y, startPos.z - defZ)
@@ -218,9 +220,9 @@ class GameEngine(private val context: Context) {
             phase = GamePhase.LAUNCHED, lastResult = null, catchTimeMs = null)
     }
 
-    fun launchRandom() {
+    fun launchRandom(difficulty: Float = 0.5f) {
         if (isSessionComplete()) return
-        ballSim.launchRandom(0.5f)
+        ballSim.launchRandom(difficulty)
         // startBeep() 전에 시작 위치 설정 → 첫 청크부터 올바른 HRTF 위치 적용
         val startPos = ballSim.positionAhead(BT_AUDIO_PREDICT_MS)
         audioEngine.updateBallPosition(startPos.x - defX, startPos.y, startPos.z - defZ)
@@ -512,10 +514,23 @@ class GameEngine(private val context: Context) {
         audioEngine.captureNeutralPitchRoll()
     }
 
+    fun fullReset() {
+        audioEngine.stopBeep()
+        sessionActive = false
+        isTutorialMode = false
+        score = 0; attempts = 0; catchTimes.clear()
+        defX = 0f; defZ = 25f
+        _state.value = GameState()
+    }
+
     fun speakControllerWarning()      { speak("컨트롤러를 연결해주세요") }
-    fun speakControllerConnected()    { speak("컨트롤러 연결됨") }
-    fun speakControllerDisconnected() { speak("컨트롤러 연결 끊김") }
+    fun speakControllerConnected()    { speak("컨트롤러가 연결되었습니다") }
+    fun speakControllerDisconnected() { speak("컨트롤러연결이 끊겼습니다.") }
     fun speakBallCount(count: Int)    { speak("${count}회") }
+    fun speakDifficulty(pos: Int) {
+        val name = when (pos) { 0 -> "쉬움"; 1 -> "보통"; 2 -> "어려움"; else -> "보통" }
+        speak("난이도 $name")
+    }
     fun reinitAudio() {
         val wasBeeping = _state.value.phase == GamePhase.LAUNCHED || _state.value.phase == GamePhase.LANDED
         audioEngine.reinitAudioTrack()

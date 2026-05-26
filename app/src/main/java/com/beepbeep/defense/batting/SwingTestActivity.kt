@@ -1,26 +1,25 @@
 package com.beepbeep.defense.batting
 
-// ── Android 프레임워크 import ──────────────────────────────────────────────
 import android.Manifest
-import android.app.AlertDialog                  // 스윙 결과 그래프 다이얼로그 표시
+import android.app.AlertDialog
 import android.content.pm.PackageManager
-import android.hardware.Sensor                  // 센서 종류 상수 (TYPE_GYROSCOPE 등)
-import android.hardware.SensorEvent             // 센서 콜백에서 받는 이벤트 객체 (values 배열 포함)
-import android.hardware.SensorEventListener     // 센서 이벤트를 수신하기 위한 인터페이스
-import android.hardware.SensorManager           // 시스템 센서 서비스 접근 및 리스너 등록/해제
-import android.media.AudioAttributes            // AudioTrack 생성 시 오디오 용도 설정 (USAGE_MEDIA 등)
-import android.media.AudioFormat                // AudioTrack 포맷 설정 (샘플레이트, 채널, 인코딩)
-import android.media.AudioTrack                 // PCM 오디오를 직접 스트리밍하는 저수준 오디오 클래스
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.os.Build
-import android.os.Bundle                        // Activity 상태 저장/복원에 쓰이는 키-값 묶음
-import android.os.SystemClock                   // elapsedRealtimeNanos(): 반응속도 측정용 고정밀 시계
-import android.view.View                        // visibility(GONE/VISIBLE/INVISIBLE) 제어
-import android.widget.Button                    // 시작/다시하기 버튼 위젯
-import android.widget.FrameLayout               // 베이스 컨테이너 (클릭 영역)
-import android.widget.LinearLayout              // 결과 다이얼로그 내부 뷰 컨테이너
-import android.widget.ScrollView                // 결과 다이얼로그 스크롤 래퍼
-import android.widget.TextView                  // 상태·결과 텍스트뷰
-import android.widget.Toast                     // 오답 베이스 선택 시 짧은 안내 메시지
+import android.os.Bundle
+import android.os.SystemClock
+import android.view.View
+import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -31,97 +30,53 @@ import kotlinx.coroutines.*
 import kotlin.math.*
 import kotlin.random.Random
 import java.util.Locale
-
 import android.util.Log
-/**
- * 타격 시뮬레이션 v2
- *
- * v1(BaseRunReactionActivity)과 흐름 동일.
- * 차이점: pitchYPosition 이 랜덤이 아니라 개발자가 정해놓은
- * BATTING_ANGLE_DEG 상수에서 결정된다.
- * 사용자는 해당 각도에 맞게 폰을 기울여 스윙해야 한다.
- *
- * ── 개발자 설정값 ──
- *   BATTING_ANGLE_DEG : 타격 요구 각도(도). 0° = 수평, +양수 = 위로, -음수 = 아래로.
- *                       이 값만 바꾸면 공 높이와 요구 각도가 함께 변경된다.
- */
+
 class SwingTestActivity : AppCompatActivity() {
 
     companion object {
         private const val REQ_BLE_PERM = 100
     }
 
-    // ═══════════════════════════════════════════════════
-    //  개발자 설정값 — 여기만 수정하면 됩니다
-    // ═══════════════════════════════════════════════════
     private val BATTING_ANGLE_DEG = SwingGraphView.REF_PITCH_ANGLE_DEG
-    // 타격 요구 각도 (절대각도, 도).
-    //   0f  → 배트 수평 (중간 공)
-    //  +15f → 배트 끝이 약간 위 (높은 공)
-    //  -15f → 배트 끝이 약간 아래 (낮은 공)
-
-    // ── pitchYPosition: BATTING_ANGLE_DEG 에서 자동 계산 (수정 불필요) ──
     private val pitchYPosition: Float =
         ((BATTING_ANGLE_DEG / 43f) + 0.5f).coerceIn(0.1f, 0.9f)
-    // BallTrackView 에 전달하는 공 수직 위치값 (0.0~1.0).
-    // 0.0=아래, 0.5=중간, 1.0=위. BATTING_ANGLE_DEG 에서 선형 변환.
 
-    // ═══════════════════════════════════════════════════
+    // ── 관리자 여부 ──────────────────────────────────────
+    private var isAdmin = false
 
-    // ── Views ───────────────────────────────────────────
-    private lateinit var tvStatus:             TextView
-    // R.id.tvV2Status: 현재 게임 상태("SET", "PITCH", "쳐!", 결과 등) 표시
+    // ── 관리자 전용 뷰 (nullable — 비관리자 레이아웃에는 없음) ──
+    private var tvStatus:             TextView?      = null
+    private var tvResult:             TextView?      = null
+    private var btnStart:             Button?        = null
+    private var ballTrackView:        BallTrackView?  = null
+    private var swingGraphView:       SwingGraphView? = null
+    private var liveBallParabolaView: BallParabolaView? = null
+    private var base1Container:       FrameLayout?   = null
+    private var base3Container:       FrameLayout?   = null
+    private var base1Glow:            View?          = null
+    private var base3Glow:            View?          = null
+    private var tvBase1Label:         TextView?      = null
+    private var tvBase3Label:         TextView?      = null
+    private var btnSwingPitchMinus:   Button?        = null
+    private var btnSwingPitchPlus:    Button?        = null
+    private var tvSwingPitchCount:    TextView?      = null
+    private var tvSwingPitchProgress: TextView?      = null
+    private var btnBleConnect:        Button?        = null
+    private var tvBleStatus:          TextView?      = null
+    private var tvBatteryLevel:       TextView?      = null
+    private var btnResultView:        Button?        = null
+    private var lastResultDialog:     android.app.AlertDialog? = null
 
-    private lateinit var tvResult:             TextView
-    // R.id.tvV2Result: 반응속도·각도 등 보조 결과 표시
-
-    private lateinit var btnStart:             Button
-    // R.id.btnV2Start: 시작/다시하기 버튼. 게임 중 비활성화
-
-    private lateinit var ballTrackView:        BallTrackView
-    // R.id.v2BallTrackView: 공 궤적·수비수·베이스 커스텀 뷰.
-    // setShowStrikeZone(false) 호출로 스트라이크존 UI 숨김
-
-    private lateinit var swingGraphView:       SwingGraphView
-    // R.id.v2SwingGraphView: 배트 각도 궤적 라이브 그래프 (시작 시 VISIBLE)
-
-    private lateinit var liveBallParabolaView: BallParabolaView
-    // R.id.v2LiveParabolaView: 공 포물선 궤적 라이브 그래프
-    // swingGraphView 바로 위에 표시. 게임 중 이동 공 애니메이션 포함
-
-    private lateinit var base1Container:       FrameLayout
-    // R.id.v2Base1Container: 1루 베이스 클릭 영역 (130×130dp)
-
-    private lateinit var base3Container:       FrameLayout
-    // R.id.v2Base3Container: 3루 베이스 클릭 영역 (130×130dp)
-
-    private lateinit var base1Glow:            View
-    // R.id.v2Base1Glow: 1루 활성화 시 빛나는 효과 레이어. 평소 INVISIBLE
-
-    private lateinit var base3Glow:            View
-    // R.id.v2Base3Glow: 3루 활성화 시 빛나는 효과 레이어. base1Glow 와 동일 구조
-
-    private lateinit var tvBase1Label:         TextView
-    private lateinit var tvBase3Label:         TextView
-
-    private lateinit var btnSwingPitchMinus:   Button
-    private lateinit var btnSwingPitchPlus:    Button
-    private lateinit var tvSwingPitchCount:    TextView
-    private lateinit var tvSwingPitchProgress: TextView
-    private lateinit var btnBleConnect:        Button
-    private lateinit var tvBleStatus:          TextView
-    private lateinit var tvBatteryLevel:       TextView
-    private lateinit var btnResultView:        Button
-    private var lastResultDialog:              android.app.AlertDialog? = null
-
-    private var targetPitches  = 3
+    // ── 훈련 상태 ────────────────────────────────────────
+    private var targetPitches   = 3
     private var currentPitchNum = 0
-    private var successCount   = 0
-    private var isTraining     = false
-    private var hitCount       = 0
-    private var foulCount      = 0
-    private var strikeCount    = 0
-    private val reactionTimes  = mutableListOf<Long>()
+    private var successCount    = 0
+    private var isTraining      = false
+    private var hitCount        = 0
+    private var foulCount       = 0
+    private var strikeCount     = 0
+    private val reactionTimes   = mutableListOf<Long>()
 
     private val perPitchRecords    = mutableListOf<HashMap<String, Any?>>()
     private val currentPitchRecord = HashMap<String, Any?>()
@@ -136,57 +91,37 @@ class SwingTestActivity : AppCompatActivity() {
     private val perPitchMinAngleRelFull      = mutableListOf<Long>()
     private val perPitchMinAngleDegList      = mutableListOf<Float>()
     private val perPitchPitchWinStartRelFull = mutableListOf<Long>()
-    private val perPitchPitchTtsStartRelFull = mutableListOf<Long>()   // PITCH 발화 시작 시각
+    private val perPitchPitchTtsStartRelFull = mutableListOf<Long>()
     private val perPitchPhase2RelFull        = mutableListOf<Long>()
     private val perPitchPhase3RelFull        = mutableListOf<Long>()
     private val perPitchWinOpenDeg           = mutableListOf<Float>()
     private val perPitchWinCloseDeg          = mutableListOf<Float>()
 
     // ── Sensors ─────────────────────────────────────────
-    private lateinit var sensorManager:        SensorManager
-    // 시스템 센서 서비스. onResume/onPause 에서 리스너 등록·해제
-
-    private var linearAccelSensor:             Sensor? = null
-    // TYPE_LINEAR_ACCELERATION (중력 제거 가속도). 미지원 시 TYPE_ACCELEROMETER 폴백
-
-    private var gyroscopeSensor:               Sensor? = null
-    // TYPE_GYROSCOPE (각속도). null 이면 자이로 없는 기기 → gyroMag=0 으로 처리
-
-    private var rotationSensor:                Sensor? = null
-    // TYPE_GAME_ROTATION_VECTOR: 피치각·방위각 추출용. 자기장 간섭 없음
-
+    private lateinit var sensorManager:  SensorManager
+    private var linearAccelSensor:       Sensor? = null
+    private var gyroscopeSensor:         Sensor? = null
+    private var rotationSensor:          Sensor? = null
     private val rotMatrix   = FloatArray(9)
-    // 3×3 회전 행렬. SensorManager.getRotationMatrixFromVector() 결과를 저장
-
     private val orientation = FloatArray(3)
-    // [0]=방위각, [1]=피치, [2]=롤 (라디안). SensorManager.getOrientation() 결과
-
     private val gravity     = FloatArray(3)
-    // TYPE_ACCELEROMETER 폴백 시 저역통과 필터로 추정한 중력 벡터 [x, y, z]
-
     private val LP_ALPHA    = 0.8f
-    // 저역통과 필터 계수. 0 에 가까울수록 빠르고, 1 에 가까울수록 안정적
 
-    @Volatile private var linearAccelMag:      Float = 0f
-    // 최신 선형 가속도 크기 (m/s²). 센서 스레드에서 갱신 → checkSwing() 에서 읽음
-
-    @Volatile private var gyroMag:             Float = 0f
-    // 최신 각속도 크기 (rad/s). 센서 스레드에서 갱신 → checkSwing() 에서 읽음
-
-    @Volatile private var currentPitchDeg:     Float = 0f
-    // 현재 기기 절대 피치각 (도). orientationListener 에서 갱신. 수평=0°, 아래=음수
+    @Volatile private var linearAccelMag:  Float = 0f
+    @Volatile private var gyroMag:         Float = 0f
+    @Volatile private var currentPitchDeg: Float = 0f
 
     private var setAngleThisPitch:   Float = 0f
-    private val setToReadyHistory    = ArrayList<Pair<Long, Float>>()  // phase1: SET→READY
-    private val readyToPitchHistory  = ArrayList<Pair<Long, Float>>()  // phase2: READY→PITCH
-    private val pitchToEndHistory    = ArrayList<Pair<Long, Float>>()  // phase3: PITCH→end
+    private val setToReadyHistory    = ArrayList<Pair<Long, Float>>()
+    private val readyToPitchHistory  = ArrayList<Pair<Long, Float>>()
+    private val pitchToEndHistory    = ArrayList<Pair<Long, Float>>()
     private val allSetAngles          = mutableListOf<Float>()
     private val perPitchPhase1Data   = mutableListOf<ArrayList<Pair<Long, Float>>>()
     private val perPitchPhase2Data   = mutableListOf<ArrayList<Pair<Long, Float>>>()
     private val perPitchPhase3Data   = mutableListOf<ArrayList<Pair<Long, Float>>>()
-    @Volatile private var recordingPhase: Int = 0
+    @Volatile private var recordingPhase:       Int  = 0
     @Volatile private var phaseRecordStartTime: Long = 0L
-    @Volatile private var hitTimePhase3Ms: Long = -1L
+    @Volatile private var hitTimePhase3Ms:      Long = -1L
     private val perPitchHitTimesPhase3 = mutableListOf<Long>()
 
     // ── 임계값 ──────────────────────────────────────────
@@ -194,174 +129,111 @@ class SwingTestActivity : AppCompatActivity() {
     private val HIT_GYRO_THRESHOLD   = 30f
     private val MIN_ACCEL_THRESHOLD  = 48f
     private val MIN_GYRO_THRESHOLD   = 30f
+    private val PITCH_TOLERANCE      = 15f
 
-    private val PITCH_TOLERANCE      = 10f
-    // 각도 허용 오차 (도). 현재 HEIGHT_TOLERANCE 기반 판정을 사용하나 참고용으로 보존
-
-    // ── 물리 상수 (공·배트 3D 위치 계산) ──────────────────
+    // ── 물리 상수 ────────────────────────────────────────
     private val PITCHER_DIST     = 6.53f
-    // 투수판 ~ 타석 거리 (m)
-
     private val PITCHER_HEIGHT   = 1.0f
-    // 투수 릴리즈 높이 (m). 공이 이 높이에서 출발함
-
     private val BALL_ARC         = 0.3f
-    // 포물선 최고점 추가 높이 (m). 직선 궤적 대비 이 만큼 볼록하게 솟음
-
     private val BATTER_HEIGHT    = 1.0f
-    // 타자 손(접촉점) 기준 높이 (m)
-
     private val BAT_REACH        = 0.6f
-    // 배트 스윙 수직 도달 거리 (m). 피치각에 따라 접촉 높이가 결정됨
-
     private val HEIGHT_TOLERANCE = 0.2f
-    // 높이 허용 오차 (m). |배트높이 - 공높이| < HEIGHT_TOLERANCE → HIT 판정
-
-    // ── 테스트 옵션 ──────────────────────────────────────
-    // 정타 강제 스위치 ON → 스윙 판정 완전 무시하고 무조건 4a(정타) 경로 진입
-    @Volatile private var testForceHit = false
 
     // ── 게임 상태 ────────────────────────────────────────
     private var targetBase = 1
-    // 이번 라운드 목표 베이스 (1 또는 3). startGame() 에서 랜덤 선택
-    // [DB 저장 후보] 라운드별 목표 베이스 번호
 
-    @Volatile private var hitWindowActive:        Boolean = false
-    @Volatile private var preWindowActive:        Boolean = false
-    @Volatile private var postWindowActive:       Boolean = false
-    @Volatile private var preWindowSwingDetected: Boolean = false
-    @Volatile private var postWindowSwingDetected:Boolean = false
-    @Volatile private var minSwingDetected:       Boolean = false
-    @Volatile private var windowOpenPitchDeg:     Float   = 0f
-    @Volatile private var windowClosePitchDeg:    Float   = 0f
+    @Volatile private var hitWindowActive:         Boolean = false
+    @Volatile private var preWindowActive:         Boolean = false
+    @Volatile private var postWindowActive:        Boolean = false
+    @Volatile private var preWindowSwingDetected:  Boolean = false
+    @Volatile private var postWindowSwingDetected: Boolean = false
+    @Volatile private var minSwingDetected:        Boolean = false
+    @Volatile private var windowOpenPitchDeg:      Float   = 0f
+    @Volatile private var windowClosePitchDeg:     Float   = 0f
+    @Volatile private var minAngleSearchActive:    Boolean = false
+    @Volatile private var minBatAngleDeg:          Float   = Float.MAX_VALUE
+    @Volatile private var minBatAngleAbsMs:        Long    = -1L
+    @Volatile private var minBatAngleRelMs:        Long    = -1L
 
-    @Volatile private var minAngleSearchActive:   Boolean = false
-    @Volatile private var minBatAngleDeg:         Float   = Float.MAX_VALUE
-    @Volatile private var minBatAngleAbsMs:       Long    = -1L
-    @Volatile private var minBatAngleRelMs:       Long    = -1L
-    private var hitWindowOpenAbsMs:               Long    = -1L
-    private var hitWindowCloseAbsMs:              Long    = -1L
-    private var graphHitWindowOpenRelMs:          Long    = -1L
-    private var graphHitWindowCloseRelMs:         Long    = -1L
-    private var graphMinSearchStartRelMs:         Long    = -1L
-    private var graphPitchWindowStartMs:          Long    = -1L
-    private var graphPitchTtsStartMs:             Long    = -1L   // PITCH 발화 시작 시각
+    private var hitWindowOpenAbsMs:           Long = -1L
+    private var hitWindowCloseAbsMs:          Long = -1L
+    private var graphHitWindowOpenRelMs:      Long = -1L
+    private var graphHitWindowCloseRelMs:     Long = -1L
+    private var graphMinSearchStartRelMs:     Long = -1L
+    private var graphPitchWindowStartMs:      Long = -1L
+    private var graphPitchTtsStartMs:         Long = -1L
 
+    @Volatile private var testForceHit:    Boolean = false
     @Volatile private var swingDetected:   Boolean = false
-    // 스윙 시도 감지 (≥ FOUL 임계값). 파울 판정의 1차 조건
-    // [DB 저장 후보] 스윙 여부 (true=스윙, false=스트라이크)
-
     @Volatile private var swingIsHit:      Boolean = false
-    // 유효 타격 (≥ HIT 임계값 + 높이 일치). true → "깡" 판정
-    // [DB 저장 후보] 정타 여부 (true=정타, false=파울/스트라이크)
-
     @Volatile private var gangSpoken:      Boolean = false
-    // 윈도우 마감 직후 "깡" 조기 발화 여부 — 4a 판정에서 중복 방지용
-
     @Volatile private var swingPitchDeg:   Float   = 0f
-    // 스윙 감지 순간의 피치각 (도). 결과 텍스트 "실제 각도" 표시용
-    // [DB 저장 후보] 스윙 순간 실제 배트 각도(°) → BATTING_ANGLE_DEG 과 비교해 각도 오차 계산 가능
-
     @Volatile private var swingWasStrong:  Boolean = false
-    // 스윙이 HIT 임계값 이상이었는지. 파울 원인(힘 부족 vs 위치 미스) 구분용
-
     @Volatile private var swingBatHeight:  Float   = Float.NaN
-    // 스윙 감지 순간의 배트 높이 (m). NaN=스윙 없음. 결과 그래프에서 배트 위치 표시용
-    // [DB 저장 후보] 스윙 순간 배트 높이(m) → contactH 와 비교해 높이 오차 계산 가능
 
     private var isWaitingForInput = false
-    // 베이스 선택 대기 중 여부. true 인 동안만 onBasePressed() 처리
-
     private var beepStartTime     = 0L
-    // 베이스 도착음 시작 시각 (elapsedRealtimeNanos, ns). 반응속도 측정 기준점
 
-    // ── 스윙 궤적 기록 ───────────────────────────────────
     private val pitchHistory = ArrayList<Pair<Long, Float>>()
-    // (경과ms, 피치각도) 목록. orientationListener 에서 isRecording=true 인 동안 추가
-
     @Volatile private var pitchRecordStart: Long    = 0L
-    // 기록 시작 시각 (System.currentTimeMillis() 기준). pitchHistory 경과ms 계산 기준
-
     @Volatile private var hitTimeRelMs:     Long    = -1L
-    // 스윙 감지 순간의 기록 기준 경과시간 (ms). -1이면 스윙 없음
-    // [DB 저장 후보] 투구 시작 ~ 스윙 감지까지 경과시간(ms) → 타이밍 오차 계산 가능
-
     @Volatile private var isRecording:      Boolean = false
-    // true 인 동안 orientationListener 가 pitchHistory 에 데이터 추가
 
-    // ── 공 접근 진행률 (오디오 거리 감쇠 공유) ──────────
     @Volatile private var ballApproachProgress: Float = 0f
-    // 0.0(투수) ~ 1.0(타자). 게임 루프에서 갱신 → beepBallJob 에서 읽어 볼륨·주파수 조정
+    @Volatile private var divProgress:          Float = 0f
 
-    @Volatile private var divProgress: Float = 0f
-    // 타격 후 DIVERGE(공 발산) 진행률. 0.0(타격 직후) ~ 1.0(베이스 도착).
-    // divBeepJob 에서 볼륨·패닝 계산에 사용
-
-    // ── 헤드트래킹 (방위각 기반 스테레오 패닝) ──────────
+    // ── 헤드트래킹 ──────────────────────────────────────
     private var baseAzimuth: Float? = null
-    // 게임 시작 시점 방위각 기준값. null 이면 다음 센서 이벤트에서 초기화
-
     @Volatile private var currentHeadingDeg: Float = 0f
-    // 현재 머리 방향 (기준 방위각 대비 상대 각도, 도). 베이스 도착음 스테레오 패닝에 사용
 
-    // ── Coroutines ───────────────────────────────────────
+    // ── Coroutines ──────────────────────────────────────
     private val scope    = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    // 이 액티비티 전용 코루틴 스코프. Default 디스패처(백그라운드 스레드).
-    // onDestroy() 에서 scope.cancel() 로 모든 하위 코루틴 일괄 취소
-
     private var gameJob:  Job? = null
-    // 게임 전체 흐름 코루틴. startGame() 에서 이전 gameJob 취소 후 새로 launch
-
     private var audioJob: Job? = null
 
-    // ── TTS ─────────────────────────────────────────────
     private val ttsManager = SwingTtsManager(this)
 
-    // ── Audio ────────────────────────────────────────────
     private var audioTrack: AudioTrack? = null
-    // PCM 스트리밍 오디오. tone() 으로 생성한 ShortArray 를 write() 로 직접 공급
-
     private lateinit var spatialAudio: SpatialAudioEngine
 
-    // ── Hardware BLE ─────────────────────────────────────
     private lateinit var bleManager: BleManager
-    // Seeed XIAO nRF52840 + BNO055 배트 센서 BLE 관리자
-
     @Volatile private var bleConnected = false
-    // BLE 연결 여부. true 이면 폰 센서 대신 BLE 센서 데이터 사용
-
-    // BLE 그래프 타임스탬프 균등 분배용
-    // MCU 는 정확히 10ms 마다 전송하지만 BLE 연결 간격에 따라 여러 패킷이
-    // 동시에 도착해 같은 타임스탬프를 갖는 계단 현상이 발생함.
-    // 기록 시작 시점을 기준으로 패킷 수 × 10ms 로 표시 시각을 계산하면
-    // 폰 기종과 무관하게 균등하게 분배되고 마커 위치도 틀어지지 않음.
-    private var bleGraphBaseMs:       Long = 0L   // 기록 시작 시 실제 경과ms 기준점
-    private var bleGraphPacketCount:  Long = 0L   // 기록 시작 후 수신 패킷 수
-    private var bleGraphStarted:    Boolean = false // 현재 기록 구간 첫 패킷 여부
+    private var bleGraphBaseMs:      Long    = 0L
+    private var bleGraphPacketCount: Long    = 0L
+    private var bleGraphStarted:     Boolean = false
 
     @Volatile private var prevBtn1 = false
     @Volatile private var prevBtn2 = false
     private var batBtn1Job: Job? = null
     private var batBtn2Job: Job? = null
 
+    // ── 튜토리얼 ────────────────────────────────────────
+    private lateinit var tutorialManager: SwingTutorialManager
+
     // ─────────────────────────────────────────────────────
-    // 스윙 감지 리스너 (선형가속도 + 자이로)
+    // 심플 UI 상태 업데이트 (일반 사용자)
+    // ─────────────────────────────────────────────────────
+    private fun updateSimpleStatus(text: String, bgColor: Int = 0xFF0A0A0A.toInt()) {
+        if (isAdmin) return
+        runOnUiThread {
+            findViewById<TextView>(R.id.tvSimpleStatus)?.text = text
+            findViewById<View>(R.id.simpleRootLayout)?.setBackgroundColor(bgColor)
+            findViewById<TextView>(R.id.tvSimpleProgress)?.text =
+                if (isTraining) "${currentPitchNum}/${targetPitches}" else ""
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 스윙 감지 리스너
     // ─────────────────────────────────────────────────────
     private val swingListener = object : SensorEventListener {
-    // onResume() 에서 linearAccelSensor, gyroscopeSensor 각각에 등록
-
         override fun onSensorChanged(event: SensorEvent) {
             if (bleConnected) return
-            // BLE 센서 연결 시 폰 센서 스윙 감지 비활성화 (BLE 데이터 우선)
             when (event.sensor.type) {
                 Sensor.TYPE_LINEAR_ACCELERATION -> {
-                // 중력이 이미 제거된 순수 가속도. 스윙 동작 감지에 사용
-                    linearAccelMag = magnitude(event.values)
-                    checkSwing()
+                    linearAccelMag = magnitude(event.values); checkSwing()
                 }
                 Sensor.TYPE_ACCELEROMETER -> {
-                // TYPE_LINEAR_ACCELERATION 미지원 기기 폴백.
-                // 저역통과 필터로 중력 성분을 추정·제거한 뒤 linearAccelMag 갱신
                     gravity[0] = LP_ALPHA * gravity[0] + (1 - LP_ALPHA) * event.values[0]
                     gravity[1] = LP_ALPHA * gravity[1] + (1 - LP_ALPHA) * event.values[1]
                     gravity[2] = LP_ALPHA * gravity[2] + (1 - LP_ALPHA) * event.values[2]
@@ -372,47 +244,34 @@ class SwingTestActivity : AppCompatActivity() {
                     ))
                     checkSwing()
                 }
-                Sensor.TYPE_GYROSCOPE -> {
-                    gyroMag = magnitude(event.values)
-                    // 각속도 벡터 크기만 갱신. checkSwing 은 가속도 이벤트에서 OR 조건으로 호출
-                }
+                Sensor.TYPE_GYROSCOPE -> { gyroMag = magnitude(event.values) }
             }
         }
         override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
     }
 
     // ─────────────────────────────────────────────────────
-    // 방향 감지 리스너 (피치각 + 방위각)
+    // 방향 감지 리스너
     // ─────────────────────────────────────────────────────
     private val orientationListener = object : SensorEventListener {
-    // TYPE_GAME_ROTATION_VECTOR 이벤트 수신. 피치각(스윙 위치 판정) +
-    // 방위각(헤드트래킹 패닝) + 배트 높이 라이브 업데이트 모두 처리
-
         override fun onSensorChanged(event: SensorEvent) {
             if (event.sensor.type != Sensor.TYPE_GAME_ROTATION_VECTOR) return
-
             SensorManager.getRotationMatrixFromVector(rotMatrix, event.values)
             SensorManager.getOrientation(rotMatrix, orientation)
-            // orientation[0]=방위각, orientation[1]=피치, orientation[2]=롤 (라디안)
 
-            // ── 방위각 → 헤드트래킹 패닝 계산 (BLE 연결 여부와 무관하게 항상 계산) ──
             val azimuthDeg = Math.toDegrees(orientation[0].toDouble()).toFloat()
             val isFirstOrientFrame = (baseAzimuth == null)
             if (isFirstOrientFrame) baseAzimuth = azimuthDeg
-            // 버튼 클릭 후 첫 이벤트에서 기준 방위각 저장
             var rel = azimuthDeg - (baseAzimuth ?: azimuthDeg)
             while (rel > 180f)  rel -= 360f
             while (rel < -180f) rel += 360f
             currentHeadingDeg = -rel
-            // -180~+180° 정규화 후 부호 반전 → 오른쪽=양수, 왼쪽=음수
 
             // 3축 HRTF: pitch/roll 매 프레임 전달. 첫 프레임에서 중립 캡처
             spatialAudio.updatePitchRoll(orientation[1], orientation[2])
             if (isFirstOrientFrame) spatialAudio.captureNeutralPitchRoll()
 
             if (bleConnected) return
-            // BLE 연결 시 피치각·배트 높이·기록은 BLE 콜백에서 담당
-
             currentPitchDeg = Math.toDegrees(orientation[1].toDouble()).toFloat()
 
             if (minAngleSearchActive && currentPitchDeg < minBatAngleDeg) {
@@ -421,25 +280,21 @@ class SwingTestActivity : AppCompatActivity() {
                 minBatAngleRelMs = minBatAngleAbsMs - pitchRecordStart
             }
 
-            // ── 배트 높이 라이브 업데이트 ──────────────────────
-            val batH = BATTER_HEIGHT + sin(currentPitchDeg * PI.toFloat() / 180f) * BAT_REACH
-            liveBallParabolaView.updateLiveBat(batH)
-            // updateLiveBat() 는 postInvalidate() 를 사용 → 센서 스레드에서 직접 호출 안전
-
-            // ── 스윙 궤적 기록 ──────────────────────────────────
-            if (isRecording) {
-                pitchHistory.add(Pair(System.currentTimeMillis() - pitchRecordStart, currentPitchDeg))
-                swingGraphView.postInvalidate()
+            if (isAdmin) {
+                val batH = BATTER_HEIGHT + sin(currentPitchDeg * PI.toFloat() / 180f) * BAT_REACH
+                liveBallParabolaView?.updateLiveBat(batH)
+                if (isRecording) {
+                    pitchHistory.add(Pair(System.currentTimeMillis() - pitchRecordStart, currentPitchDeg))
+                    swingGraphView?.postInvalidate()
+                }
             }
 
-            // ── 구간별 각도 기록 (sensor 콜백에서 직접 기록 → 코루틴 지연 없음) ──
             val phaseElapsed = System.currentTimeMillis() - phaseRecordStartTime
             when (recordingPhase) {
                 1 -> setToReadyHistory.add(Pair(phaseElapsed, currentPitchDeg))
                 2 -> readyToPitchHistory.add(Pair(phaseElapsed, currentPitchDeg))
                 3 -> pitchToEndHistory.add(Pair(phaseElapsed, currentPitchDeg))
             }
-
         }
         override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
     }
@@ -450,18 +305,14 @@ class SwingTestActivity : AppCompatActivity() {
     private fun checkSwing() {
         val accel = linearAccelMag
         val gyro  = gyroMag
-
         val isStrongSwing = accel > HIT_ACCEL_THRESHOLD && gyro > HIT_GYRO_THRESHOLD
         val isAnySwing    = accel > HIT_ACCEL_THRESHOLD && gyro > HIT_GYRO_THRESHOLD
         val isMinSwing    = accel > MIN_ACCEL_THRESHOLD  && gyro > MIN_GYRO_THRESHOLD
 
-        if ((preWindowActive || hitWindowActive || postWindowActive) && !minSwingDetected && isMinSwing) {
+        if ((preWindowActive || hitWindowActive || postWindowActive) && !minSwingDetected && isMinSwing)
             minSwingDetected = true
-        }
-
-        if (preWindowActive && !preWindowSwingDetected && isAnySwing) {
+        if (preWindowActive && !preWindowSwingDetected && isAnySwing)
             preWindowSwingDetected = true
-        }
 
         if (hitWindowActive) {
             if (!swingDetected && isAnySwing) {
@@ -469,11 +320,11 @@ class SwingTestActivity : AppCompatActivity() {
                 swingPitchDeg = currentPitchDeg
                 if (hitTimeRelMs < 0L) {
                     hitTimeRelMs = System.currentTimeMillis() - pitchRecordStart
-                    if (recordingPhase == 3) {
-                        hitTimePhase3Ms = System.currentTimeMillis() - phaseRecordStartTime
+                    if (recordingPhase == 3) hitTimePhase3Ms = System.currentTimeMillis() - phaseRecordStartTime
+                    if (isAdmin) {
+                        swingGraphView?.setHitTime(hitTimeRelMs)
+                        swingGraphView?.postInvalidate()
                     }
-                    swingGraphView.setHitTime(hitTimeRelMs)
-                    swingGraphView.postInvalidate()
                 }
             }
             if (!swingWasStrong && isStrongSwing) {
@@ -482,139 +333,150 @@ class SwingTestActivity : AppCompatActivity() {
                 if (abs(currentPitchDeg - BATTING_ANGLE_DEG) <= PITCH_TOLERANCE) swingIsHit = true
             }
         }
-
-        if (postWindowActive && !postWindowSwingDetected && isAnySwing) {
+        if (postWindowActive && !postWindowSwingDetected && isAnySwing)
             postWindowSwingDetected = true
-        }
     }
 
-    private fun startPhaseRecording() {
-        phaseRecordStartTime = System.currentTimeMillis()
-    }
-
-    private fun stopPhaseRecording() {
-        recordingPhase = 0
-    }
+    private fun startPhaseRecording() { phaseRecordStartTime = System.currentTimeMillis() }
+    private fun stopPhaseRecording()  { recordingPhase = 0 }
 
     // ─────────────────────────────────────────────────────
     // onCreate
     // ─────────────────────────────────────────────────────
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("R_CHECK", "btnV2Start: ${R.id.btnV2Start}")
-        Log.d("R_CHECK", "tvV2Status: ${R.id.tvV2Status}")
-        setContentView(R.layout.activity_swing_test)
 
-        // res/layout/activity_swing_test.xml 로 화면 설정 (가로 모드 고정)
+        // ── 관리자 여부 체크 ──
+        val userId = getSharedPreferences("UserInfo", MODE_PRIVATE)
+            .getString("id", "anonymous") ?: "anonymous"
+        isAdmin = userId == "123402"
+        // 관리자: 가로 강제 (매니페스트 기본값 portrait → 1회 재생성 허용)
+        // 일반 사용자: 매니페스트 portrait 그대로 → 재생성 없음
+        if (isAdmin) {
+            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        }
 
-        // ── 뷰 바인딩 (XML id → 코드 변수) ──────────────────
-        tvStatus              = findViewById(R.id.tvV2Status)
-        tvResult              = findViewById(R.id.tvV2Result)
-        btnStart              = findViewById(R.id.btnV2Start)
-        ballTrackView         = findViewById(R.id.v2BallTrackView)
-        swingGraphView        = findViewById(R.id.v2SwingGraphView)
-        liveBallParabolaView  = findViewById(R.id.v2LiveParabolaView)
-        base1Container        = findViewById(R.id.v2Base1Container)
-        base3Container        = findViewById(R.id.v2Base3Container)
-        base1Glow             = findViewById(R.id.v2Base1Glow)
-        base3Glow             = findViewById(R.id.v2Base3Glow)
-        tvBase1Label          = findViewById(R.id.v2TvBase1Label)
-        tvBase3Label          = findViewById(R.id.v2TvBase3Label)
-
-        btnSwingPitchMinus   = findViewById(R.id.btnSwingPitchMinus)
-        btnSwingPitchPlus    = findViewById(R.id.btnSwingPitchPlus)
-        tvSwingPitchCount    = findViewById(R.id.tvSwingPitchCount)
-        tvSwingPitchProgress = findViewById(R.id.tvSwingPitchProgress)
-        btnBleConnect        = findViewById(R.id.btnBleConnect)
-        tvBleStatus          = findViewById(R.id.tvBleStatus)
-        tvBatteryLevel       = findViewById(R.id.tvBatteryLevel)
-        btnResultView        = findViewById(R.id.btnResultView)
-
-        btnResultView.setOnClickListener { lastResultDialog?.show() }
-
-        // 테스트용 정타 강제 스위치
-        findViewById<android.widget.Switch>(R.id.switchTestForceHit)
-            .setOnCheckedChangeListener { _, isChecked -> testForceHit = isChecked }
-
-        ballTrackView.setShowStrikeZone(false)
+        if (isAdmin) {
+            setContentView(R.layout.activity_swing_test)
+            tvStatus              = findViewById(R.id.tvV2Status)
+            tvResult              = findViewById(R.id.tvV2Result)
+            btnStart              = findViewById(R.id.btnV2Start)
+            ballTrackView         = findViewById(R.id.v2BallTrackView)
+            swingGraphView        = findViewById(R.id.v2SwingGraphView)
+            liveBallParabolaView  = findViewById(R.id.v2LiveParabolaView)
+            base1Container        = findViewById(R.id.v2Base1Container)
+            base3Container        = findViewById(R.id.v2Base3Container)
+            base1Glow             = findViewById(R.id.v2Base1Glow)
+            base3Glow             = findViewById(R.id.v2Base3Glow)
+            tvBase1Label          = findViewById(R.id.v2TvBase1Label)
+            tvBase3Label          = findViewById(R.id.v2TvBase3Label)
+            btnSwingPitchMinus    = findViewById(R.id.btnSwingPitchMinus)
+            btnSwingPitchPlus     = findViewById(R.id.btnSwingPitchPlus)
+            tvSwingPitchCount     = findViewById(R.id.tvSwingPitchCount)
+            tvSwingPitchProgress  = findViewById(R.id.tvSwingPitchProgress)
+            btnBleConnect         = findViewById(R.id.btnBleConnect)
+            tvBleStatus           = findViewById(R.id.tvBleStatus)
+            tvBatteryLevel        = findViewById(R.id.tvBatteryLevel)
+            btnResultView         = findViewById(R.id.btnResultView)
+            btnResultView?.setOnClickListener { lastResultDialog?.show() }
+            // 테스트용 정타 강제 스위치
+            findViewById<android.widget.Switch>(R.id.switchTestForceHit)
+                ?.setOnCheckedChangeListener { _, isChecked -> testForceHit = isChecked }
+            ballTrackView?.setShowStrikeZone(false)
+        } else {
+            setContentView(R.layout.activity_swing_simple)
+        }
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
 
-        // ── TTS 초기화 ────────────────────────────────────
-        ttsManager.init()
+        ttsManager.init {
+            runOnUiThread {
+                updateSimpleStatus("배트를 연결해주세요")
+                if (hasBlePermissions()) startBleScan() else requestBlePermissions()
+            }
+        }
+
+        tutorialManager = SwingTutorialManager(
+            context              = this,
+            ttsManager           = ttsManager,
+            scope                = scope,
+            onStartPracticePitch = {
+                isTraining = true
+                currentPitchNum = 1
+                tutorialManager.targetPitchCount = targetPitches
+                startGame()
+                if (isAdmin) resetAndShowLiveGraphs()
+            },
+            onStartBaseBeep = {
+                initAudioTrack()
+                targetBase = if (Random.nextBoolean()) 1 else 3
+                if (isAdmin) activateBothBases()
+                startBaseBeep()
+                isWaitingForInput = true
+            },
+            onTutorialFinished = {
+                runOnUiThread { finish() }
+            }
+        )
 
         initAudioTrack()
-        // AudioTrack 인스턴스 생성 및 재생 상태 설정
         spatialAudio = SpatialAudioEngine(this)
         spatialAudio.init()
-
         bleManager = BleManager(this)
         bleManager.setCallback(bleCallback)
 
-        btnBleConnect.setOnClickListener {
-            if (bleConnected) {
-                bleManager.disconnect()
-            } else {
-                startBleScan()
+        if (isAdmin) {
+            btnBleConnect?.setOnClickListener {
+                if (bleConnected) bleManager.disconnect() else startBleScan()
             }
-        }
-
-        // 앱 시작 시 자동 스캔
-        if (hasBlePermissions()) startBleScan() else requestBlePermissions()
-
-        btnSwingPitchMinus.setOnClickListener {
-            if (targetPitches > 1) {
-                targetPitches--
-                tvSwingPitchCount.text = targetPitches.toString()
+            btnSwingPitchMinus?.setOnClickListener {
+                if (targetPitches > 1) { targetPitches--; tvSwingPitchCount?.text = targetPitches.toString() }
             }
-        }
-        btnSwingPitchPlus.setOnClickListener {
-            if (targetPitches < 20) {
-                targetPitches++
-                tvSwingPitchCount.text = targetPitches.toString()
+            btnSwingPitchPlus?.setOnClickListener {
+                if (targetPitches < 20) { targetPitches++; tvSwingPitchCount?.text = targetPitches.toString() }
             }
+            btnStart?.setOnClickListener {
+                if (tutorialManager.isRunning) return@setOnClickListener
+                lastResultDialog?.dismiss()
+                lastResultDialog = null
+                btnResultView?.visibility = View.GONE
+                baseAzimuth = null
+                isTraining = true
+                currentPitchNum = 1
+                successCount = 0
+                hitCount = 0
+                foulCount = 0
+                strikeCount = 0
+                reactionTimes.clear()
+                allSetAngles.clear()
+                perPitchPhase1Data.clear()
+                perPitchPhase2Data.clear()
+                perPitchPhase3Data.clear()
+                perPitchHitTimesPhase3.clear()
+                perPitchRecords.clear()
+                perPitchFullHistory.clear()
+                perPitchHitTimeRelFull.clear()
+                perPitchWinOpenRelFull.clear()
+                perPitchWinCloseRelFull.clear()
+                perPitchMinSearchRelFull.clear()
+                perPitchMinAngleRelFull.clear()
+                perPitchMinAngleDegList.clear()
+                perPitchPitchWinStartRelFull.clear()
+                perPitchPitchTtsStartRelFull.clear()
+                perPitchPhase2RelFull.clear()
+                perPitchPhase3RelFull.clear()
+                perPitchWinOpenDeg.clear()
+                perPitchWinCloseDeg.clear()
+                btnSwingPitchMinus?.isEnabled = false
+                btnSwingPitchPlus?.isEnabled  = false
+                tvSwingPitchProgress?.text = "1/${targetPitches}"
+                tutorialManager.targetPitchCount = targetPitches
+                startGame()
+                resetAndShowLiveGraphs()
+            }
+            base1Container?.setOnClickListener { onBasePressed(1) }
+            base3Container?.setOnClickListener { onBasePressed(3) }
         }
-
-        btnStart.setOnClickListener {
-            lastResultDialog?.dismiss()
-            lastResultDialog = null
-            btnResultView.visibility = View.GONE
-            baseAzimuth = null
-            isTraining = true
-            currentPitchNum = 1
-            successCount = 0
-            hitCount = 0
-            foulCount = 0
-            strikeCount = 0
-            reactionTimes.clear()
-            allSetAngles.clear()
-            perPitchPhase1Data.clear()
-            perPitchPhase2Data.clear()
-            perPitchPhase3Data.clear()
-            perPitchHitTimesPhase3.clear()
-            perPitchRecords.clear()
-            perPitchFullHistory.clear()
-            perPitchHitTimeRelFull.clear()
-            perPitchWinOpenRelFull.clear()
-            perPitchWinCloseRelFull.clear()
-            perPitchMinSearchRelFull.clear()
-            perPitchMinAngleRelFull.clear()
-            perPitchMinAngleDegList.clear()
-            perPitchPitchWinStartRelFull.clear()
-            perPitchPitchTtsStartRelFull.clear()
-            perPitchPhase2RelFull.clear()
-            perPitchPhase3RelFull.clear()
-            perPitchWinOpenDeg.clear()
-            perPitchWinCloseDeg.clear()
-            btnSwingPitchMinus.isEnabled = false
-            btnSwingPitchPlus.isEnabled = false
-            tvSwingPitchProgress.text = "1/${targetPitches}"
-            startGame()
-            resetAndShowLiveGraphs()
-        }
-
-        base1Container.setOnClickListener { onBasePressed(1) }
-        base3Container.setOnClickListener { onBasePressed(3) }
     }
 
     // ─────────────────────────────────────────────────────
@@ -622,13 +484,12 @@ class SwingTestActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────
     private fun startGame() {
         gameJob?.cancel()
-        // 이전 게임 코루틴이 남아있으면 취소 (다시하기 클릭 시 이전 흐름 중단)
+        tvResult?.text      = ""
+        ballTrackView?.reset()
+        btnStart?.isEnabled = false
+        isWaitingForInput   = false
+        updateSimpleStatus("준비 중...")
 
-        // ── 모든 상태 초기화 ──────────────────────────────
-        tvResult.text      = ""
-        ballTrackView.reset()      // 공 위치·궤적·트레일 초기화
-        btnStart.isEnabled = false
-        isWaitingForInput  = false
         swingDetected             = false
         swingIsHit                = false
         gangSpoken                = false
@@ -661,32 +522,30 @@ class SwingTestActivity : AppCompatActivity() {
         swingWasStrong     = false
         swingBatHeight     = Float.NaN
         hitTimePhase3Ms    = -1L
-        ballApproachProgress = 0f  // 비프볼 볼륨 기준 초기화
-        divProgress          = 0f  // DIVERGE 비프음 볼륨·패닝 기준 초기화
+        ballApproachProgress = 0f
+        divProgress          = 0f
         pitchHistory.clear()
-        hitTimeRelMs   = -1L
-        isRecording    = false
+        hitTimeRelMs    = -1L
+        isRecording     = false
         hitWindowActive = false
         initAudioTrack()
-        targetBase     = if (Random.nextBoolean()) 1 else 3
-        // 50% 확률로 1루 또는 3루 선택
+        targetBase = if (Random.nextBoolean()) 1 else 3
         resetBaseVisuals()
         currentPitchRecord.clear()
-        currentPitchRecord["투구번호"]     = currentPitchNum
-        currentPitchRecord["목표베이스"]   = targetBase
-        currentPitchRecord["배트각도"]     = null
-        currentPitchRecord["선택베이스"]   = null
+        currentPitchRecord["투구번호"]       = currentPitchNum
+        currentPitchRecord["목표베이스"]     = targetBase
+        currentPitchRecord["배트각도"]       = null
+        currentPitchRecord["선택베이스"]     = null
         currentPitchRecord["베이스정답여부"] = null
-        currentPitchRecord["주루반응속도"] = null
+        currentPitchRecord["주루반응속도"]   = null
 
         gameJob = scope.launch {
-        // 게임 전체 흐름을 단일 코루틴으로 관리 (자기 취소 버그 방지)
-
-            // ━━━ 1단계: SET 발화 + 초기 각도 기록 ━━━
+            // ━━━ 1단계: SET ━━━
             setAngleThisPitch = currentPitchDeg
             allSetAngles.add(setAngleThisPitch)
-            // BLE: MCU 상태 리셋 후 측정 시작 — 이전 세션이 끊어졌을 때 isMeasuring=true가 남아
-            // sendControl(1)이 무시되는 버그를 방지하기 위해 0→200ms→1 순서로 전송
+            // BLE: MCU 상태 리셋 후 측정 시작
+            // 이전 세션이 끊어졌을 때 isMeasuring=true가 남아있으면 sendControl(1)이 무시되므로
+            // 0→200ms→1 순서로 전송해 항상 올바른 상태에서 측정 시작
             if (bleConnected) {
                 bleManager.sendControl(0)
                 delay(200L)
@@ -695,23 +554,21 @@ class SwingTestActivity : AppCompatActivity() {
             recordingPhase = 1
             startPhaseRecording()
             withContext(Dispatchers.Main) {
-                tvStatus.text = "SET"
-                tvStatus.setTextColor(0xFF93C5FD.toInt())
+                tvStatus?.text = "SET"
+                tvStatus?.setTextColor(0xFF93C5FD.toInt())
+                updateSimpleStatus("SET")
                 ttsManager.speakEnglish("SET", speechRate = 1.2f)
             }
             delay(1000)
 
-            // ━━━ 2단계: 공 접근 (2500ms) + READY (10피트) + PITCH 발화 ━━━
+            // ━━━ 2단계: 공 접근 + READY/PITCH TTS ━━━
             val approachMs    = 1300L
             val readyDistM    = 10f * 0.3048f
             val readyProgress = ((PITCHER_DIST - readyDistM) / PITCHER_DIST).coerceIn(0f, 1f)
+            val contactH      = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
             var pitchTtsJob: Job? = null
             var pitchCompletedMs  = -1L
 
-            val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
-
-            // READY+PITCH TTS를 공 애니메이션보다 100ms 먼저 시작
-            // → PITCH가 100ms 일찍 끝나 히트 윈도우 전에 발화 완료됨
             stopPhaseRecording()
             recordingPhase = 2
             startPhaseRecording()
@@ -719,66 +576,63 @@ class SwingTestActivity : AppCompatActivity() {
             preWindowActive = true
             pitchTtsJob = launch {
                 withContext(Dispatchers.Main) {
-                    tvStatus.text = "READY"
-                    tvStatus.setTextColor(0xFF93C5FD.toInt())
+                    tvStatus?.text = "READY"
+                    tvStatus?.setTextColor(0xFF93C5FD.toInt())
+                    updateSimpleStatus("READY")
                 }
-                // READY·PITCH를 하나의 TTS 세션에 연속 큐잉
-                // → 버퍼 오버헤드가 2회→1회로 줄어 총 발화 시간 ~0.7초 단축
                 ttsManager.speakTwoSequentially(
                     first  = "READY",
                     second = "PITCH",
                     locale = Locale.ENGLISH,
                     speechRate = 1.2f,
                     onFirstDone = {
-                        // READY 완료 → PITCH 발화 시작 시각 기록 + UI 전환
                         val ttsStartMs = System.currentTimeMillis() - pitchRecordStart
                         android.os.Handler(android.os.Looper.getMainLooper()).post {
                             graphPitchTtsStartMs = ttsStartMs
-                            swingGraphView.setPitchTtsStart(ttsStartMs)
-                            tvStatus.text = "PITCH"
-                            tvStatus.setTextColor(0xFFFBBF24.toInt())
+                            if (isAdmin) {
+                                swingGraphView?.setPitchTtsStart(ttsStartMs)
+                                tvStatus?.text = "PITCH"
+                                tvStatus?.setTextColor(0xFFFBBF24.toInt())
+                            }
+                            updateSimpleStatus("PITCH", 0xFF78350F.toInt())
                         }
                     }
                 )
                 pitchCompletedMs = System.currentTimeMillis()
                 preWindowActive  = false
-                withContext(Dispatchers.Main) {
-                    tvStatus.text = ""
-                }
+                withContext(Dispatchers.Main) { tvStatus?.text = "" }
             }
 
-            // TTS에 300ms 선행 시간을 준 뒤 공 애니메이션 시작
             delay(500L)
             val tApproach = System.currentTimeMillis()
 
-            // 타격: 6.5m 범위에서 접근감 극대화 (수비 기본값 0.092보다 큰 값 사용)
+            // 타격: 6.5m 범위에서 접근감 극대화
             spatialAudio.gainCoeff = 0.30f
             spatialAudio.updateBallPosition(0f, 0f, -PITCHER_DIST)
             spatialAudio.updateHeading(currentHeadingDeg)
             spatialAudio.startBeep()
 
-            // 루프 A: 공 애니메이션 (16ms 주기)
+            // 루프 A: 공 애니메이션
             val animJob = launch {
                 while (isActive) {
                     val elapsed  = System.currentTimeMillis() - tApproach
                     val progress = (elapsed.toFloat() / approachMs).coerceIn(0f, 1f)
-
                     ballApproachProgress = progress
                     val zPos = -(PITCHER_DIST * (1f - progress)).coerceAtLeast(0.5f)
                     spatialAudio.updateBallPosition(0f, 0f, zPos)
                     spatialAudio.updateHeading(currentHeadingDeg)
-
-                    withContext(Dispatchers.Main) {
-                        ballTrackView.updateBall(0f, progress, BallPhase.APPROACH, pitchYPosition)
-                        liveBallParabolaView.setBallProgress(progress)
+                    if (isAdmin) {
+                        withContext(Dispatchers.Main) {
+                            ballTrackView?.updateBall(0f, progress, BallPhase.APPROACH, pitchYPosition)
+                            liveBallParabolaView?.setBallProgress(progress)
+                        }
                     }
-
                     if (progress >= 1f) break
                     delay(16)
                 }
             }
 
-            // 루프 B: 타이밍 조건 체크 (1ms 주기)
+            // 루프 B: 타이밍 조건 체크
             while (isActive) {
                 val elapsed = System.currentTimeMillis() - tApproach
 
@@ -788,12 +642,10 @@ class SwingTestActivity : AppCompatActivity() {
                     minBatAngleAbsMs         = -1L
                     minAngleSearchActive     = true
                     graphMinSearchStartRelMs = System.currentTimeMillis() - pitchRecordStart
-                    withContext(Dispatchers.Main) {
-                        swingGraphView.setMinAngleSearch(graphMinSearchStartRelMs)
-                    }
+                    if (isAdmin) withContext(Dispatchers.Main) { swingGraphView?.setMinAngleSearch(graphMinSearchStartRelMs) }
                 }
 
-                // 타격 윈도우 오픈 (공 도착 160ms 전 — PITCH 발화 완료 후 여유 확보)
+                // 타격 윈도우 오픈 (공 도착 160ms 전)
                 if (!hitWindowActive && elapsed >= approachMs - 160L) {
                     swingDetected           = false
                     swingIsHit              = false
@@ -802,19 +654,14 @@ class SwingTestActivity : AppCompatActivity() {
                     hitWindowOpenAbsMs      = System.currentTimeMillis()
                     graphHitWindowOpenRelMs = hitWindowOpenAbsMs - pitchRecordStart
                     hitWindowActive         = true
-                    withContext(Dispatchers.Main) {
-                        swingGraphView.setHitWindowOpen(graphHitWindowOpenRelMs)
-                    }
+                    if (isAdmin) withContext(Dispatchers.Main) { swingGraphView?.setHitWindowOpen(graphHitWindowOpenRelMs) }
                 }
 
                 if (elapsed >= approachMs) break
                 delay(1)
             }
             animJob.join()
-            // stopBeep()를 타격 윈도우 이후로 이동:
-            // 공 도착(1300ms) 시점에 마지막 ON 구간이 시작(gain≈86%)되는데
-            // 즉시 stopBeep()하면 50ms만 재생되고 잘림 → "커지기 전에 사라지는" 느낌
-            // 윈도우 닫힌 후 멈춰야 마지막 큰 소리가 충분히 들림
+
             audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
 
             stopPhaseRecording()
@@ -823,16 +670,12 @@ class SwingTestActivity : AppCompatActivity() {
             phase3StartAbsMs = phaseRecordStartTime
 
             pitchTtsJob?.join()
-            // onDone은 오디오 버퍼 flush 후 호출 → 실제 발음 종료보다 ~190ms 늦음
-            // 보정값을 빼서 귀에 들리는 실제 PITCH 종료 시점에 맞춤
             val TTS_BUFFER_OFFSET_MS = 190L
             graphPitchWindowStartMs = if (pitchCompletedMs >= 0L)
                 (pitchCompletedMs - pitchRecordStart - TTS_BUFFER_OFFSET_MS)
-                    .coerceAtLeast(graphPitchTtsStartMs + 50L)  // PITCH↑보다는 항상 뒤에 위치
+                    .coerceAtLeast(graphPitchTtsStartMs + 50L)
             else 0L
-            withContext(Dispatchers.Main) {
-                swingGraphView.setPitchWindowStart(graphPitchWindowStartMs)
-            }
+            if (isAdmin) withContext(Dispatchers.Main) { swingGraphView?.setPitchWindowStart(graphPitchWindowStartMs) }
 
             // ━━━ 3단계: 타격 윈도우 마감 (+50ms) ━━━
             val deadline = System.currentTimeMillis() + 50L
@@ -841,46 +684,42 @@ class SwingTestActivity : AppCompatActivity() {
                 delay(8)
             }
             hitWindowActive          = false
-            spatialAudio.stopBeep()  // 마지막 ON 구간(공 도착 후 ~100ms)이 다 울린 뒤 종료
+            spatialAudio.stopBeep()
             hitWindowCloseAbsMs      = System.currentTimeMillis()
             graphHitWindowCloseRelMs = hitWindowCloseAbsMs - pitchRecordStart
             windowClosePitchDeg      = currentPitchDeg
 
-            // 윈도우 닫히는 순간의 minBatAngleDeg 스냅샷 — postWindow 동안 배트가
-            // 계속 내려가도 최종 판정이 흔들리지 않도록 이 시점 값을 고정해서 사용
-            val snapMinAngleDeg    = minBatAngleDeg
-            val snapMinAngleAbsMs  = minBatAngleAbsMs
+            // 윈도우 닫히는 순간 스냅샷
+            val snapMinAngleDeg   = minBatAngleDeg
+            val snapMinAngleAbsMs = minBatAngleAbsMs
 
             withContext(Dispatchers.Main) {
-                tvStatus.text = ""
-                swingGraphView.setHitWindowClose(graphHitWindowCloseRelMs)
-                swingGraphView.setWindowAngles(windowOpenPitchDeg, windowClosePitchDeg)
+                tvStatus?.text = ""
+                if (isAdmin) {
+                    swingGraphView?.setHitWindowClose(graphHitWindowCloseRelMs)
+                    swingGraphView?.setWindowAngles(windowOpenPitchDeg, windowClosePitchDeg)
+                }
             }
             if (bleConnected) bleManager.sendControl(0)
 
-            // 윈도우 마감 직후 정타 조건 즉시 평가 — postWindow 1000ms 기다리지 않음
-            // 스냅샷 값 사용 → postWindow 중 배트가 더 내려가도 조기 판정과 최종 판정이 일치
+            // 윈도우 마감 직후 조기 정타 판정
             val earlyMinInWindow = snapMinAngleDeg < Float.MAX_VALUE &&
-                                   snapMinAngleAbsMs >= hitWindowOpenAbsMs &&
-                                   snapMinAngleAbsMs <= hitWindowCloseAbsMs
+                    snapMinAngleAbsMs >= hitWindowOpenAbsMs &&
+                    snapMinAngleAbsMs <= hitWindowCloseAbsMs
             val earlyAngleDiff   = if (snapMinAngleDeg < Float.MAX_VALUE)
-                                       snapMinAngleDeg - BATTING_ANGLE_DEG
-                                   else Float.MAX_VALUE
+                snapMinAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
 
             if (earlyMinInWindow && swingWasStrong && abs(earlyAngleDiff) <= PITCH_TOLERANCE) {
                 gangSpoken = true
-                val impactSamples = 44100 * 150 / 1000
-                launch(Dispatchers.IO) {
-                    audioTrack?.write(tone(impactSamples, 880f, 0f, 1.0f), 0, impactSamples * 2)
-                }
                 withContext(Dispatchers.Main) {
                     ttsManager.speak("깡")
-                    tvStatus.text = "소리 들어봐!"
-                    tvStatus.setTextColor(0xFFFBBF24.toInt())
+                    tvStatus?.text = "소리 들어봐!"
+                    tvStatus?.setTextColor(0xFFFBBF24.toInt())
+                    updateSimpleStatus("정타!", 0xFF166534.toInt())
                 }
                 launch {
-                    delay((300L..1000L).random())
-                    withContext(Dispatchers.Main) { activateBothBases() }
+                    delay(100L)
+                    withContext(Dispatchers.Main) { if (isAdmin) activateBothBases() }
                     startBaseBeep()
                     isWaitingForInput = true
                 }
@@ -890,10 +729,9 @@ class SwingTestActivity : AppCompatActivity() {
             delay(1000L)
             postWindowActive = false
             minAngleSearchActive = false
-            withContext(Dispatchers.Main) {
-                if (minBatAngleAbsMs > 0L && minBatAngleDeg < Float.MAX_VALUE) {
-                    swingGraphView.setMinAngle(minBatAngleRelMs, minBatAngleDeg)
-                }
+            if (isAdmin) withContext(Dispatchers.Main) {
+                if (minBatAngleAbsMs > 0L && minBatAngleDeg < Float.MAX_VALUE)
+                    swingGraphView?.setMinAngle(minBatAngleRelMs, minBatAngleDeg)
             }
 
             delay(150L)
@@ -904,20 +742,19 @@ class SwingTestActivity : AppCompatActivity() {
             if (pitchToEndHistory.isNotEmpty())   perPitchPhase3Data.add(ArrayList(pitchToEndHistory))
             perPitchHitTimesPhase3.add(hitTimePhase3Ms)
 
-            // 메인 스레드에서 스냅샷 — BLE 콜백 큐를 모두 소진한 뒤 pitchHistory 복사
-            val snapHitTime   = hitTimeRelMs
-            val snapWinOpen   = graphHitWindowOpenRelMs
-            val snapWinClose  = graphHitWindowCloseRelMs
-            val snapMinSearch = graphMinSearchStartRelMs
-            val snapMinRel    = if (minBatAngleAbsMs > 0L && minBatAngleDeg < Float.MAX_VALUE) minBatAngleRelMs else -1L
-            val snapMinDeg    = minBatAngleDeg
+            val snapHitTime       = hitTimeRelMs
+            val snapWinOpen       = graphHitWindowOpenRelMs
+            val snapWinClose      = graphHitWindowCloseRelMs
+            val snapMinSearch     = graphMinSearchStartRelMs
+            val snapMinRel        = if (minBatAngleAbsMs > 0L && minBatAngleDeg < Float.MAX_VALUE) minBatAngleRelMs else -1L
+            val snapMinDeg        = minBatAngleDeg
             val snapPitchWin      = graphPitchWindowStartMs
             val snapPitchTtsStart = graphPitchTtsStartMs
             val snapP2Rel         = phase2StartAbsMs - pitchRecordStart
-            val snapP3Rel     = phase3StartAbsMs - pitchRecordStart
-            val snapWinOpenDeg  = windowOpenPitchDeg
-            val snapWinCloseDeg = windowClosePitchDeg
-            withContext(Dispatchers.Main) {
+            val snapP3Rel         = phase3StartAbsMs - pitchRecordStart
+            val snapWinOpenDeg    = windowOpenPitchDeg
+            val snapWinCloseDeg   = windowClosePitchDeg
+            if (isAdmin) withContext(Dispatchers.Main) {
                 perPitchFullHistory.add(ArrayList(pitchHistory))
                 perPitchHitTimeRelFull.add(snapHitTime)
                 perPitchWinOpenRelFull.add(snapWinOpen)
@@ -933,46 +770,34 @@ class SwingTestActivity : AppCompatActivity() {
                 perPitchWinCloseDeg.add(snapWinCloseDeg)
             }
 
-            // ━━━ 4단계: 결과 판정 (최저각도 기반) ━━━
-            // post-window 1000ms 후의 최종 최저각으로 판정
-            // → 윈도우 닫힐 때 배트가 아직 내려가는 중이면 최저각이 window close 이후에 찍히므로
-            //   minAfterWin=true → 4d(늦은 스윙) 처리됨 (잘못된 각도 피드백 방지)
-            //
-            // batStillMovingAtClose: 윈도우 마감 시점에 배트가 아직 내려가는 중인지 여부
-            // → windowClosePitchDeg(마감 순간 각도) > minBatAngleDeg(최저각)이면
-            //   최저각이 아직 찍히지 않은 것 → 실질적으로 늦은 스윙
-            // → 센서 10ms 샘플링 오차로 minInWindow가 true여도 이 경우 4d(늦은 스윙)로 처리
-            val hasValidMin          = minBatAngleDeg < Float.MAX_VALUE
-            val minInWindow          = hasValidMin &&
-                                       minBatAngleAbsMs >= hitWindowOpenAbsMs &&
-                                       minBatAngleAbsMs <= hitWindowCloseAbsMs
-            val minBeforeWin         = hasValidMin && minBatAngleAbsMs < hitWindowOpenAbsMs
-            val minAfterWin          = hasValidMin && minBatAngleAbsMs > hitWindowCloseAbsMs
-            val batStillMovingAtClose = hasValidMin &&
-                                        (windowClosePitchDeg - minBatAngleDeg) > 10f
-            val angleDiff            = if (hasValidMin) minBatAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
-            val winDelta             = windowClosePitchDeg - windowOpenPitchDeg
-            val winSign              = if (winDelta >= 0f) "+" else ""
+            // ━━━ 4단계: 결과 판정 ━━━
+            val hasValidMin  = snapMinAngleDeg < Float.MAX_VALUE
+            val minInWindow  = hasValidMin && snapMinAngleAbsMs >= hitWindowOpenAbsMs && snapMinAngleAbsMs <= hitWindowCloseAbsMs
+            val minBeforeWin = hasValidMin && snapMinAngleAbsMs < hitWindowOpenAbsMs
+            val minAfterWin  = hasValidMin && snapMinAngleAbsMs > hitWindowCloseAbsMs
+            val angleDiff    = if (hasValidMin) snapMinAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
+            val winDelta     = windowClosePitchDeg - windowOpenPitchDeg
+            val winSign      = if (winDelta >= 0f) "+" else ""
 
             when {
 
-                // ── 4x: 최소 스윙 미달 — 스트라이크(늦음)와 동일 처리 ──
-                // testForceHit=true 면 스윙 미달 무시 → 아래 4a(정타) 로 직행
+                // ── 4x: 최소 스윙 미달 ──
                 !minSwingDetected && !testForceHit -> {
                     currentPitchRecord["판정"] = "스트라이크(무스윙)"
                     currentPitchRecord["피드백"] = "더 빨리 스윙하세요"
                     withContext(Dispatchers.Main) {
                         perPitchRecords.add(HashMap(currentPitchRecord))
-                        ballTrackView.reset()
+                        ballTrackView?.reset()
                         ttsManager.speak("스트라이크")
                         strikeCount++
-                        tvStatus.text = "스트라이크!"
-                        tvStatus.setTextColor(0xFFF87171.toInt())
-                        tvResult.text = "스윙 없음"
-                        if (!isTraining) {
+                        tvStatus?.text = "스트라이크!"
+                        tvStatus?.setTextColor(0xFFF87171.toInt())
+                        tvResult?.text = "스윙 없음"
+                        updateSimpleStatus("스트라이크!", 0xFF7F1D1D.toInt())
+                        if (isAdmin && !isTraining) {
                             showSwingGraph()
-                            btnStart.isEnabled = true
-                            btnStart.text = "다시하기"
+                            btnStart?.isEnabled = true
+                            btnStart?.text = "다시하기"
                         }
                     }
                     delay(1000L)
@@ -987,26 +812,21 @@ class SwingTestActivity : AppCompatActivity() {
                     currentPitchRecord["판정"] = "정타"
                     currentPitchRecord["피드백"] = "정타 — 베이스 선택"
                     withContext(Dispatchers.Main) {
-                        // hitCount/기록은 DIVERGE 애니메이션 이전에 처리
-                        // → onBasePressed에서 gameJob?.cancel() 호출 시 카운트 누락 방지
                         perPitchRecords.add(HashMap(currentPitchRecord))
                         hitCount++
                         // gangSpoken=false면 조기 발화가 안 된 경우 — 여기서 fallback 발화
                         if (!gangSpoken) {
-                            val impactSamples = 44100 * 150 / 1000
-                            launch(Dispatchers.IO) {
-                                audioTrack?.write(tone(impactSamples, 880f, 0f, 1.0f), 0, impactSamples * 2)
-                            }
                             ttsManager.speak("깡")
-                            tvStatus.text = "소리 들어봐!"
-                            tvStatus.setTextColor(0xFFFBBF24.toInt())
+                            tvStatus?.text = "소리 들어봐!"
+                            tvStatus?.setTextColor(0xFFFBBF24.toInt())
+                            updateSimpleStatus("정타!", 0xFF166534.toInt())
                         }
-                        tvResult.text = "최저 각도: %.0f°".format(minBatAngleDeg)
+                        tvResult?.text = "최저 각도: %.0f°".format(minBatAngleDeg)
                     }
                     if (!gangSpoken) {
                         launch {
-                            delay((300L..1000L).random())
-                            withContext(Dispatchers.Main) { activateBothBases() }
+                            delay(100L)
+                            withContext(Dispatchers.Main) { if (isAdmin) activateBothBases() }
                             startBaseBeep()
                             isWaitingForInput = true
                         }
@@ -1026,8 +846,8 @@ class SwingTestActivity : AppCompatActivity() {
                         divProgress = progress
                         spatialAudio.updateBallPosition(targetPanX * progress * 5f, 0f, -0.5f)
                         spatialAudio.updateHeading(currentHeadingDeg)
-                        withContext(Dispatchers.Main) {
-                            ballTrackView.updateBall(
+                        if (isAdmin) withContext(Dispatchers.Main) {
+                            ballTrackView?.updateBall(
                                 targetPanX * progress,
                                 1f - progress,
                                 BallPhase.DIVERGE
@@ -1037,20 +857,29 @@ class SwingTestActivity : AppCompatActivity() {
                         delay(16)
                     }
 
-                    // spatialAudio.stopBeep() 제거:
-                    // startBaseBeep()이 이미 prevJob?.cancelAndJoin()으로 divBase 비프를 취소함
-                    // 여기서 stopBeep()하면 베이스 방향 비프가 교체된 뒤 바로 죽어버림 → "비프 사라짐"
                     audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
 
+                    // gangSpoken=true 케이스: earlyMinInWindow에서 시작한 베이스 비프음이
+                    // divMs 애니메이션의 startBeep()에 의해 취소됨 → 여기서 재시작
+                    if (gangSpoken) startBaseBeep()
+
                     withContext(Dispatchers.Main) {
-                        ballTrackView.reset()
-                        tvStatus.text = ""
+                        ballTrackView?.reset()
+                        // 튜토리얼 step3: 정타 → 베이스 선택 대기
+                        // (onBasePressed에서 notifyStep3Done 호출 — scheduleNextOrFinish 호출 금지)
+                        if (tutorialManager.isRunning && tutorialManager.currentStep == 3) {
+                            tvStatus?.text = "정타!"
+                            tvStatus?.setTextColor(0xFF4ADE80.toInt())
+                            ttsManager.speak("정타입니다. 소리 방향의 버튼을 눌러보세요.")
+                            return@withContext
+                        }
+                        if (isAdmin) activateBothBases()
+                        tvStatus?.text = ""
                     }
                 }
 
-                // ── 4b: 파울 — 최저각이 윈도우 안이고 배트가 정지 후 최저각 확정 ──
-                // batStillMovingAtClose=true면 실제 최저각은 윈도우 마감 이후 → 4d로 빠짐
-                minInWindow && !batStillMovingAtClose -> {
+                // ── 4b: 파울 — 최저각이 윈도우 안이지만 각도 불일치 or 힘 부족 ──
+                minInWindow -> {
                     val absDiff = abs(angleDiff).toInt()
                     val foulAdvice = when {
                         !swingWasStrong  -> "더 강하게 휘두르세요"
@@ -1061,17 +890,18 @@ class SwingTestActivity : AppCompatActivity() {
                     currentPitchRecord["피드백"] = foulAdvice
                     withContext(Dispatchers.Main) {
                         perPitchRecords.add(HashMap(currentPitchRecord))
-                        ballTrackView.reset()
+                        ballTrackView?.reset()
                         ttsManager.speak("파울")
                         foulCount++
-                        tvStatus.text = "파울!"
-                        tvStatus.setTextColor(0xFFFBBF24.toInt())
+                        tvStatus?.text = "파울!"
+                        tvStatus?.setTextColor(0xFFFBBF24.toInt())
                         val resultLabel = if (!swingWasStrong) "파울 — 힘 부족" else "파울 — 각도 불일치"
-                        tvResult.text = "$resultLabel\n최저 각도: %.0f°".format(minBatAngleDeg)
-                        if (!isTraining) {
+                        tvResult?.text = "$resultLabel\n최저 각도: %.0f°".format(minBatAngleDeg)
+                        updateSimpleStatus("파울!", 0xFF78350F.toInt())
+                        if (isAdmin && !isTraining) {
                             showSwingGraph()
-                            btnStart.isEnabled = true
-                            btnStart.text = "다시하기"
+                            btnStart?.isEnabled = true
+                            btnStart?.text = "다시하기"
                         }
                     }
                     delay(900L)
@@ -1087,16 +917,17 @@ class SwingTestActivity : AppCompatActivity() {
                     currentPitchRecord["피드백"] = "더 늦게 스윙하세요"
                     withContext(Dispatchers.Main) {
                         perPitchRecords.add(HashMap(currentPitchRecord))
-                        ballTrackView.reset()
+                        ballTrackView?.reset()
                         ttsManager.speak("스트라이크")
                         strikeCount++
-                        tvStatus.text = "스트라이크!"
-                        tvStatus.setTextColor(0xFFF87171.toInt())
-                        tvResult.text = "타격 윈도우 전 스윙\n최저 각도: %.0f°".format(minBatAngleDeg)
-                        if (!isTraining) {
+                        tvStatus?.text = "스트라이크!"
+                        tvStatus?.setTextColor(0xFFF87171.toInt())
+                        tvResult?.text = "타격 윈도우 전 스윙\n최저 각도: %.0f°".format(minBatAngleDeg)
+                        updateSimpleStatus("스트라이크!", 0xFF7F1D1D.toInt())
+                        if (isAdmin && !isTraining) {
                             showSwingGraph()
-                            btnStart.isEnabled = true
-                            btnStart.text = "다시하기"
+                            btnStart?.isEnabled = true
+                            btnStart?.text = "다시하기"
                         }
                     }
                     delay(1000L)
@@ -1106,26 +937,23 @@ class SwingTestActivity : AppCompatActivity() {
                     }
                 }
 
-                // ── 4d: 스트라이크 — 늦은 스윙 ──
-                // 케이스 1: minAfterWin — 최저각이 윈도우 마감 이후에 찍힘
-                // 케이스 2: minInWindow && batStillMovingAtClose — 윈도우 마감 시 배트가 아직 내려가는 중
-                //           (센서 10ms 샘플링 오차로 minInWindow=true여도 실질적으로 늦은 스윙)
-                minAfterWin || (minInWindow && batStillMovingAtClose) -> {
+                // ── 4d: 스트라이크 — 윈도우 마감 후 최저각 도달 (늦은 스윙) ──
+                minAfterWin -> {
                     currentPitchRecord["판정"] = "스트라이크(늦음)"
                     currentPitchRecord["피드백"] = "더 빨리 스윙하세요"
                     withContext(Dispatchers.Main) {
                         perPitchRecords.add(HashMap(currentPitchRecord))
-                        ballTrackView.reset()
+                        ballTrackView?.reset()
                         ttsManager.speak("스트라이크")
                         strikeCount++
-                        tvStatus.text = "스트라이크!"
-                        tvStatus.setTextColor(0xFFF87171.toInt())
-                        val lateLabel = if (batStillMovingAtClose) "스윙이 늦음 (마감 시 이동 중)" else "스윙이 늦음"
-                        tvResult.text = "$lateLabel\n최저 각도: %.0f°".format(minBatAngleDeg)
-                        if (!isTraining) {
+                        tvStatus?.text = "스트라이크!"
+                        tvStatus?.setTextColor(0xFFF87171.toInt())
+                        tvResult?.text = "스윙이 늦음\n최저 각도: %.0f° (윈도우 마감 후)".format(minBatAngleDeg)
+                        updateSimpleStatus("스트라이크!", 0xFF7F1D1D.toInt())
+                        if (isAdmin && !isTraining) {
                             showSwingGraph()
-                            btnStart.isEnabled = true
-                            btnStart.text = "다시하기"
+                            btnStart?.isEnabled = true
+                            btnStart?.text = "다시하기"
                         }
                     }
                     delay(1000L)
@@ -1141,16 +969,17 @@ class SwingTestActivity : AppCompatActivity() {
                     currentPitchRecord["피드백"] = "더 빨리 스윙하세요"
                     withContext(Dispatchers.Main) {
                         perPitchRecords.add(HashMap(currentPitchRecord))
-                        ballTrackView.reset()
+                        ballTrackView?.reset()
                         ttsManager.speak("스트라이크")
                         strikeCount++
-                        tvStatus.text = "스트라이크!"
-                        tvStatus.setTextColor(0xFFF87171.toInt())
-                        tvResult.text = "타격 윈도우 후 스윙 / 무스윙"
-                        if (!isTraining) {
+                        tvStatus?.text = "스트라이크!"
+                        tvStatus?.setTextColor(0xFFF87171.toInt())
+                        tvResult?.text = "타격 윈도우 후 스윙 / 무스윙"
+                        updateSimpleStatus("스트라이크!", 0xFF7F1D1D.toInt())
+                        if (isAdmin && !isTraining) {
                             showSwingGraph()
-                            btnStart.isEnabled = true
-                            btnStart.text = "다시하기"
+                            btnStart?.isEnabled = true
+                            btnStart?.text = "다시하기"
                         }
                     }
                     delay(1000L)
@@ -1164,22 +993,15 @@ class SwingTestActivity : AppCompatActivity() {
     }
 
     // ─────────────────────────────────────────────────────
-    // 베이스 도착음 — 수비 훈련과 동일한 SpatialAudio 엔진 사용 (HRTF 3D 음향)
-    // 3루 = 왼쪽(-X 5m), 1루 = 오른쪽(+X 5m)
+    // 베이스 도착음 — Resonance Audio HRTF 3D 음향
     // ─────────────────────────────────────────────────────
     private fun startBaseBeep() {
         audioJob?.cancel()
-
-        // 3루=왼쪽(-X), 1루=오른쪽(+X), 5m 거리 — HRTF로 방향 표현
-        // Z=0 이면 방위각 ±90° → HRTF 앞/뒤 반구 경계선 = 노이즈 발생
-        // Z=-1f 로 약간 앞쪽으로 이동 → 방위각 ≈79° (경계 회피, 소리 체감 차이 없음)
-        // sectorFade도 고개를 ~79° 이상 돌릴 때만 발동 → 정면 응시 중 안 터짐
+        spatialAudio.gainCoeff = 0.092f
         val dirX = if (targetBase == 3) -5f else 5f
         spatialAudio.updateBallPosition(dirX, 0f, -1f)
         spatialAudio.updateHeading(currentHeadingDeg)
-        spatialAudio.startBeep()
-
-        // spatialAudio 내부 beep 루프에 헤딩 변화를 전달 (16ms마다 갱신)
+        spatialAudio.startContinuousBeep()
         audioJob = scope.launch {
             while (isActive) {
                 spatialAudio.updateHeading(currentHeadingDeg)
@@ -1193,46 +1015,75 @@ class SwingTestActivity : AppCompatActivity() {
     // 베이스 선택 처리
     // ─────────────────────────────────────────────────────
     private fun onBasePressed(pressedBase: Int) {
-    // base1Container / base3Container 클릭 시 호출
-
         if (!isWaitingForInput) return
-        // 베이스 도착 전이거나 이미 처리된 경우 무시
-
         isWaitingForInput = false
-        // 중복 입력 방지 (한 번 선택하면 더 이상 처리 안 함)
-
         stopAudio()
-        spatialAudio.stopBeep()
         gameJob?.cancel()
         resetBaseVisuals()
-        ballTrackView.reset()
+        ballTrackView?.reset()
+
+        // 튜토리얼 step3: 정타 후 베이스 선택 → 성공/실패 피드백 후 완료 통보
+        if (tutorialManager.isRunning && tutorialManager.currentStep == 3) {
+            val success = pressedBase == targetBase
+            scope.launch {
+                if (success) {
+                    val ms = (SystemClock.elapsedRealtimeNanos() - beepStartTime) / 1_000_000L
+                    ttsManager.speakAndWait(
+                        "정답입니다. 반응속도 %.1f초입니다.".format(ms / 1000.0),
+                        Locale.KOREAN
+                    )
+                } else {
+                    ttsManager.speakAndWait("틀렸습니다. 소리 방향의 버튼을 누르세요.", Locale.KOREAN)
+                }
+                tutorialManager.notifyStep3Done()
+            }
+            return
+        }
+        // 튜토리얼 step4: 실제 베이스 선택 연습
+        if (tutorialManager.isRunning && tutorialManager.currentStep == 4) {
+            val success = pressedBase == targetBase
+            scope.launch {
+                if (success) {
+                    val ms = (SystemClock.elapsedRealtimeNanos() - beepStartTime) / 1_000_000L
+                    ttsManager.speakAndWait(
+                        "정답입니다. 반응속도 %.1f초입니다.".format(ms / 1000.0),
+                        Locale.KOREAN
+                    )
+                } else {
+                    ttsManager.speakAndWait("틀렸습니다.", Locale.KOREAN)
+                }
+                tutorialManager.notifyStep4Done()
+            }
+            return
+        }
 
         val success = pressedBase == targetBase
-        // [DB 저장 후보] 베이스 선택 정답 여부 (true=정답, false=오답)
-        currentPitchRecord["선택베이스"]   = pressedBase
+        currentPitchRecord["선택베이스"]     = pressedBase
         currentPitchRecord["베이스정답여부"] = success
         audioTrack?.stop()
+
         if (success) {
             val ms = (SystemClock.elapsedRealtimeNanos() - beepStartTime) / 1_000_000L
-            // [DB 저장 후보] 베이스 부저음 시작 ~ 버튼 선택까지 반응속도(ms)
             currentPitchRecord["주루반응속도"] = ms
-            currentPitchRecord["피드백"] = "정타 — ${pressedBase}루 정답 (반응속도 ${ms}ms)"
+            currentPitchRecord["피드백"]       = "정타 — ${pressedBase}루 정답 (반응속도 ${ms}ms)"
             reactionTimes.add(ms)
-            tvStatus.text = "성공!"
-            tvStatus.setTextColor(0xFF4ADE80.toInt())
+            tvStatus?.text = "성공!"
+            tvStatus?.setTextColor(0xFF4ADE80.toInt())
             val sec = ms / 1000.0
-            tvResult.text = "%.2f 초".format(sec)
+            tvResult?.text = "%.2f 초".format(sec)
             ttsManager.speak("성공, 반응속도 %.1f초".format(sec))
+            updateSimpleStatus("성공!", 0xFF166534.toInt())
         } else {
             currentPitchRecord["피드백"] = "정타 — ${pressedBase}루 오답 (목표: ${targetBase}루)"
-            tvStatus.text = "알맞지 않은\n베이스 선택입니다"
-            tvStatus.setTextColor(0xFFF87171.toInt())
-            tvResult.text = ""
-            Toast.makeText(this, "알맞지 않은 베이스 선택입니다", Toast.LENGTH_SHORT).show()
+            tvStatus?.text = "알맞지 않은\n베이스 선택입니다"
+            tvStatus?.setTextColor(0xFFF87171.toInt())
+            tvResult?.text = ""
+            if (isAdmin) Toast.makeText(this, "알맞지 않은 베이스 선택입니다", Toast.LENGTH_SHORT).show()
             ttsManager.speak("베이스 선택이 틀렸습니다")
+            updateSimpleStatus("오답", 0xFF7F1D1D.toInt())
         }
-        // 4a 판정 블록에서 이미 perPitchRecords에 추가됨 → 새로 추가하지 않고 마지막 레코드를 갱신
-        // (중복 add 시 인덱스 어긋남으로 엉뚱한 피드백이 표시되는 버그 방지)
+
+        // 4a 판정 블록에서 이미 perPitchRecords에 추가됨 → 마지막 레코드 갱신
         if (perPitchRecords.isNotEmpty()) {
             val last = perPitchRecords.last()
             last["피드백"]         = currentPitchRecord["피드백"] ?: ""
@@ -1248,10 +1099,10 @@ class SwingTestActivity : AppCompatActivity() {
                 delay(4000)
                 withContext(Dispatchers.Main) { scheduleNextOrFinish(success) }
             }
-        } else {
+        } else if (isAdmin) {
             showSwingGraph()
-            btnStart.isEnabled = true
-            btnStart.text = "다시하기"
+            btnStart?.isEnabled = true
+            btnStart?.text = "다시하기"
         }
     }
 
@@ -1261,54 +1112,55 @@ class SwingTestActivity : AppCompatActivity() {
     private val bleCallback = object : BleManager.Callback {
         override fun onConnected() {
             bleConnected = true
-            btnBleConnect.isEnabled = true
-            btnBleConnect.text = "배트 센서 해제"
-            tvBleStatus.text = "● 연결됨"
-            tvBleStatus.setTextColor(0xFF4ADE80.toInt())
-            ttsManager.speak("배트가 연결되었습니다")
-            // sendControl(1) 은 여기서 호출하지 않음.
-            // onConnected 에서 sendControl(1) 을 보내면 MCU 가 isMeasuring=true 로 진입해
-            // 단일 버튼(왼쪽/오른쪽) 전송이 5 초간 차단됨 → 버튼 딜레이 버그.
-            // 또한 게임 SET 단계에서 sendControl(1) 을 다시 보낼 때 MCU 가
-            // !isMeasuring 조건 불충족으로 무시 → 측정 데이터 안 들어오는 버그.
-            // sendControl(1) 은 게임 SET 단계(startPitchSequence)에서만 전송.
-        }
-
-        override fun onReconnecting() {
-            // BleManager 가 직접 재연결 시도 중 (스캔 없이) — UI만 업데이트
-            bleConnected = false
-            btnBleConnect.isEnabled = false
-            btnBleConnect.text = "재연결 중..."
-            tvBleStatus.text = "● 재연결 중..."
-            tvBleStatus.setTextColor(0xFFFBBF24.toInt())  // 노란색
-        }
-
-        override fun onDisconnected() {
-            // BleManager 직접 재연결 3회 모두 실패한 경우 → 앱에서 스캔 재시도
-            bleConnected = false
-            btnBleConnect.isEnabled = true
-            btnBleConnect.text = "배트 센서 연결"
-            tvBleStatus.text = "● 미연결"
-            tvBleStatus.setTextColor(0xFFF87171.toInt())
-            ttsManager.speak("배트 연결이 끊겼습니다")
-            // 1초 후 자동 재스캔 (이전 2초에서 단축)
-            scope.launch {
-                delay(1000)
-                withContext(Dispatchers.Main) {
-                    if (!bleConnected && hasBlePermissions()) startBleScan()
+            if (isAdmin) {
+                btnBleConnect?.isEnabled = true; btnBleConnect?.text = "배트 센서 해제"
+                tvBleStatus?.text = "● 연결됨"; tvBleStatus?.setTextColor(0xFF4ADE80.toInt())
+            }
+            // 튜토리얼 미완료 → 자동 시작
+            if (!tutorialManager.isTutorialDone() && !tutorialManager.isRunning) {
+                scope.launch {
+                    delay(1_000L)
+                    ttsManager.speakAndWait("배트가 연결되었습니다.", Locale.KOREAN)
+                    delay(500)
+                    withContext(Dispatchers.Main) { tutorialManager.startTutorial() }
+                }
+            } else {
+                scope.launch {
+                    delay(1_000L)
+                    ttsManager.speak("배트가 연결되었습니다")
                 }
             }
         }
 
+        override fun onReconnecting() {
+            bleConnected = false
+            if (isAdmin) {
+                btnBleConnect?.isEnabled = false; btnBleConnect?.text = "재연결 중..."
+                tvBleStatus?.text = "● 재연결 중..."; tvBleStatus?.setTextColor(0xFFFBBF24.toInt())
+            }
+        }
+
+        override fun onDisconnected() {
+            bleConnected = false
+            if (isAdmin) {
+                btnBleConnect?.isEnabled = true; btnBleConnect?.text = "배트 센서 연결"
+                tvBleStatus?.text = "● 미연결"; tvBleStatus?.setTextColor(0xFFF87171.toInt())
+            }
+            ttsManager.speak("배트 연결이 끊겼습니다")
+            scope.launch {
+                delay(1000)
+                withContext(Dispatchers.Main) { if (!bleConnected && hasBlePermissions()) startBleScan() }
+            }
+        }
+
         override fun onBatteryLevel(level: Int) {
-            tvBatteryLevel.text = "배터리 ${level}%"
-            tvBatteryLevel.setTextColor(if (level <= 20) 0xFFF87171.toInt() else 0xFF64748B.toInt())
+            if (isAdmin) {
+                tvBatteryLevel?.text = "배터리 ${level}%"
+                tvBatteryLevel?.setTextColor(if (level <= 20) 0xFFF87171.toInt() else 0xFF64748B.toInt())
+            }
         }
 
         override fun onPacket(packet: BleManager.SensorPacket) {
-            // BLE 패킷에서 스윙 감지용 값 갱신
-            // handleEuler: [X=heading, Y=pitch, Z=roll] (도)
-            // handleGyro:  [x,y,z] (rad/s), handleAccel: [x,y,z] (m/s²)
             linearAccelMag  = magnitude(packet.handleAccel)
             gyroMag         = magnitude(packet.handleGyro)
             currentPitchDeg = packet.handleEuler[1]
@@ -1320,52 +1172,55 @@ class SwingTestActivity : AppCompatActivity() {
                 minBatAngleRelMs = minBatAngleAbsMs - pitchRecordStart
             }
 
+            if (isAdmin) {
+                val batH = BATTER_HEIGHT + sin(currentPitchDeg * PI.toFloat() / 180f) * BAT_REACH
+                liveBallParabolaView?.updateLiveBat(batH)
 
-            // 배트 높이 라이브 업데이트
-            val batH = BATTER_HEIGHT + sin(currentPitchDeg * PI.toFloat() / 180f) * BAT_REACH
-            liveBallParabolaView.updateLiveBat(batH)
-
-            // 스윙 궤적 기록 (메인 스레드에서 실행 — BleManager가 mainHandler.post 사용)
-            // 실제 시각 기반으로 기록해 히트 윈도우 등 마커와 시간축을 일치시킴.
-            // 동시 도착 패킷(버스트)은 +1ms 씩 밀어 수직 점프를 방지하되
-            // 실제 시각을 절대 앞지르지 않아 마커 위치가 틀어지지 않음.
-            if (isRecording) {
-                val nowMs  = System.currentTimeMillis() - pitchRecordStart
-                val lastMs = pitchHistory.lastOrNull()?.first ?: 0L
-                val adjMs  = if (nowMs <= lastMs) lastMs + 1L else nowMs
-                pitchHistory.add(Pair(adjMs, currentPitchDeg))
-                swingGraphView.postInvalidate()
+                // 실제 시각 기반 기록 (동시 도착 패킷은 +1ms 씩 밀어 수직 점프 방지)
+                if (isRecording) {
+                    val nowMs  = System.currentTimeMillis() - pitchRecordStart
+                    val lastMs = pitchHistory.lastOrNull()?.first ?: 0L
+                    val adjMs  = if (nowMs <= lastMs) lastMs + 1L else nowMs
+                    pitchHistory.add(Pair(adjMs, currentPitchDeg))
+                    swingGraphView?.postInvalidate()
+                }
+                val phaseElapsed = System.currentTimeMillis() - phaseRecordStartTime
+                when (recordingPhase) {
+                    1 -> setToReadyHistory.add(Pair(phaseElapsed, currentPitchDeg))
+                    2 -> readyToPitchHistory.add(Pair(phaseElapsed, currentPitchDeg))
+                    3 -> pitchToEndHistory.add(Pair(phaseElapsed, currentPitchDeg))
+                }
             }
-            val phaseElapsed = System.currentTimeMillis() - phaseRecordStartTime
-            when (recordingPhase) {
-                1 -> setToReadyHistory.add(Pair(phaseElapsed, currentPitchDeg))
-                2 -> readyToPitchHistory.add(Pair(phaseElapsed, currentPitchDeg))
-                3 -> pitchToEndHistory.add(Pair(phaseElapsed, currentPitchDeg))
-            }
-
             handleBatButton(packet.btn1, packet.btn2)
         }
     }
 
     // ─────────────────────────────────────────────────────
     // 배트 버튼 처리
-    // ─────────────────────────────────────────────────────
-    // ─────────────────────────────────────────────────────
-    // 배트 버튼 처리
     //   오른쪽(btn1) 단일탭 → 투구수 +1 / 1루 선택
     //   왼쪽(btn2)   단일탭 → 투구수 -1 / 3루 선택
-    //   양쪽 동시    → 훈련 시작
+    //   양쪽 동시    → 훈련 시작 / 조기종료
     // ─────────────────────────────────────────────────────
     private fun handleBatButton(btn1: Boolean, btn2: Boolean) {
-        val wasBtn1 = prevBtn1
-        val wasBtn2 = prevBtn2
+        val wasBtn1    = prevBtn1
+        val wasBtn2    = prevBtn2
+        val risingBtn1 = btn1 && !wasBtn1
+        val risingBtn2 = btn2 && !wasBtn2
 
-        // 양쪽 버튼 동시 상승 에지 (같은 패킷에서 동시에 눌린 경우)
+        if (tutorialManager.isRunning) {
+            if (risingBtn1 || risingBtn2) tutorialManager.onTutorialButton(risingBtn1, risingBtn2)
+            if (tutorialManager.currentStep != 2 && tutorialManager.currentStep != 4) {
+                prevBtn1 = btn1; prevBtn2 = btn2
+                return
+            }
+        }
+
+        // 양쪽 버튼 동시 상승 에지
         if (btn1 && !wasBtn1 && btn2 && !wasBtn2) {
             batBtn1Job?.cancel(); batBtn2Job?.cancel()
             when {
                 isTraining -> earlyFinishTraining(speakTts = true)
-                else       -> if (btnStart.isEnabled) btnStart.performClick()
+                else       -> if (btnStart?.isEnabled == true) btnStart?.performClick()
             }
             prevBtn1 = btn1; prevBtn2 = btn2
             return
@@ -1376,7 +1231,6 @@ class SwingTestActivity : AppCompatActivity() {
             when {
                 isWaitingForInput -> { batBtn2Job?.cancel(); onBasePressed(1) }
                 isTraining -> {
-                    // 왼쪽 타이머 대기 중 → 200ms 내 동시 누름 → 조기종료
                     if (batBtn2Job?.isActive == true) {
                         batBtn1Job?.cancel(); batBtn2Job?.cancel()
                         earlyFinishTraining(speakTts = true)
@@ -1387,17 +1241,16 @@ class SwingTestActivity : AppCompatActivity() {
                 }
                 !isTraining -> {
                     if (batBtn2Job?.isActive == true) {
-                        // 왼쪽 타이머 대기 중 → 동시 누름 → 훈련 시작
                         batBtn1Job?.cancel(); batBtn2Job?.cancel()
-                        if (btnStart.isEnabled) btnStart.performClick()
+                        if (btnStart?.isEnabled == true) btnStart?.performClick()
                     } else {
                         batBtn1Job?.cancel()
                         batBtn1Job = scope.launch {
                             delay(200L)
                             withContext(Dispatchers.Main) {
-                                if (batBtn2Job?.isActive != true && btnStart.isEnabled && targetPitches < 20) {
+                                if (batBtn2Job?.isActive != true && btnStart?.isEnabled == true && targetPitches < 20) {
                                     targetPitches++
-                                    tvSwingPitchCount.text = targetPitches.toString()
+                                    tvSwingPitchCount?.text = targetPitches.toString()
                                     ttsManager.speak("${targetPitches}회")
                                 }
                             }
@@ -1412,7 +1265,6 @@ class SwingTestActivity : AppCompatActivity() {
             when {
                 isWaitingForInput -> { batBtn1Job?.cancel(); onBasePressed(3) }
                 isTraining -> {
-                    // 오른쪽 타이머 대기 중 → 200ms 내 동시 누름 → 조기종료
                     if (batBtn1Job?.isActive == true) {
                         batBtn1Job?.cancel(); batBtn2Job?.cancel()
                         earlyFinishTraining(speakTts = true)
@@ -1423,17 +1275,16 @@ class SwingTestActivity : AppCompatActivity() {
                 }
                 !isTraining -> {
                     if (batBtn1Job?.isActive == true) {
-                        // 오른쪽 타이머 대기 중 → 동시 누름 → 훈련 시작
                         batBtn1Job?.cancel(); batBtn2Job?.cancel()
-                        if (btnStart.isEnabled) btnStart.performClick()
+                        if (btnStart?.isEnabled == true) btnStart?.performClick()
                     } else {
                         batBtn2Job?.cancel()
                         batBtn2Job = scope.launch {
                             delay(200L)
                             withContext(Dispatchers.Main) {
-                                if (batBtn1Job?.isActive != true && btnStart.isEnabled && targetPitches > 1) {
+                                if (batBtn1Job?.isActive != true && btnStart?.isEnabled == true && targetPitches > 1) {
                                     targetPitches--
-                                    tvSwingPitchCount.text = targetPitches.toString()
+                                    tvSwingPitchCount?.text = targetPitches.toString()
                                     ttsManager.speak("${targetPitches}회")
                                 }
                             }
@@ -1449,23 +1300,6 @@ class SwingTestActivity : AppCompatActivity() {
 
     // ─────────────────────────────────────────────────────
     // 조기종료 처리
-    //   speakTts=true  : "조기종료" TTS 출력 (양쪽 버튼 동시 누름 시)
-    //   speakTts=false : TTS 없음 (뒤로가기 / 앱 종료 시)
-    //
-    // DB 업로드에 사용할 변수 위치:
-    //   perPitchRecords  — 완료된 투구별 기록 List<HashMap<String,Any?>> (멤버변수 126번 줄)
-    //   actualPitches    — 실제 완료 투구 수 (perPitchRecords.size, 아래 지역변수)
-    //   hitCount         — 정타 수            (멤버변수 121번 줄)
-    //   foulCount        — 파울 수            (멤버변수 122번 줄)
-    //   strikeCount      — 스트라이크 수      (멤버변수 123번 줄)
-    //   successCount     — 베이스 정답 수     (멤버변수 119번 줄)
-    //   reactionTimes    — 반응속도 목록      (멤버변수 124번 줄)
-    //   battingAvg       — 타율 (아래 지역변수)
-    //   avgReaction      — 평균 반응속도 ms   (아래 지역변수)
-    //   baseCorrectPct   — 베이스 정답률 %    (아래 지역변수)
-    //
-    // Firebase 업로드 코드 삽입 위치:
-    //   아래 주석 "← Firebase 업로드 코드 여기에 삽입" 위치에 추가
     // ─────────────────────────────────────────────────────
     private fun earlyFinishTraining(speakTts: Boolean, showSummary: Boolean = true) {
         if (!isTraining) return
@@ -1498,15 +1332,14 @@ class SwingTestActivity : AppCompatActivity() {
                 }
                 ttsManager.speakWithDone(ttsText) {
                     runOnUiThread {
-                        btnStart.isEnabled           = true
-                        btnSwingPitchMinus.isEnabled = true
-                        btnSwingPitchPlus.isEnabled  = true
+                        btnStart?.isEnabled           = true
+                        btnSwingPitchMinus?.isEnabled = true
+                        btnSwingPitchPlus?.isEnabled  = true
                     }
                 }
             }
 
             val userId    = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
-
             val db        = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             val sessionId = System.currentTimeMillis().toString()
             val sessionData = hashMapOf(
@@ -1527,33 +1360,25 @@ class SwingTestActivity : AppCompatActivity() {
                     "반응속도최대" to (reactionTimes.maxOrNull() ?: -1L)
                 )
             )
-            val sessionRef = db.collection("users")
-                .document(userId)
-                .collection("훈련기록")
-                .document(sessionId)
+            val sessionRef = db.collection("users").document(userId).collection("훈련기록").document(sessionId)
             sessionRef.set(sessionData)
                 .addOnSuccessListener {
                     perPitchRecords.forEachIndexed { index, record ->
-                        sessionRef.collection("투구별기록")
-                            .document("${index + 1}번투구")
-                            .set(record)
+                        sessionRef.collection("투구별기록").document("${index + 1}번투구").set(record)
                     }
                 }
-                .addOnFailureListener { e ->
-                    android.util.Log.e("Firebase", "조기종료 업로드 실패: ${e.message}")
-                }
+                .addOnFailureListener { e -> Log.e("Firebase", "조기종료 업로드 실패: ${e.message}") }
 
             val statsPref = getSharedPreferences("TrainingStats_$userId", MODE_PRIVATE)
             val editor    = statsPref.edit()
-            val count     = statsPref.getInt("count", 0)
-            editor.putInt  ("count",                minOf(count + 1, 10))
-            editor.putFloat("sum_batting_avg",       statsPref.getFloat("sum_batting_avg",       0f) + battingAvg)
-            editor.putFloat("sum_base_correct_pct",  statsPref.getFloat("sum_base_correct_pct",  0f) + baseCorrectPct)
-            editor.putFloat("sum_reaction",          statsPref.getFloat("sum_reaction",          0f) + avgReaction.toFloat())
-            editor.putFloat("sum_hit",               statsPref.getFloat("sum_hit",               0f) + hitCount.toFloat())
-            editor.putFloat("sum_foul",              statsPref.getFloat("sum_foul",              0f) + foulCount.toFloat())
-            editor.putFloat("sum_strike",            statsPref.getFloat("sum_strike",            0f) + strikeCount.toFloat())
-            editor.putFloat("sum_base_correct",      statsPref.getFloat("sum_base_correct",      0f) + successCount.toFloat())
+            editor.putInt  ("count",               minOf(statsPref.getInt("count", 0) + 1, 10))
+            editor.putFloat("sum_batting_avg",      statsPref.getFloat("sum_batting_avg",      0f) + battingAvg)
+            editor.putFloat("sum_base_correct_pct", statsPref.getFloat("sum_base_correct_pct", 0f) + baseCorrectPct)
+            editor.putFloat("sum_reaction",         statsPref.getFloat("sum_reaction",         0f) + avgReaction.toFloat())
+            editor.putFloat("sum_hit",              statsPref.getFloat("sum_hit",              0f) + hitCount.toFloat())
+            editor.putFloat("sum_foul",             statsPref.getFloat("sum_foul",             0f) + foulCount.toFloat())
+            editor.putFloat("sum_strike",           statsPref.getFloat("sum_strike",           0f) + strikeCount.toFloat())
+            editor.putFloat("sum_base_correct",     statsPref.getFloat("sum_base_correct",     0f) + successCount.toFloat())
             val totalCount = statsPref.getInt("total_count", 0) + 1
             editor.putInt  ("total_count",                totalCount)
             editor.putFloat("total_sum_batting_avg",      statsPref.getFloat("total_sum_batting_avg",      0f) + battingAvg)
@@ -1565,116 +1390,84 @@ class SwingTestActivity : AppCompatActivity() {
             editor.putFloat("total_sum_base_correct",     statsPref.getFloat("total_sum_base_correct",     0f) + successCount.toFloat())
             editor.apply()
         } else if (speakTts) {
-            // 첫 투구 조기종료: 통계 없어도 "조기종료" TTS는 출력
             ttsManager.speakWithDone("조기종료") {
                 runOnUiThread {
-                    btnStart.isEnabled           = true
-                    btnSwingPitchMinus.isEnabled = true
-                    btnSwingPitchPlus.isEnabled  = true
+                    btnStart?.isEnabled           = true
+                    btnSwingPitchMinus?.isEnabled = true
+                    btnSwingPitchPlus?.isEnabled  = true
                 }
             }
         }
 
         val ttsWillPlay = (actualPitches > 0 && showSummary) || (actualPitches == 0 && speakTts)
-
         runOnUiThread {
-            tvStatus.text = if (speakTts) "조기 종료" else ""
-            if (speakTts) tvStatus.setTextColor(0xFFF87171.toInt())
-            tvResult.text             = ""
-            tvSwingPitchProgress.text = ""
-            btnStart.isEnabled        = false
-            btnStart.text             = "다시 훈련"
-            btnSwingPitchMinus.isEnabled = false
-            btnSwingPitchPlus.isEnabled  = false
+            tvStatus?.text = if (speakTts) "조기 종료" else ""
+            if (speakTts) tvStatus?.setTextColor(0xFFF87171.toInt())
+            tvResult?.text             = ""
+            tvSwingPitchProgress?.text = ""
+            btnStart?.isEnabled        = false
+            btnStart?.text             = "다시 훈련"
+            btnSwingPitchMinus?.isEnabled = false
+            btnSwingPitchPlus?.isEnabled  = false
+            updateSimpleStatus(if (speakTts) "조기종료" else "")
             resetBaseVisuals()
-            ballTrackView.reset()
-            if (actualPitches > 0 && showSummary) {
+            ballTrackView?.reset()
+            if (isAdmin && actualPitches > 0 && showSummary) {
                 showTrainingSummary(
                     displayCount = actualPitches,
                     dialogTitle  = "조기 종료 결과 (${actualPitches}/${targetPitches}회)"
                 )
             } else if (!ttsWillPlay) {
-                // TTS 없는 케이스(뒤로가기 등): 즉시 활성화
-                btnStart.isEnabled           = true
-                btnSwingPitchMinus.isEnabled = true
-                btnSwingPitchPlus.isEnabled  = true
+                btnStart?.isEnabled           = true
+                btnSwingPitchMinus?.isEnabled = true
+                btnSwingPitchPlus?.isEnabled  = true
             }
-            // ttsWillPlay && !showSummary 케이스: speakWithDone 콜백에서 활성화
         }
     }
 
     // ─────────────────────────────────────────────────────
-    // BLE 권한 요청
+    // 훈련 흐름 제어
     // ─────────────────────────────────────────────────────
-    private fun requestBlePermissions() {
-        val needed = mutableListOf<String>()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
-                needed.add(Manifest.permission.BLUETOOTH_CONNECT)
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED)
-                needed.add(Manifest.permission.BLUETOOTH_SCAN)
-        } else {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-                needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-        if (needed.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQ_BLE_PERM)
-        } else {
-            bleManager.startScan()
-        }
-    }
-
-    private fun hasBlePermissions(): Boolean =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)    == PackageManager.PERMISSION_GRANTED
-        } else {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQ_BLE_PERM && grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-            startBleScan()
-        }
-    }
-
-    private fun startBleScan() {
-        btnBleConnect.isEnabled = false
-        btnBleConnect.text = "연결 중..."
-        bleManager?.startScan()
-    }
-
     private fun scheduleNextOrFinish(success: Boolean) {
-        if (!isTraining) return
-        if (success) successCount++
-        if (currentPitchNum >= targetPitches) {
-            finishTraining()
-        } else {
-            launchNextTrainingPitch()
+        if (tutorialManager.isRunning) {
+            if (currentPitchNum >= targetPitches) {
+                tutorialManager.notifyStep3Done()
+            } else {
+                launchNextTrainingPitch()
+            }
+            return
         }
+        if (success) successCount++
+        if (currentPitchNum >= targetPitches) finishTraining()
+        else launchNextTrainingPitch()
     }
 
     private fun launchNextTrainingPitch() {
         currentPitchNum++
-        tvSwingPitchProgress.text = "${currentPitchNum}/${targetPitches}"
+        tvSwingPitchProgress?.text = "${currentPitchNum}/${targetPitches}"
         startGame()
-        resetAndShowLiveGraphs()
+        if (isAdmin) resetAndShowLiveGraphs()
     }
 
     private fun finishTraining() {
+        if (tutorialManager.isRunning) {
+            isTraining = false
+            audioTrack?.stop()
+            return
+        }
         isTraining = false
-        tvStatus.text = "훈련 완료!"
-        tvStatus.setTextColor(0xFF4ADE80.toInt())
-        tvResult.text = ""
-        tvSwingPitchProgress.text = ""
-        btnStart.isEnabled = false
-        btnStart.text = "다시 훈련"
-        btnSwingPitchMinus.isEnabled = false
-        btnSwingPitchPlus.isEnabled = false
-
+        tvStatus?.text = "훈련 완료!"
+        tvStatus?.setTextColor(0xFF4ADE80.toInt())
+        tvResult?.text             = ""
+        tvSwingPitchProgress?.text = ""
+        btnStart?.isEnabled        = false
+        btnStart?.text             = "다시 훈련"
+        btnSwingPitchMinus?.isEnabled = false
+        btnSwingPitchPlus?.isEnabled  = false
         audioTrack?.stop()
-        val battingAvgPct = if (targetPitches > 0) (hitCount.toFloat() / targetPitches * 100).toInt() else 0
+        updateSimpleStatus("훈련 완료!")
+
+        val battingAvgPct     = if (targetPitches > 0) (hitCount.toFloat() / targetPitches * 100).toInt() else 0
         val avgReactionForTts = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
         val ttsText = buildString {
             append("훈련 완료. ")
@@ -1683,20 +1476,18 @@ class SwingTestActivity : AppCompatActivity() {
         }
         ttsManager.speakWithDone(ttsText) {
             runOnUiThread {
-                btnStart.isEnabled           = true
-                btnSwingPitchMinus.isEnabled = true
-                btnSwingPitchPlus.isEnabled  = true
+                btnStart?.isEnabled           = true
+                btnSwingPitchMinus?.isEnabled = true
+                btnSwingPitchPlus?.isEnabled  = true
             }
         }
 
         val battingAvg     = if (targetPitches > 0) hitCount.toFloat() / targetPitches else 0f
         val avgReaction    = if (reactionTimes.isNotEmpty()) reactionTimes.average().toLong() else -1L
         val baseCorrectPct = if (hitCount > 0) successCount.toFloat() / hitCount * 100f else 0f
-
-        val userId = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
-
-        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-        val sessionId = System.currentTimeMillis().toString()
+        val userId         = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
+        val db             = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val sessionId      = System.currentTimeMillis().toString()
 
         val sessionData = hashMapOf(
             "생성일시"   to com.google.firebase.Timestamp.now(),
@@ -1714,54 +1505,42 @@ class SwingTestActivity : AppCompatActivity() {
                 "반응속도최대" to (reactionTimes.maxOrNull() ?: -1L)
             )
         )
-
-        val sessionRef = db.collection("users")
-            .document(userId)
-            .collection("훈련기록")
-            .document(sessionId)
-
+        val sessionRef = db.collection("users").document(userId).collection("훈련기록").document(sessionId)
         sessionRef.set(sessionData)
             .addOnSuccessListener {
                 perPitchRecords.forEachIndexed { index, record ->
-                    sessionRef.collection("투구별기록")
-                        .document("${index + 1}번투구")
-                        .set(record)
+                    sessionRef.collection("투구별기록").document("${index + 1}번투구").set(record)
                 }
             }
-            .addOnFailureListener { e ->
-                android.util.Log.e("Firebase", "업로드 실패: ${e.message}")
-            }
+            .addOnFailureListener { e -> Log.e("Firebase", "업로드 실패: ${e.message}") }
 
         val statsPref = getSharedPreferences("TrainingStats_$userId", MODE_PRIVATE)
-        val editor = statsPref.edit()
-
-        val count = statsPref.getInt("count", 0)
-        val newCount = minOf(count + 1, 10)
-        editor.putInt("count", newCount)
-        editor.putFloat("sum_batting_avg", statsPref.getFloat("sum_batting_avg", 0f) + battingAvg)
+        val editor    = statsPref.edit()
+        editor.putInt  ("count",               minOf(statsPref.getInt("count", 0) + 1, 10))
+        editor.putFloat("sum_batting_avg",      statsPref.getFloat("sum_batting_avg",      0f) + battingAvg)
         editor.putFloat("sum_base_correct_pct", statsPref.getFloat("sum_base_correct_pct", 0f) + baseCorrectPct)
-        editor.putFloat("sum_reaction", statsPref.getFloat("sum_reaction", 0f) + avgReaction.toFloat())
-        editor.putFloat("sum_hit", statsPref.getFloat("sum_hit", 0f) + hitCount.toFloat())
-        editor.putFloat("sum_foul", statsPref.getFloat("sum_foul", 0f) + foulCount.toFloat())
-        editor.putFloat("sum_strike", statsPref.getFloat("sum_strike", 0f) + strikeCount.toFloat())
-        editor.putFloat("sum_base_correct", statsPref.getFloat("sum_base_correct", 0f) + successCount.toFloat())
-
+        editor.putFloat("sum_reaction",         statsPref.getFloat("sum_reaction",         0f) + avgReaction.toFloat())
+        editor.putFloat("sum_hit",              statsPref.getFloat("sum_hit",              0f) + hitCount.toFloat())
+        editor.putFloat("sum_foul",             statsPref.getFloat("sum_foul",             0f) + foulCount.toFloat())
+        editor.putFloat("sum_strike",           statsPref.getFloat("sum_strike",           0f) + strikeCount.toFloat())
+        editor.putFloat("sum_base_correct",     statsPref.getFloat("sum_base_correct",     0f) + successCount.toFloat())
         val totalCount = statsPref.getInt("total_count", 0) + 1
-        editor.putInt("total_count", totalCount)
-        editor.putFloat("total_sum_batting_avg", statsPref.getFloat("total_sum_batting_avg", 0f) + battingAvg)
+        editor.putInt  ("total_count",                totalCount)
+        editor.putFloat("total_sum_batting_avg",      statsPref.getFloat("total_sum_batting_avg",      0f) + battingAvg)
         editor.putFloat("total_sum_base_correct_pct", statsPref.getFloat("total_sum_base_correct_pct", 0f) + baseCorrectPct)
-        editor.putFloat("total_sum_reaction", statsPref.getFloat("total_sum_reaction", 0f) + avgReaction.toFloat())
-        editor.putFloat("total_sum_hit", statsPref.getFloat("total_sum_hit", 0f) + hitCount.toFloat())
-        editor.putFloat("total_sum_foul", statsPref.getFloat("total_sum_foul", 0f) + foulCount.toFloat())
-        editor.putFloat("total_sum_strike", statsPref.getFloat("total_sum_strike", 0f) + strikeCount.toFloat())
-        editor.putFloat("total_sum_base_correct", statsPref.getFloat("total_sum_base_correct", 0f) + successCount.toFloat())
-
+        editor.putFloat("total_sum_reaction",         statsPref.getFloat("total_sum_reaction",         0f) + avgReaction.toFloat())
+        editor.putFloat("total_sum_hit",              statsPref.getFloat("total_sum_hit",              0f) + hitCount.toFloat())
+        editor.putFloat("total_sum_foul",             statsPref.getFloat("total_sum_foul",             0f) + foulCount.toFloat())
+        editor.putFloat("total_sum_strike",           statsPref.getFloat("total_sum_strike",           0f) + strikeCount.toFloat())
+        editor.putFloat("total_sum_base_correct",     statsPref.getFloat("total_sum_base_correct",     0f) + successCount.toFloat())
         editor.apply()
 
-        showTrainingSummary()
+        if (isAdmin) showTrainingSummary()
     }
 
-
+    // ─────────────────────────────────────────────────────
+    // 훈련 종합 결과 다이얼로그 (관리자 전용)
+    // ─────────────────────────────────────────────────────
     private fun showTrainingSummary(
         displayCount: Int = targetPitches,
         dialogTitle: String = "훈련 종합 결과"
@@ -1778,165 +1557,112 @@ class SwingTestActivity : AppCompatActivity() {
             appendLine("스트라이크      ${strikeCount}회")
             appendLine()
             appendLine("베이스 정답     ${successCount}회")
-            if (hitCount > 0) {
-                appendLine("베이스 정답률   ${"%.0f".format(baseCorrectPct)}%  (${successCount}/${hitCount})")
-            }
+            if (hitCount > 0) appendLine("베이스 정답률   ${"%.0f".format(baseCorrectPct)}%  (${successCount}/${hitCount})")
             appendLine()
             appendLine("타율            ${"%.3f".format(battingAvg)}  (${hitCount}/${displayCount})")
             appendLine()
             if (avgReaction >= 0L) {
                 appendLine("주루 반응속도 평균   ${avgReaction} ms")
-                if (reactionTimes.size > 1) {
-                    appendLine("  최소 ${reactionTimes.minOrNull()} ms  /  최대 ${reactionTimes.maxOrNull()} ms")
-                }
+                if (reactionTimes.size > 1) appendLine("  최소 ${reactionTimes.minOrNull()} ms  /  최대 ${reactionTimes.maxOrNull()} ms")
             } else {
                 appendLine("주루 반응속도   기록 없음")
             }
             appendLine()
             appendLine("── SET 초기 각도 ──")
-            allSetAngles.forEachIndexed { i, a ->
-                appendLine("  #${i + 1}: ${"%.1f".format(a)}°")
-            }
+            allSetAngles.forEachIndexed { i, a -> appendLine("  #${i + 1}: ${"%.1f".format(a)}°") }
         }
 
-        val totalData   = perPitchFullHistory.size
-        val heightPx    = (340 * resources.displayMetrics.density).toInt()
-        var currentIdx  = 0
+        val totalData  = perPitchFullHistory.size
+        val heightPx   = (340 * resources.displayMetrics.density).toInt()
+        var currentIdx = 0
 
-        val tv = TextView(this)
-        tv.text = summaryText
-        tv.textSize = 14f
-        tv.setTextColor(0xFFE2E8F0.toInt())
-        tv.typeface = android.graphics.Typeface.MONOSPACE
-        tv.setBackgroundColor(0xFF0A1423.toInt())
-        tv.setPadding(56, 40, 56, 24)
-        tv.setLineSpacing(0f, 1.3f)
-
-        val btnPrev = Button(this)
-        btnPrev.text = "◀"
-        btnPrev.textSize = 13f
-        btnPrev.setTextColor(0xFF64B4FF.toInt())
-
-        val tvPitchNum = TextView(this)
-        tvPitchNum.textSize = 14f
-        tvPitchNum.setTextColor(0xFFFFFFFF.toInt())
-        tvPitchNum.gravity = android.view.Gravity.CENTER
-        tvPitchNum.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-
-        val btnNext = Button(this)
-        btnNext.text = "▶"
-        btnNext.textSize = 13f
-        btnNext.setTextColor(0xFF64B4FF.toInt())
-
-        val navRow = LinearLayout(this)
-        navRow.orientation = LinearLayout.HORIZONTAL
-        navRow.gravity = android.view.Gravity.CENTER_VERTICAL
-        navRow.setPadding(40, 8, 40, 4)
-        navRow.addView(btnPrev)
-        navRow.addView(tvPitchNum)
-        navRow.addView(btnNext)
-
-        val tvFeedback = TextView(this)
-        tvFeedback.textSize = 14f
-        tvFeedback.gravity = android.view.Gravity.CENTER
-        tvFeedback.setPadding(56, 4, 56, 8)
-        tvFeedback.typeface = android.graphics.Typeface.DEFAULT_BOLD
-
-        val tvLabelCombined = TextView(this)
-        tvLabelCombined.text = "READY 이후 배트 각도 궤적"
-        tvLabelCombined.textSize = 13f
-        tvLabelCombined.setTextColor(0xFF93C5FD.toInt())
-        tvLabelCombined.setPadding(56, 4, 56, 4)
-
+        val tv = TextView(this).apply {
+            text = summaryText; textSize = 14f
+            setTextColor(0xFFE2E8F0.toInt()); typeface = android.graphics.Typeface.MONOSPACE
+            setBackgroundColor(0xFF0A1423.toInt()); setPadding(56, 40, 56, 24); setLineSpacing(0f, 1.3f)
+        }
+        val btnPrev = Button(this).apply { text = "◀"; textSize = 13f; setTextColor(0xFF64B4FF.toInt()) }
+        val tvPitchNum = TextView(this).apply {
+            textSize = 14f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val btnNext = Button(this).apply { text = "▶"; textSize = 13f; setTextColor(0xFF64B4FF.toInt()) }
+        val navRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(40, 8, 40, 4); addView(btnPrev); addView(tvPitchNum); addView(btnNext)
+        }
+        val tvFeedback = TextView(this).apply {
+            textSize = 14f; gravity = android.view.Gravity.CENTER; setPadding(56, 4, 56, 8)
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        val tvLabelCombined = TextView(this).apply {
+            text = "READY 이후 배트 각도 궤적"; textSize = 13f
+            setTextColor(0xFF93C5FD.toInt()); setPadding(56, 4, 56, 4)
+        }
         val graphCombined = SwingGraphView(this)
 
         fun updateGraphs(idx: Int) {
-            tvPitchNum.text = "${idx + 1} / $totalData"
-
             val fullHist    = if (idx < perPitchFullHistory.size)          perPitchFullHistory[idx]          else ArrayList()
             val hitTime     = if (idx < perPitchHitTimeRelFull.size)       perPitchHitTimeRelFull[idx]       else -1L
             val winOpen     = if (idx < perPitchWinOpenRelFull.size)       perPitchWinOpenRelFull[idx]       else -1L
             val winClose    = if (idx < perPitchWinCloseRelFull.size)      perPitchWinCloseRelFull[idx]      else -1L
-            val minSearch   = if (idx < perPitchMinSearchRelFull.size)     perPitchMinSearchRelFull[idx]     else -1L
             val minAngleRel = if (idx < perPitchMinAngleRelFull.size)      perPitchMinAngleRelFull[idx]      else -1L
             val minDeg      = if (idx < perPitchMinAngleDegList.size)      perPitchMinAngleDegList[idx]      else Float.MAX_VALUE
-            val pitchWinSt     = if (idx < perPitchPitchWinStartRelFull.size)  perPitchPitchWinStartRelFull[idx]  else -1L
-            val pitchTtsSt     = if (idx < perPitchPitchTtsStartRelFull.size) perPitchPitchTtsStartRelFull[idx] else -1L
+            val pitchWinSt  = if (idx < perPitchPitchWinStartRelFull.size) perPitchPitchWinStartRelFull[idx] else -1L
+            val pitchTtsSt  = if (idx < perPitchPitchTtsStartRelFull.size) perPitchPitchTtsStartRelFull[idx] else -1L
             val phase2Rel   = if (idx < perPitchPhase2RelFull.size)        perPitchPhase2RelFull[idx].coerceAtLeast(0L) else 0L
-            val phase3Rel   = if (idx < perPitchPhase3RelFull.size)        perPitchPhase3RelFull[idx].coerceAtLeast(0L) else 0L
             val winOpenDeg  = if (idx < perPitchWinOpenDeg.size)           perPitchWinOpenDeg[idx]           else 0f
             val winCloseDeg = if (idx < perPitchWinCloseDeg.size)          perPitchWinCloseDeg[idx]          else 0f
 
-            // 판정 + 피드백 표시
-            val record = perPitchRecords.getOrNull(idx)
-            val judgment = record?.get("판정") as? String ?: ""
+            val record   = perPitchRecords.getOrNull(idx)
+            val judgment = record?.get("판정")  as? String ?: ""
             val feedback = record?.get("피드백") as? String ?: ""
-            val (judgmentColor, feedbackColor) = when {
-                judgment.startsWith("정타")         -> 0xFF4ADE80.toInt() to 0xFF86EFAC.toInt()
-                judgment.startsWith("파울")         -> 0xFFFBBF24.toInt() to 0xFFFDE68A.toInt()
-                judgment.startsWith("스트라이크")   -> 0xFFF87171.toInt() to 0xFFFCA5A5.toInt()
-                else                                -> 0xFFFFFFFF.toInt() to 0xFFAAAAAA.toInt()
+            val (jc, fc) = when {
+                judgment.startsWith("정타")       -> 0xFF4ADE80.toInt() to 0xFF86EFAC.toInt()
+                judgment.startsWith("파울")       -> 0xFFFBBF24.toInt() to 0xFFFDE68A.toInt()
+                judgment.startsWith("스트라이크") -> 0xFFF87171.toInt() to 0xFFFCA5A5.toInt()
+                else                              -> 0xFFFFFFFF.toInt() to 0xFFAAAAAA.toInt()
             }
             tvPitchNum.text = "${idx + 1} / $totalData   [$judgment]"
-            tvPitchNum.setTextColor(judgmentColor)
+            tvPitchNum.setTextColor(jc)
             tvFeedback.text = "💬 $feedback"
-            tvFeedback.setTextColor(feedbackColor)
+            tvFeedback.setTextColor(fc)
 
-            // READY 이후 전체 데이터 — phase2Rel 기준으로 타임스탬프 정규화
             val segCombined = ArrayList(fullHist.filter { it.first >= phase2Rel }
                 .map { Pair(it.first - phase2Rel, it.second) })
-
-            // 모든 마커를 READY(phase2Rel) 기준으로 변환
             fun toCombined(ms: Long) = ms - phase2Rel
-            val cHit        = if (hitTime     >= 0L) toCombined(hitTime)     else -1L
-            val cWinOpen    = if (winOpen     >= 0L) maxOf(0L, toCombined(winOpen)) else -1L
-            val cWinClose   = if (winClose    >= 0L) toCombined(winClose)    else -1L
-            val cMinAngle   = if (minAngleRel >= 0L) toCombined(minAngleRel) else -1L
-            val cPitchTtsSt = if (pitchTtsSt  >= 0L) toCombined(pitchTtsSt)  else -1L
-            val cPitchWin   = if (pitchWinSt  >= 0L) toCombined(pitchWinSt)  else -1L
+            val cHit        = if (hitTime     >= 0L) toCombined(hitTime)              else -1L
+            val cWinOpen    = if (winOpen     >= 0L) maxOf(0L, toCombined(winOpen))   else -1L
+            val cWinClose   = if (winClose    >= 0L) toCombined(winClose)             else -1L
+            val cMinAngle   = if (minAngleRel >= 0L) toCombined(minAngleRel)          else -1L
+            val cPitchTtsSt = if (pitchTtsSt  >= 0L) toCombined(pitchTtsSt)          else -1L
+            val cPitchWin   = if (pitchWinSt  >= 0L) toCombined(pitchWinSt)          else -1L
 
             graphCombined.setData(segCombined, cHit, BATTING_ANGLE_DEG)
             graphCombined.setTolerance(PITCH_TOLERANCE)
             graphCombined.setWindowAngles(winOpenDeg, winCloseDeg)
-            if (cPitchTtsSt >= 0L)                              graphCombined.setPitchTtsStart(cPitchTtsSt)
-            if (cPitchWin   >= 0L)                              graphCombined.setPitchWindowStart(cPitchWin)
-            if (cWinOpen    >= 0L)                              graphCombined.setHitWindowOpen(cWinOpen)
-            if (cWinClose   >= 0L)                              graphCombined.setHitWindowClose(cWinClose)
-            if (cMinAngle   >= 0L && minDeg < Float.MAX_VALUE)  graphCombined.setMinAngle(cMinAngle, minDeg)
-
+            if (cPitchTtsSt >= 0L) graphCombined.setPitchTtsStart(cPitchTtsSt)
+            if (cPitchWin   >= 0L) graphCombined.setPitchWindowStart(cPitchWin)
+            if (cWinOpen    >= 0L) graphCombined.setHitWindowOpen(cWinOpen)
+            if (cWinClose   >= 0L) graphCombined.setHitWindowClose(cWinClose)
+            if (cMinAngle   >= 0L && minDeg < Float.MAX_VALUE) graphCombined.setMinAngle(cMinAngle, minDeg)
             btnPrev.isEnabled = idx > 0
             btnNext.isEnabled = idx < totalData - 1
         }
 
         if (totalData > 0) updateGraphs(0) else tvPitchNum.text = "0 / 0"
+        btnPrev.setOnClickListener { if (currentIdx > 0) { currentIdx--; updateGraphs(currentIdx) } }
+        btnNext.setOnClickListener { if (currentIdx < totalData - 1) { currentIdx++; updateGraphs(currentIdx) } }
 
-        btnPrev.setOnClickListener {
-            if (currentIdx > 0) { currentIdx--; updateGraphs(currentIdx) }
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; setBackgroundColor(0xFF0A1423.toInt())
+            addView(tv); addView(navRow); addView(tvFeedback); addView(tvLabelCombined)
+            addView(graphCombined, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
         }
-        btnNext.setOnClickListener {
-            if (currentIdx < totalData - 1) { currentIdx++; updateGraphs(currentIdx) }
-        }
-
-        val container = LinearLayout(this)
-        container.orientation = LinearLayout.VERTICAL
-        container.setBackgroundColor(0xFF0A1423.toInt())
-        container.addView(tv)
-        container.addView(navRow)
-        container.addView(tvFeedback)
-        container.addView(tvLabelCombined)
-        container.addView(graphCombined, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
-
-        val scroll = ScrollView(this)
-        scroll.setBackgroundColor(0xFF0A1423.toInt())
-        scroll.addView(container)
-
-        lastResultDialog = AlertDialog.Builder(this)
-            .setTitle(dialogTitle)
-            .setView(scroll)
-            .setPositiveButton("확인", null)
-            .create()
+        val scroll = ScrollView(this).apply { setBackgroundColor(0xFF0A1423.toInt()); addView(container) }
+        lastResultDialog = AlertDialog.Builder(this).setTitle(dialogTitle).setView(scroll).setPositiveButton("확인", null).create()
         lastResultDialog?.show()
-        btnResultView.visibility = View.VISIBLE
+        btnResultView?.visibility = View.VISIBLE
         if (totalData > 0) {
             graphCombined.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
                 override fun onGlobalLayout() {
@@ -1949,203 +1675,142 @@ class SwingTestActivity : AppCompatActivity() {
 
     private fun resetAndShowLiveGraphs() {
         pitchHistory.clear()
-        hitTimeRelMs       = -1L
-        pitchRecordStart   = System.currentTimeMillis()
-        bleGraphStarted    = false   // BLE 패킷 카운터 리셋
+        hitTimeRelMs        = -1L
+        pitchRecordStart    = System.currentTimeMillis()
+        bleGraphStarted     = false
         bleGraphPacketCount = 0L
-        isRecording        = true
-        swingGraphView.setLiveSource(pitchHistory, BATTING_ANGLE_DEG)
-        swingGraphView.setTolerance(PITCH_TOLERANCE)
-        swingGraphView.visibility = View.VISIBLE
+        isRecording         = true
+        swingGraphView?.setLiveSource(pitchHistory, BATTING_ANGLE_DEG)
+        swingGraphView?.setTolerance(PITCH_TOLERANCE)
+        swingGraphView?.visibility = View.VISIBLE
     }
 
     // ─────────────────────────────────────────────────────
     // 베이스 시각 활성화 / 초기화
     // ─────────────────────────────────────────────────────
-    private fun activateBase1() {
-        base1Glow.visibility = View.VISIBLE
-        tvBase1Label.setTextColor(0xFF4ADE80.toInt())   // 초록 = 활성 베이스
-    }
-    private fun activateBase3() {
-        base3Glow.visibility = View.VISIBLE
-        tvBase3Label.setTextColor(0xFF4ADE80.toInt())
-    }
     private fun activateBothBases() {
-        base1Glow.visibility = View.VISIBLE
-        base3Glow.visibility = View.VISIBLE
-        tvBase1Label.setTextColor(0xFF4ADE80.toInt())
-        tvBase3Label.setTextColor(0xFF4ADE80.toInt())
+        base1Glow?.visibility = View.VISIBLE; base3Glow?.visibility = View.VISIBLE
+        tvBase1Label?.setTextColor(0xFF4ADE80.toInt()); tvBase3Label?.setTextColor(0xFF4ADE80.toInt())
     }
     private fun resetBaseVisuals() {
-        base1Glow.visibility = View.INVISIBLE
-        base3Glow.visibility = View.INVISIBLE
-        tvBase1Label.setTextColor(0xFF94A3B8.toInt())   // 슬레이트 = 비활성
-        tvBase3Label.setTextColor(0xFF94A3B8.toInt())
+        base1Glow?.visibility = View.INVISIBLE; base3Glow?.visibility = View.INVISIBLE
+        tvBase1Label?.setTextColor(0xFF94A3B8.toInt()); tvBase3Label?.setTextColor(0xFF94A3B8.toInt())
     }
 
     // ─────────────────────────────────────────────────────
-    // 스윙 결과 그래프 다이얼로그 (공 포물선 + 배트 각도 두 그래프 표시)
+    // 스윙 결과 그래프 다이얼로그 (비훈련 단일 투구 — 관리자 전용)
     // ─────────────────────────────────────────────────────
     private fun showSwingGraph() {
-        val history = ArrayList(pitchHistory)   // 스냅샷 (UI 스레드 안전 복사)
+        val history = ArrayList(pitchHistory)
         if (history.isEmpty()) return
-
         val contactH = BATTER_HEIGHT + sin(BATTING_ANGLE_DEG * PI.toFloat() / 180f) * BAT_REACH
-        // 이 라운드 공의 목표 접촉 높이
-
         val batH = when {
             !swingBatHeight.isNaN() -> swingBatHeight
-            // 강한 스윙 → checkSwing() 에서 기록된 배트 높이 사용
             swingDetected           -> BATTER_HEIGHT + sin(swingPitchDeg * PI.toFloat() / 180f) * BAT_REACH
-            // 약한 스윙 → swingPitchDeg 로 배트 높이 역산
             else                    -> contactH
-            // 스윙 없음 → 배트를 목표 높이와 동일하게 표시
         }
-
-        val heightPx = (300 * resources.displayMetrics.density).toInt()
-        // 그래프 뷰 높이 300dp → 픽셀 변환
-
-        val parabolaView = BallParabolaView(this)
-        parabolaView.setData(PITCHER_DIST, PITCHER_HEIGHT, contactH, batH, BALL_ARC, swingIsHit)
-        // 결과 다이얼로그용: liveMode=false → HIT/MISS 레이블·요약 표시
-
-        val graphView = SwingGraphView(this)
-        graphView.setData(history, hitTimeRelMs, BATTING_ANGLE_DEG)
-        graphView.setTolerance(PITCH_TOLERANCE)
-        graphView.setWindowAngles(windowOpenPitchDeg, windowClosePitchDeg)
-        if (graphPitchWindowStartMs >= 0L)
-            graphView.setPitchWindowStart(graphPitchWindowStartMs)
-        if (graphHitWindowOpenRelMs >= 0L)
-            graphView.setHitWindowOpen(graphHitWindowOpenRelMs)
-        if (graphHitWindowCloseRelMs >= 0L)
-            graphView.setHitWindowClose(graphHitWindowCloseRelMs)
-        if (graphMinSearchStartRelMs >= 0L)
-            graphView.setMinAngleSearch(graphMinSearchStartRelMs)
-        if (minBatAngleAbsMs > 0L && minBatAngleDeg < Float.MAX_VALUE)
-            graphView.setMinAngle(minBatAngleRelMs, minBatAngleDeg)
-
-        val container = LinearLayout(this)
-        container.orientation = LinearLayout.VERTICAL
-        container.setBackgroundColor(0xFF0A1423.toInt())   // 앱 배경색 #0A1423
-        container.addView(parabolaView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
-        container.addView(graphView,    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
-        // 포물선 그래프(위) + 배트 각도 그래프(아래) 세로 배치
-
-        val scrollView = ScrollView(this)
-        scrollView.addView(container)
-        // 화면이 작은 기기에서 두 그래프 모두 스크롤하여 확인 가능
-
-        AlertDialog.Builder(this)
-            .setTitle("스윙 결과")
-            .setView(scrollView)
-            .setPositiveButton("확인", null)
-            .show()
+        val heightPx     = (300 * resources.displayMetrics.density).toInt()
+        val parabolaView = BallParabolaView(this).apply { setData(PITCHER_DIST, PITCHER_HEIGHT, contactH, batH, BALL_ARC, swingIsHit) }
+        val graphView    = SwingGraphView(this).apply {
+            setData(history, hitTimeRelMs, BATTING_ANGLE_DEG); setTolerance(PITCH_TOLERANCE)
+            setWindowAngles(windowOpenPitchDeg, windowClosePitchDeg)
+            if (graphPitchWindowStartMs  >= 0L) setPitchWindowStart(graphPitchWindowStartMs)
+            if (graphHitWindowOpenRelMs  >= 0L) setHitWindowOpen(graphHitWindowOpenRelMs)
+            if (graphHitWindowCloseRelMs >= 0L) setHitWindowClose(graphHitWindowCloseRelMs)
+            if (graphMinSearchStartRelMs >= 0L) setMinAngleSearch(graphMinSearchStartRelMs)
+            if (minBatAngleAbsMs > 0L && minBatAngleDeg < Float.MAX_VALUE) setMinAngle(minBatAngleRelMs, minBatAngleDeg)
+        }
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; setBackgroundColor(0xFF0A1423.toInt())
+            addView(parabolaView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
+            addView(graphView,    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightPx))
+        }
+        AlertDialog.Builder(this).setTitle("스윙 결과").setView(ScrollView(this).apply { addView(container) }).setPositiveButton("확인", null).show()
     }
-
-    // ─────────────────────────────────────────────────────
-    // TTS 발화
-    // ─────────────────────────────────────────────────────
 
     // ─────────────────────────────────────────────────────
     // 오디오 중단
     // ─────────────────────────────────────────────────────
     private fun stopAudio() {
         audioJob?.cancel()
-        audioTrack?.pause()
-        audioTrack?.flush()
-        audioTrack?.play()
+        spatialAudio.stopBeep()
+        audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
     }
 
     // ─────────────────────────────────────────────────────
     // 유틸리티
     // ─────────────────────────────────────────────────────
     private fun magnitude(v: FloatArray) = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2])
-    // 3차원 벡터 크기: √(x²+y²+z²). FloatArray[3] → Float
-
-    private fun tone(numSamples: Int, freq: Float, pan: Float, vol: Float): ShortArray {
-    // 스테레오 PCM 사인파 샘플 배열 생성
-    // numSamples: 모노 기준 샘플 수 (출력 배열 크기 = numSamples * 2, 스테레오 인터리브)
-    // freq: 주파수 (Hz) | pan: 위치 -1(좌)~+1(우) | vol: 음량 0.0~1.0
-        val out   = ShortArray(numSamples * 2)
-        val lGain = cos((pan.coerceIn(-1f, 1f) + 1f) * PI.toFloat() / 4f)
-        // 좌측 채널 게인: pan=-1 → 1.0, pan=0 → 0.707, pan=+1 → 0
-        val rGain = cos((1f - pan.coerceIn(-1f, 1f)) * PI.toFloat() / 4f)
-        // 우측 채널 게인: pan=+1 → 1.0, pan=0 → 0.707, pan=-1 → 0
-        // 코사인 패닝: lGain² + rGain² = 1 (파워 보존)
-        for (i in 0 until numSamples) {
-            val s = (sin(2 * PI * freq * i / 44100) * 32767 * vol).toInt()
-            // i번째 모노 샘플 값. 44100과 일치해야 정확한 주파수 생성
-            out[i * 2]     = (s * lGain).toInt().toShort()   // 짝수 인덱스: 좌측 채널
-            out[i * 2 + 1] = (s * rGain).toInt().toShort()   // 홀수 인덱스: 우측 채널
-        }
-        return out
-    }
 
     private fun initAudioTrack() {
-    // AudioTrack 초기화. onCreate() 에서 한 번 호출. PCM 스트리밍 재생 준비
         audioTrack?.stop(); audioTrack?.release()
-        // 이전 인스턴스 정리 (재초기화 시 메모리 누수 방지)
-        val sr     = 44100   // 샘플레이트 (Hz). tone() 함수와 동일한 값 사용 필수
+        val sr     = 44100
         val minBuf = AudioTrack.getMinBufferSize(sr, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT)
         audioTrack = AudioTrack.Builder()
-            .setAudioAttributes(AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                // 미디어 재생 용도 분류 → 볼륨 채널 = 미디어 볼륨
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
-            .setAudioFormat(AudioFormat.Builder()
-                .setSampleRate(sr)
-                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                // 16비트 PCM: 샘플 하나 = Short(2바이트)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO).build())
-                // 스테레오: Left + Right 채널
-            .setBufferSizeInBytes(minBuf * 4)
-            // 최소 버퍼의 4배 → 언더런(소리 끊김) 방지
-            .setTransferMode(AudioTrack.MODE_STREAM).build()
-            // MODE_STREAM: write() 로 실시간 데이터 공급
+            .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
+            .setAudioFormat(AudioFormat.Builder().setSampleRate(sr).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_STEREO).build())
+            .setBufferSizeInBytes(minBuf * 4).setTransferMode(AudioTrack.MODE_STREAM).build()
         audioTrack?.play()
-        // 즉시 재생 상태로 설정. write() 호출 시 바로 출력
     }
 
     // ─────────────────────────────────────────────────────
-    // 센서 등록 / 해제
+    // BLE 권한
     // ─────────────────────────────────────────────────────
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        if (isTraining) earlyFinishTraining(speakTts = false, showSummary = false)
-        super.onBackPressed()
+    private fun requestBlePermissions() {
+        val needed = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) needed.add(Manifest.permission.BLUETOOTH_CONNECT)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)    != PackageManager.PERMISSION_GRANTED) needed.add(Manifest.permission.BLUETOOTH_SCAN)
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        if (needed.isNotEmpty()) ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQ_BLE_PERM)
+        else bleManager.startScan()
     }
 
-    override fun onStop() {
-        super.onStop()
-        if (isTraining) earlyFinishTraining(speakTts = false, showSummary = false)
+    private fun hasBlePermissions(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)    == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+        }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_BLE_PERM && grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) startBleScan()
     }
 
+    private fun startBleScan() {
+        if (isAdmin) { btnBleConnect?.isEnabled = false; btnBleConnect?.text = "연결 중..." }
+        ttsManager.speak("배트 연결을 시도하고 있습니다.")
+        bleManager.startScan()
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 생명주기
+    // ─────────────────────────────────────────────────────
     override fun onResume() {
         super.onResume()
         initAudioTrack()
         linearAccelSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
             ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        // TYPE_LINEAR_ACCELERATION 우선. 미지원 기기에서 TYPE_ACCELEROMETER 폴백
         gyroscopeSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         rotationSensor  = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
-        linearAccelSensor?.let { sensorManager.registerListener(swingListener, it, SensorManager.SENSOR_DELAY_GAME) }
-        gyroscopeSensor?.let  { sensorManager.registerListener(swingListener, it, SensorManager.SENSOR_DELAY_GAME) }
-        rotationSensor?.let   { sensorManager.registerListener(orientationListener, it, SensorManager.SENSOR_DELAY_GAME) }
-        // SENSOR_DELAY_GAME ≈ 20ms 간격으로 센서 이벤트 수신
+        linearAccelSensor?.let { sensorManager.registerListener(swingListener,      it, SensorManager.SENSOR_DELAY_GAME) }
+        gyroscopeSensor?.let   { sensorManager.registerListener(swingListener,      it, SensorManager.SENSOR_DELAY_GAME) }
+        rotationSensor?.let    { sensorManager.registerListener(orientationListener, it, SensorManager.SENSOR_DELAY_GAME) }
     }
 
     override fun onPause() {
-    // 화면이 백그라운드로 갈 때. 센서 해제로 배터리 절약
         super.onPause()
         sensorManager.unregisterListener(swingListener)
         sensorManager.unregisterListener(orientationListener)
-        // 등록된 모든 센서에서 각 리스너 해제
-
         bleManager.stopScan()
         gameJob?.cancel()
         audioJob?.cancel()
         spatialAudio.stopBeep()
-        // 백그라운드 진입 시 게임·오디오 코루틴 중단
     }
 
     override fun onDestroy() {

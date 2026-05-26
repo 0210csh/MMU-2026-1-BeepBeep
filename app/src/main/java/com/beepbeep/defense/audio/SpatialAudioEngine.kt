@@ -339,6 +339,93 @@ class SpatialAudioEngine(private val context: Context) {
         }
     }
 
+    /**
+     * 끊김 없이 연속으로 재생되는 비프 — 베이스 방향음 전용.
+     * startBeep()의 100ms ON / 200ms OFF 패턴 없이 매 청크 꾸준히 출력.
+     * HRTF 위치·방향 갱신은 startBeep()과 동일하게 유지.
+     */
+    fun startContinuousBeep() {
+        val prevJob = beepJob
+        prevBallX = ballX
+        prevBallZ = ballZ
+        beepJob = scope.launch {
+            prevJob?.cancelAndJoin()
+            audioTrack?.setVolume(1f)
+            Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
+
+            val stereoOut = ShortArray(FRAMES * 2)
+
+            // 시작 50ms 무음 워밍업 — 초기 노이즈 방지
+            val warmupChunks = (SAMPLE_RATE * 0.05f / FRAMES).toInt()
+            ResonanceBridge.nativeSetGain(0f)
+            repeat(warmupChunks) {
+                if (!isActive) return@repeat
+                val r = Math.toRadians(currentHeadingDeg.toDouble())
+                val qW = buildHeadQuaternion(r)
+                ResonanceBridge.nativeSetHeadRotation(qW[0], qW[1], qW[2], qW[3])
+                ResonanceBridge.nativeProcessChunk(BEEP_FREQ, 0f, 0f, 0f, 0f, stereoOut)
+                audioTrack?.write(stereoOut, 0, stereoOut.size)
+            }
+
+            val initAmpY = ballY * 4f
+            val initDist = sqrt(ballX*ballX + initAmpY*initAmpY + ballZ*ballZ).coerceAtLeast(0.5f)
+            var smoothedGain = exp(-initDist * gainCoeff).toFloat()
+
+            var hrtfX    = ballX
+            var hrtfY    = ballY
+            var hrtfZ    = ballZ
+            var sectorFade = 1f
+            var prevRelZ   = 0f
+            var prevFade   = 0f
+            var prevPan    = computePan()
+
+            itdTailL.fill(0); itdTailR.fill(0)
+
+            while (isActive) {
+                if (audioTrack?.playState != AudioTrack.PLAYSTATE_PLAYING) audioTrack?.play()
+
+                val r   = Math.toRadians(currentHeadingDeg.toDouble())
+                val qOn = buildHeadQuaternion(r)
+                ResonanceBridge.nativeSetHeadRotation(qOn[0], qOn[1], qOn[2], qOn[3])
+
+                hrtfX = hrtfX * 0.3f + ballX * 0.7f
+                hrtfY = hrtfY * 0.3f + ballY * 0.7f
+                hrtfZ = hrtfZ * 0.3f + ballZ * 0.7f
+                val safeZ = if (hrtfZ == 0f) 0.01f else hrtfZ
+                ResonanceBridge.nativeSetSourcePosition(hrtfX * 1.5f, hrtfY * 2.5f, safeZ)
+
+                val ampY     = ballY * 4f
+                val curDist  = sqrt(ballX*ballX + ampY*ampY + ballZ*ballZ).coerceAtLeast(0.5f)
+                val target   = exp(-curDist * gainCoeff).toFloat()
+                smoothedGain = smoothedGain * 0.7f + target * 0.3f
+
+                // 섹터 전환 크로스페이드 (±90° 노이즈 마스킹)
+                val sinR   = sin(r).toFloat()
+                val cosR   = cos(r).toFloat()
+                val curRelZ = hrtfX * sinR + hrtfZ * cosR
+                if (prevRelZ * curRelZ < 0f) sectorFade = 0f
+                prevRelZ = curRelZ
+                ResonanceBridge.nativeSetGain(sectorFade)
+                sectorFade = (sectorFade + 0.2f).coerceAtMost(1f)
+
+                // ON/OFF 없이 smoothedGain 그대로 → 일정한 볼륨 유지
+                val curFade = smoothedGain * sectorFade
+                val curAz   = computeAzimuth()
+                val curPan  = computePanFromAzimuth(curAz)
+
+                val ok = ResonanceBridge.nativeProcessChunk(
+                    BEEP_FREQ, prevFade, curFade, prevPan, curPan, stereoOut)
+                if (ok) {
+                    applyItd(stereoOut, curAz)
+                    audioTrack?.write(stereoOut, 0, stereoOut.size)
+                }
+                prevFade = curFade
+                prevPan  = curPan
+                prevBallX = ballX; prevBallZ = ballZ
+            }
+        }
+    }
+
     fun stopBeep() {
         beepJob?.cancel()
         beepJob = null

@@ -108,7 +108,11 @@ class TrainingActivity : AppCompatActivity() {
         }
 
         binding.btnStartDefense.setOnClickListener {
-            startActivity(Intent(this, MainActivity::class.java))
+            val tutDone = getSharedPreferences("TutorialPrefs", MODE_PRIVATE)
+                .getBoolean("defense_tutorial_done", false)
+            val intent = Intent(this, MainActivity::class.java)
+            if (!tutDone) intent.putExtra("start_tutorial", true)
+            startActivity(intent)
         }
 
         binding.navHome.setOnClickListener {

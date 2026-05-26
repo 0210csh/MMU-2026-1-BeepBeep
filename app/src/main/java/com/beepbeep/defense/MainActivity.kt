@@ -10,35 +10,61 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.beepbeep.defense.databinding.ActivityMainBinding
+import com.beepbeep.defense.game.DefenseTtsManager
+import com.beepbeep.defense.game.DefenseTutorialManager
 import com.beepbeep.defense.game.GameEngine
 import com.beepbeep.defense.game.GamePhase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityMainBinding
+    // ── 관리자 여부 ──────────────────────────────────────
+    private var isAdmin = false
+
+    // ── 관리자 전용 바인딩 (비관리자 레이아웃에는 없음) ──
+    private var binding: ActivityMainBinding? = null
+
     private lateinit var gameEngine: GameEngine
     private lateinit var sensorManager: SensorManager
     private lateinit var inputManager: InputManager
     private var resultDialog: android.app.AlertDialog? = null
 
+    // ── 튜토리얼 ─────────────────────────────────────────
+    private lateinit var defenseTtsManager: DefenseTtsManager
+    private lateinit var defenseTutorialManager: DefenseTutorialManager
+    private val tutorialScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
     private val inputDeviceListener = object : InputManager.InputDeviceListener {
         override fun onInputDeviceAdded(deviceId: Int) {
             val dev = InputDevice.getDevice(deviceId) ?: return
             if ((dev.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD) {
-                runOnUiThread { binding.switchFakeController.isChecked = true }
-                gameEngine.speakControllerConnected()
+                if (isAdmin) runOnUiThread { binding?.switchFakeController?.isChecked = true }
+                if (defenseTutorialManager.isRunning) {
+                    // 튜토리얼 실행 중 → 튜토리얼에 알림 (튜토리얼이 TTS 담당)
+                    defenseTutorialManager.notifyControllerConnected()
+                } else {
+                    // 튜토리얼 미실행 시 항상 연결 TTS 재생
+                    gameEngine.speakControllerConnected()
+                    if (!defenseTutorialManager.isTutorialDone()) {
+                        defenseTutorialManager.notifyControllerConnected()
+                    }
+                }
             }
         }
         override fun onInputDeviceChanged(deviceId: Int) {}
         override fun onInputDeviceRemoved(deviceId: Int) {
             if (!isRealGamepadConnected()) {
-                runOnUiThread { binding.switchFakeController.isChecked = false }
+                if (isAdmin) runOnUiThread { binding?.switchFakeController?.isChecked = false }
                 gameEngine.speakControllerDisconnected()
             }
         }
@@ -47,13 +73,15 @@ class MainActivity : AppCompatActivity() {
     private val rotMatrix = FloatArray(9)
     private val orientation = FloatArray(3)
     private var baseAzimuth: Float? = null
-    private var controllerCheckedOnStart = false
+
+    // ── 헤딩 필터 (시각 예측용) ──────────────────────────
     private var smoothedHeading      = 0f
     private var audioSmoothedHeading = 0f   // 오디오 전용 헤딩 (시각 예측값과 분리)
     private var prevAmplified   = 0f
     private var headingVelocity = 0f
     private var signedVelocity  = 0f
     private var audioSignedVel  = 0f   // 오디오 전용 속도 (더 빠른 감쇠, 오버슈트 방지)
+
     private var ballCount = 5
     private val HEADING_SENSITIVITY = 1.0f
 
@@ -69,7 +97,7 @@ class MainActivity : AppCompatActivity() {
             while (rel > 180f)  rel -= 360f
             while (rel < -180f) rel += 360f
 
-            val amplified = (-rel * HEADING_SENSITIVITY).coerceIn(-180f, 180f)
+            val amplified        = (-rel * HEADING_SENSITIVITY).coerceIn(-180f, 180f)
             val instantVel       = abs(amplified - prevAmplified)
             val instantSignedVel = amplified - prevAmplified
             headingVelocity = headingVelocity * 0.4f + instantVel       * 0.6f
@@ -115,8 +143,18 @@ class MainActivity : AppCompatActivity() {
                         or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 )
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        // ── 관리자 여부 체크 ──
+        val userId = getSharedPreferences("UserInfo", MODE_PRIVATE)
+            .getString("id", "anonymous") ?: "anonymous"
+        isAdmin = userId == "123402"
+        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
+        if (isAdmin) {
+            binding = ActivityMainBinding.inflate(layoutInflater)
+            setContentView(binding!!.root)
+        } else {
+            setContentView(R.layout.activity_main_simple)
+        }
 
         gameEngine   = GameEngine(this)
         inputManager = getSystemService(InputManager::class.java)
@@ -124,22 +162,86 @@ class MainActivity : AppCompatActivity() {
 
         sensorManager = getSystemService(SensorManager::class.java)
 
-        gameEngine.onHeadingChanged = { deg ->
-            runOnUiThread { binding.fieldView.updateHeading(deg) }
+        if (isAdmin) {
+            gameEngine.onHeadingChanged = { deg ->
+                runOnUiThread { binding?.fieldView?.updateHeading(deg) }
+            }
+            // TTS 준비 전까지 시작 버튼 잠금
+            binding?.btnStart?.isEnabled = false
+        }
+        // TTS 준비 완료 콜백 — isAdmin 외부에서 설정해야 일반 사용자에도 적용됨
+        gameEngine.onTtsReady = {
+            runOnUiThread {
+                if (isAdmin) binding?.btnStart?.isEnabled = true
+                // TTS 준비 완료 시점에 컨트롤러 상태 안내 (onResume은 TTS 미준비 상태라 여기서 처리)
+                if (isGamepadConnected()) {
+                    if (defenseTutorialManager.isRunning) {
+                        defenseTutorialManager.notifyControllerConnected()
+                    } else {
+                        gameEngine.speakControllerConnected()
+                        if (!defenseTutorialManager.isTutorialDone()) {
+                            defenseTutorialManager.notifyControllerConnected()
+                        }
+                    }
+                } else {
+                    gameEngine.speakControllerWarning()
+                }
+            }
         }
 
         gameEngine.onSessionComplete = { result ->
-            runOnUiThread { showSessionResultDialog(result) }
+            if (!defenseTutorialManager.isRunning) {
+                if (isAdmin) runOnUiThread { showSessionResultDialog(result) }
+            } else {
+                defenseTutorialManager.notifyStep3Done()
+            }
         }
 
-        // TTS 준비 전까지 시작 버튼 잠금
-        binding.btnStart.isEnabled = false
-        gameEngine.onTtsReady = {
-            runOnUiThread { binding.btnStart.isEnabled = true }
-        }
+        // ── 튜토리얼 매니저 초기화 ───────────────────────
+        defenseTtsManager = DefenseTtsManager(this)
+        defenseTtsManager.init()
 
-        setupButtons()
+        defenseTutorialManager = DefenseTutorialManager(
+            context               = this,
+            ttsManager            = defenseTtsManager,
+            scope                 = tutorialScope,
+            isControllerConnected = { isGamepadConnected() },
+            onStartPractice       = {
+                gameEngine.isTutorialMode = true
+                defenseTutorialManager.targetBallCount = ballCount
+                gameEngine.startSession(ballCount, 0.5f)
+            },
+            onTutorialFinished    = {
+                gameEngine.isTutorialMode = false
+                finish()
+            }
+        )
+
+        if (isAdmin) setupButtons()
         observeGameState()
+
+        if (intent.getBooleanExtra("start_tutorial", false)) {
+            tutorialScope.launch {
+                kotlinx.coroutines.delay(1_000L)
+                defenseTutorialManager.startTutorial()
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 심플 UI 상태 업데이트 (일반 사용자)
+    // ─────────────────────────────────────────────────────
+    private fun updateSimpleStatus(text: String, bgColor: Int = 0xFF0A0A0A.toInt()) {
+        if (isAdmin) return
+        runOnUiThread {
+            findViewById<TextView>(R.id.tvSimpleStatus)?.text = text
+            findViewById<View>(R.id.simpleRootLayout)?.setBackgroundColor(bgColor)
+            val state = gameEngine.state.value
+            val scoreText = if (state.targetBallCount > 0)
+                "성공 ${state.score} / ${state.totalAttempts} (목표 ${state.targetBallCount}회)"
+            else ""
+            findViewById<TextView>(R.id.tvSimpleScore)?.text = scoreText
+        }
     }
 
     private fun registerOrientationSensor() {
@@ -156,10 +258,12 @@ class MainActivity : AppCompatActivity() {
         }
 
     private fun isGamepadConnected(): Boolean =
-        binding.switchFakeController.isChecked || isRealGamepadConnected()
+        if (isAdmin) (binding?.switchFakeController?.isChecked ?: false) || isRealGamepadConnected()
+        else isRealGamepadConnected()
 
     private fun setupButtons() {
-        binding.btnStart.setOnClickListener {
+        binding?.btnStart?.setOnClickListener {
+            if (defenseTutorialManager.isRunning) return@setOnClickListener
             if (!isGamepadConnected()) {
                 gameEngine.speakControllerWarning()
                 return@setOnClickListener
@@ -167,99 +271,116 @@ class MainActivity : AppCompatActivity() {
             val state = gameEngine.state.value
             if (state.phase == GamePhase.IDLE) {
                 when {
-                    // 세션 완료됐거나 아직 시작 안 한 경우 → 새 세션 시작
-                    // 버튼 누르는 순간의 방향을 즉시 정면으로 설정
                     gameEngine.isSessionComplete() || state.totalAttempts == 0 -> {
                         resetHeading()
-                        gameEngine.startSession(getBallCount())
+                        gameEngine.startSession(getBallCount(), 0.5f)
                     }
-                    // 세션 진행 중 → 다음 판 시작 (정면 기준 유지)
-                    else -> {
-                        gameEngine.launchNextInSession()
-                    }
+                    else -> gameEngine.launchNextInSession(0.5f)
                 }
             }
         }
 
-        binding.btnCatch.setOnClickListener { gameEngine.onCatchPressed() }
-        binding.btnEarlyStop.setOnClickListener { gameEngine.forceStopSession() }
-        binding.btnBallCountDown.setOnClickListener { adjustBallCount(-1) }
-        binding.btnBallCountUp.setOnClickListener   { adjustBallCount(+1) }
+        binding?.btnCatch?.setOnClickListener {
+            if (defenseTutorialManager.isRunning && defenseTutorialManager.currentStep == 4) {
+                gameEngine.onCatchPressed()
+            } else if (!defenseTutorialManager.isRunning) {
+                gameEngine.onCatchPressed()
+            }
+        }
 
-        binding.joystickView.onMove = { dx, dz ->
-            gameEngine.setJoystick(dx, -dz)  // 즉시 오디오 위치 갱신 (tick 16ms 대기 없음)
+        binding?.btnEarlyStop?.setOnClickListener { gameEngine.forceStopSession() }
+
+        binding?.btnBallCountDown?.setOnClickListener { adjustBallCount(-1) }
+        binding?.btnBallCountUp?.setOnClickListener   { adjustBallCount(+1) }
+
+        binding?.joystickView?.onMove = { dx, dz ->
+            gameEngine.setJoystick(dx, -dz)
         }
     }
 
     private fun adjustBallCount(delta: Int) {
-        if (!binding.btnBallCountDown.isEnabled) return
+        if (isAdmin && binding?.btnBallCountDown?.isEnabled == false) return
         ballCount = (ballCount + delta).coerceIn(1, 20)
-        binding.tvBallCount.text = ballCount.toString()
+        if (isAdmin) binding?.tvBallCount?.text = ballCount.toString()
         gameEngine.speakBallCount(ballCount)
     }
 
     private fun getBallCount(): Int = ballCount
 
-    /** 버튼 누르는 순간의 방향을 정면(0°)으로 즉시 설정 — null 대기 방식 대신 직접 할당 */
+    /** 버튼 누르는 순간의 방향을 정면(0°)으로 즉시 설정 */
     private fun resetHeading() {
-        baseAzimuth     = Math.toDegrees(orientation[0].toDouble()).toFloat()
-        smoothedHeading = 0f
-        prevAmplified   = 0f
-        headingVelocity = 0f
-        signedVelocity  = 0f
-        audioSignedVel  = 0f
-        // 현재 pitch/roll을 중립으로 캡처 → 모자 착용 각도(~45°)를 기준으로 상대 회전만 HRTF에 전달
+        baseAzimuth          = Math.toDegrees(orientation[0].toDouble()).toFloat()
+        smoothedHeading      = 0f
+        audioSmoothedHeading = 0f
+        prevAmplified        = 0f
+        headingVelocity      = 0f
+        signedVelocity       = 0f
+        audioSignedVel       = 0f
+        // 현재 pitch/roll을 중립으로 캡처 → 모자 착용 각도를 기준으로 상대 회전만 HRTF에 전달
         gameEngine.captureAudioNeutralOrientation()
     }
 
     private fun observeGameState() {
         lifecycleScope.launch {
             gameEngine.state.collectLatest { state ->
-                binding.fieldView.update(
-                    ball = state.ball, defX = state.defenderX,
-                    defZ = state.defenderZ, isFlying = state.phase == GamePhase.LAUNCHED
-                )
-                binding.tvScore.text = if (state.targetBallCount > 0)
-                    "성공: ${state.score} / ${state.totalAttempts} (목표 ${state.targetBallCount}회)"
-                else
-                    "성공: ${state.score} / ${state.totalAttempts}"
+                if (isAdmin) {
+                    // ── 관리자: 기존 UI 업데이트 ──
+                    binding?.fieldView?.update(
+                        ball = state.ball, defX = state.defenderX,
+                        defZ = state.defenderZ, isFlying = state.phase == GamePhase.LAUNCHED
+                    )
+                    binding?.tvScore?.text = if (state.targetBallCount > 0)
+                        "성공: ${state.score} / ${state.totalAttempts} (목표 ${state.targetBallCount}회)"
+                    else
+                        "성공: ${state.score} / ${state.totalAttempts}"
 
-                binding.tvPhase.text = when (state.phase) {
-                    GamePhase.IDLE     -> "🎯 시작 버튼을 누르세요"
-                    GamePhase.LAUNCHED -> "🔊 비프음 방향으로 이동!"
-                    GamePhase.LANDED   -> "📍 착지! CATCH 누르세요!"
-                    GamePhase.CAUGHT   -> {
-                        val t = state.catchTimeMs?.let { "%.1f".format(it / 1000.0) }
-                        if (t != null) "✅ 포구 성공!  ${t}s" else "✅ 포구 성공!"
+                    binding?.tvPhase?.text = when (state.phase) {
+                        GamePhase.IDLE     -> "🎯 시작 버튼을 누르세요"
+                        GamePhase.LAUNCHED -> "🔊 비프음 방향으로 이동!"
+                        GamePhase.LANDED   -> "📍 착지! CATCH 누르세요!"
+                        GamePhase.CAUGHT   -> {
+                            val t = state.catchTimeMs?.let { "%.1f".format(it / 1000.0) }
+                            if (t != null) "✅ 포구 성공!  ${t}s" else "✅ 포구 성공!"
+                        }
+                        GamePhase.RESULT            -> "❌ 포구 실패"
+                        GamePhase.TRAINING_COMPLETE -> "🏆 훈련 완료!"
                     }
-                    GamePhase.RESULT            -> "❌ 포구 실패"
-                    GamePhase.TRAINING_COMPLETE -> "🏆 훈련 완료!"
+
+                    val startEnabled = state.phase == GamePhase.IDLE && !defenseTutorialManager.isRunning
+                    binding?.btnStart?.isEnabled = startEnabled
+                    binding?.btnStart?.alpha = if (startEnabled) 1f else 0.5f
+
+                    val catchEnabled = state.phase == GamePhase.LAUNCHED || state.phase == GamePhase.LANDED
+                    binding?.btnCatch?.isEnabled = catchEnabled
+                    binding?.btnCatch?.alpha = if (catchEnabled) 1f else 0.4f
+
+                    // 조기종료: 세션 진행 중이고 1회 이상 완료됐거나 공이 날고 있을 때
+                    val earlyStopEnabled = gameEngine.sessionActive &&
+                        (state.totalAttempts > 0 ||
+                         state.phase == GamePhase.LAUNCHED ||
+                         state.phase == GamePhase.LANDED)
+                    binding?.btnEarlyStop?.isEnabled = earlyStopEnabled
+                    binding?.btnEarlyStop?.alpha     = if (earlyStopEnabled) 1f else 0.4f
+
+                    val ballCountEditable = state.totalAttempts == 0 && state.phase == GamePhase.IDLE
+                    binding?.btnBallCountDown?.isEnabled = ballCountEditable
+                    binding?.btnBallCountUp?.isEnabled   = ballCountEditable
+                    binding?.tvBallCount?.alpha          = if (ballCountEditable) 1f else 0.4f
+                    binding?.btnBallCountDown?.alpha     = if (ballCountEditable) 1f else 0.4f
+                    binding?.btnBallCountUp?.alpha       = if (ballCountEditable) 1f else 0.4f
+                    binding?.tvDebug?.text = state.debugInfo
+
+                } else {
+                    // ── 일반 사용자: 심플 UI 업데이트 ──
+                    when (state.phase) {
+                        GamePhase.IDLE     -> updateSimpleStatus("대기 중", 0xFF0A0A0A.toInt())
+                        GamePhase.LAUNCHED -> updateSimpleStatus("공 날아오는 중!", 0xFF0A0A0A.toInt())
+                        GamePhase.LANDED   -> updateSimpleStatus("착지!", 0xFFFBBF24.toInt())
+                        GamePhase.CAUGHT   -> updateSimpleStatus("포구 성공!", 0xFF166534.toInt())
+                        GamePhase.RESULT   -> updateSimpleStatus("포구 실패", 0xFF7F1D1D.toInt())
+                        GamePhase.TRAINING_COMPLETE -> updateSimpleStatus("훈련 완료!", 0xFF0A0A0A.toInt())
+                    }
                 }
-
-                val startEnabled = state.phase == GamePhase.IDLE
-                binding.btnStart.isEnabled = startEnabled
-                binding.btnStart.alpha = if (startEnabled) 1f else 0.5f
-
-                val catchEnabled = state.phase == GamePhase.LAUNCHED || state.phase == GamePhase.LANDED
-                binding.btnCatch.isEnabled = catchEnabled
-                binding.btnCatch.alpha = if (catchEnabled) 1f else 0.4f
-
-                // 조기종료: 세션 진행 중이고 1회 이상 완료됐거나 공이 날고 있을 때
-                val earlyStopEnabled = gameEngine.sessionActive &&
-                    (state.totalAttempts > 0 ||
-                     state.phase == GamePhase.LAUNCHED ||
-                     state.phase == GamePhase.LANDED)
-                binding.btnEarlyStop.isEnabled = earlyStopEnabled
-                binding.btnEarlyStop.alpha     = if (earlyStopEnabled) 1f else 0.4f
-
-                val ballCountEditable = state.phase == GamePhase.IDLE && !gameEngine.sessionActive
-                binding.btnBallCountDown.isEnabled = ballCountEditable
-                binding.btnBallCountUp.isEnabled   = ballCountEditable
-                binding.tvBallCount.alpha = if (ballCountEditable) 1f else 0.4f
-                binding.btnBallCountDown.alpha = if (ballCountEditable) 1f else 0.4f
-                binding.btnBallCountUp.alpha   = if (ballCountEditable) 1f else 0.4f
-
-                binding.tvDebug.text = state.debugInfo
             }
         }
     }
@@ -268,12 +389,8 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         registerOrientationSensor()
         inputManager.registerInputDeviceListener(inputDeviceListener, null)
-        binding.switchFakeController.isChecked = isRealGamepadConnected()
-        if (!controllerCheckedOnStart) {
-            controllerCheckedOnStart = true
-            if (!isGamepadConnected()) {
-                gameEngine.speakControllerWarning()
-            }
+        if (isAdmin) {
+            binding?.switchFakeController?.isChecked = isRealGamepadConnected()
         }
     }
 
@@ -293,9 +410,8 @@ class MainActivity : AppCompatActivity() {
             val ry = getCenteredAxis(event, MotionEvent.AXIS_RZ)
             val dx = if (abs(lx) > 0.01f) lx else rx
             val dy = if (abs(ly) > 0.01f) ly else ry
-            gameEngine.setJoystick(dx, dy)  // 즉시 오디오 위치 갱신
-            binding.joystickView.setExternalInput(dx, -dy)
-
+            gameEngine.setJoystick(dx, dy)
+            if (isAdmin) binding?.joystickView?.setExternalInput(dx, -dy)
             return true
         }
         return super.dispatchGenericMotionEvent(event)
@@ -313,29 +429,59 @@ class MainActivity : AppCompatActivity() {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (event.keyCode) {
                     KeyEvent.KEYCODE_BUTTON_A -> {
+                        // 결과 다이얼로그 표시 중 → 닫기 (관리자)
                         val d = resultDialog
                         if (d != null && d.isShowing) {
                             d.dismiss(); gameEngine.stopSpeak(); resultDialog = null
-                        } else {
+                        } else if (defenseTutorialManager.isRunning && defenseTutorialManager.currentStep == 4) {
+                            gameEngine.onCatchPressed()
+                        } else if (!defenseTutorialManager.isRunning) {
                             gameEngine.onCatchPressed()
                         }
                         return true
                     }
-                    KeyEvent.KEYCODE_BUTTON_B -> { gameEngine.forceStopSession(); return true }
+                    KeyEvent.KEYCODE_BUTTON_B -> {
+                        if (!defenseTutorialManager.isRunning) {
+                            gameEngine.forceStopSession()
+                        }
+                        return true
+                    }
                     KeyEvent.KEYCODE_BUTTON_X -> {
-                        val st = gameEngine.state.value
-                        if (st.phase == GamePhase.IDLE) {
-                            if (gameEngine.isSessionComplete() || st.totalAttempts == 0) {
-                                resetHeading()
-                                gameEngine.startSession(getBallCount())
-                            } else {
-                                gameEngine.launchRandom()
+                        if (defenseTutorialManager.isRunning && defenseTutorialManager.currentStep == 4) {
+                            // step4 포구 체험: 캐치/실패 후 X로 다음 공 발사
+                            val st = gameEngine.state.value
+                            if (st.phase == GamePhase.IDLE && !gameEngine.isSessionComplete()) {
+                                gameEngine.launchNextInSession(0.5f)
+                            }
+                        } else if (defenseTutorialManager.isRunning) {
+                            defenseTutorialManager.onXButton()
+                        } else {
+                            val st = gameEngine.state.value
+                            if (st.phase == GamePhase.IDLE) {
+                                if (gameEngine.isSessionComplete() || st.totalAttempts == 0) {
+                                    resetHeading()
+                                    gameEngine.startSession(getBallCount(), 0.5f)
+                                } else {
+                                    gameEngine.launchRandom(0.5f)
+                                }
                             }
                         }
                         return true
                     }
-                    KeyEvent.KEYCODE_BUTTON_L1 -> { adjustBallCount(-1); return true }
-                    KeyEvent.KEYCODE_BUTTON_R1 -> { adjustBallCount(+1); return true }
+                    // ── LB: 튜토리얼 아닐 때 or (2단계 + TTS 끝난 후)만 허용 ──
+                    KeyEvent.KEYCODE_BUTTON_L1 -> {
+                        if (!defenseTutorialManager.isRunning ||
+                            (defenseTutorialManager.currentStep == 2 && !defenseTutorialManager.isSpeaking))
+                            adjustBallCount(-1)
+                        return true
+                    }
+                    // ── RB: 튜토리얼 아닐 때 or (2단계 + TTS 끝난 후)만 허용 ──
+                    KeyEvent.KEYCODE_BUTTON_R1 -> {
+                        if (!defenseTutorialManager.isRunning ||
+                            (defenseTutorialManager.currentStep == 2 && !defenseTutorialManager.isSpeaking))
+                            adjustBallCount(+1)
+                        return true
+                    }
                 }
             }
             return true
@@ -367,8 +513,7 @@ class MainActivity : AppCompatActivity() {
             .setOnCancelListener { gameEngine.stopSpeak(); resultDialog = null }
             .show()
             .also { dialog ->
-                // AlertDialog는 별도 Window → Activity dispatchKeyEvent 미호출
-                // 다이얼로그에 직접 키 리스너 등록해서 A 버튼 한 번에 닫기
+                // 다이얼로그에 직접 키 리스너 등록 → A 버튼 한 번에 닫기
                 dialog.setOnKeyListener { _, keyCode, event ->
                     if (event.source and android.view.InputDevice.SOURCE_GAMEPAD == android.view.InputDevice.SOURCE_GAMEPAD
                         && keyCode == android.view.KeyEvent.KEYCODE_BUTTON_A
@@ -385,5 +530,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         gameEngine.release()
+        defenseTtsManager.shutdown()
+        tutorialScope.cancel()
     }
 }

@@ -19,25 +19,21 @@ class HomeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ✅ Edge-to-edge: 앱이 시스템 바 영역까지 확장되도록 설정
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContentView(R.layout.activity_home)
 
-        val mainLayout   = findViewById<ConstraintLayout>(R.id.main_layout)
-        val layoutHeader = findViewById<LinearLayout>(R.id.layoutHeader)
-        val btnSetting   = findViewById<ImageButton>(R.id.btnSetting)
+        val mainLayout      = findViewById<ConstraintLayout>(R.id.main_layout)
+        val layoutHeader    = findViewById<LinearLayout>(R.id.layoutHeader)
+        val btnSetting      = findViewById<ImageButton>(R.id.btnSetting)
         val layoutBottomNav = findViewById<LinearLayout>(R.id.layoutBottomNav)
 
-        // ✅ 시스템 내비게이션 바(뒤로가기/홈 버튼) 높이만큼 하단 패딩 추가
         ViewCompat.setOnApplyWindowInsetsListener(layoutBottomNav) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // paddingTop은 XML의 10dp 유지, bottom만 inset 반영
             view.setPadding(0, view.paddingTop, 0, systemBars.bottom)
             insets
         }
 
-        // ✅ 접근성: 홈 화면 진입 시 헤더로 포커스 이동
         mainLayout.post {
             mainLayout.postDelayed({
                 layoutHeader.performAccessibilityAction(
@@ -47,22 +43,19 @@ class HomeActivity : AppCompatActivity() {
             }, 1500)
         }
 
-        val cardBatting  = findViewById<CardView>(R.id.cardBatting)
-        val cardDefense  = findViewById<CardView>(R.id.cardDefense)
+        val cardTraining = findViewById<CardView>(R.id.cardTraining)
         val cardMyRecord = findViewById<CardView>(R.id.cardMyRecord)
 
         val navHome     = findViewById<LinearLayout>(R.id.navHome)
         val navTraining = findViewById<LinearLayout>(R.id.navTraining)
         val navRecord   = findViewById<LinearLayout>(R.id.navRecord)
 
-        cardBatting?.setOnClickListener {
+        // ── 훈련 선택 카드 ──
+        cardTraining?.setOnClickListener {
             startActivity(Intent(this, TrainingActivity::class.java))
         }
 
-        cardDefense?.setOnClickListener {
-            startActivity(Intent(this, TrainingActivity::class.java))
-        }
-
+        // ── 내 기록 카드 ──
         cardMyRecord?.setOnClickListener {
             startActivity(Intent(this, RecordActivity::class.java))
         }

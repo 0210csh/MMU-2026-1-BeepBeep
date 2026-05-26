@@ -84,6 +84,34 @@ class SettingActivity : AppCompatActivity() {
                 .show()
         }
 
+        // 타격 튜토리얼 다시보기
+        findViewById<LinearLayout>(R.id.itemResetBattingTutorial).setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("타격 튜토리얼 초기화")
+                .setMessage("다음 타격 훈련 시작 시 튜토리얼이 다시 진행됩니다.")
+                .setPositiveButton("확인") { _, _ ->
+                    getSharedPreferences("TutorialPrefs", MODE_PRIVATE)
+                        .edit().putBoolean("batting_tutorial_done", false).apply()
+                    Toast.makeText(this, "타격 튜토리얼이 초기화되었습니다", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("취소", null)
+                .show()
+        }
+
+        // 수비 튜토리얼 다시보기
+        findViewById<LinearLayout>(R.id.itemResetDefenseTutorial).setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("수비 튜토리얼 초기화")
+                .setMessage("다음 수비 훈련 시작 시 튜토리얼이 다시 진행됩니다.")
+                .setPositiveButton("확인") { _, _ ->
+                    getSharedPreferences("TutorialPrefs", MODE_PRIVATE)
+                        .edit().putBoolean("defense_tutorial_done", false).apply()
+                    Toast.makeText(this, "수비 튜토리얼이 초기화되었습니다", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("취소", null)
+                .show()
+        }
+
         // 훈련 기록 초기화
         findViewById<LinearLayout>(R.id.itemResetRecord).setOnClickListener {
             AlertDialog.Builder(this)

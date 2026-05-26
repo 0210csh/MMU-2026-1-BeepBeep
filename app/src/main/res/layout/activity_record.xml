@@ -15,6 +15,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
+            <!-- 헤더 -->
             <LinearLayout
                 android:id="@+id/ll_record_header"
                 android:layout_width="match_parent"
@@ -85,11 +86,13 @@
                     android:layout_marginStart="20dp"
                     android:text="로그인이 필요합니다"
                     android:textColor="#FFFFFF"
-                    android:textSize="18sp"
+                    android:textSize="20sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- 타격 훈련 통계 -->
+            <!-- ══════════════════════════════════ -->
+            <!--      ⚾ 타격 훈련 통계 (전체 평균)   -->
+            <!-- ══════════════════════════════════ -->
             <TextView
                 android:id="@+id/tv_batting_label"
                 android:layout_width="wrap_content"
@@ -99,7 +102,7 @@
                 android:text="⚾ 타격 훈련 통계"
                 android:contentDescription="타격 훈련 통계"
                 android:textColor="#5CF387"
-                android:textSize="18sp"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -108,9 +111,9 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@id/tv_batting_label"
                 android:layout_marginTop="6dp"
-                android:text="기록 없음"
+                android:text="불러오는 중..."
                 android:textColor="#AAAAAA"
-                android:textSize="13sp" />
+                android:textSize="15sp" />
 
             <GridLayout
                 android:id="@+id/statsGrid"
@@ -120,201 +123,175 @@
                 android:layout_marginTop="10dp"
                 android:columnCount="2">
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvStatBattingAvg"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#00FF7F"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="타율"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvStatBattingAvg" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#00FF7F" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="타율" android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvStatReaction"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#FFB74D"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="반응속도 평균"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvStatReaction" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#FFB74D" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="반응속도 평균" android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvStatHit"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#5CF387"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="정타 (평균)"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvStatHit" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#5CF387" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="정타 (20구 기준)" android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvStatFoul"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#FBBF24"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="파울 (평균)"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvStatFoul" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#FBBF24" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="파울 (20구 기준)" android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvStatStrike"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#F87171"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="스트라이크 (평균)"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvStatStrike" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#F87171" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="스트라이크\n(20구 기준)"
+                        android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvStatBaseCorrectPct"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#4FC3F7"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="베이스 정답률"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvStatBaseCorrectPct" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#4FC3F7" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="베이스 정답률" android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvStatBaseCorrect"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#A78BFA"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="베이스 정답수 (평균)"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvStatBaseCorrect" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#A78BFA" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="베이스 정답수\n(20구 기준)"
+                        android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
             </GridLayout>
 
-            <!-- 수비 훈련 통계 -->
+            <!-- ══════════════════════════════════ -->
+            <!--       📈 타격 성장 추이 헤더         -->
+            <!-- ══════════════════════════════════ -->
+            <TextView
+                android:id="@+id/tvBattingGrowthSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/statsGrid"
+                android:layout_marginTop="24dp"
+                android:background="#111F17"
+                android:padding="16dp"
+                android:text="📈 타격 성장 추이"
+                android:contentDescription="타격 성장 추이"
+                android:textColor="#5CF387"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:importantForAccessibility="yes"
+                android:focusable="true" />
+
+            <!-- 타격 성장 추이 행들 -->
+            <LinearLayout
+                android:id="@+id/llBattingGrowthRows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/tvBattingGrowthSection"
+                android:orientation="vertical"
+                android:background="#0D1A12"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="12dp"
+                android:visibility="gone">
+
+                <TextView android:id="@+id/tvGrowthBattingAvg"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textColor="#AAAAAA" android:textSize="16sp"
+                    android:importantForAccessibility="yes" android:focusable="true" />
+
+                <TextView android:id="@+id/tvGrowthReaction"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textColor="#AAAAAA" android:textSize="16sp"
+                    android:importantForAccessibility="yes" android:focusable="true" />
+
+                <TextView android:id="@+id/tvGrowthHit"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textColor="#AAAAAA" android:textSize="16sp"
+                    android:importantForAccessibility="yes" android:focusable="true" />
+
+                <TextView android:id="@+id/tvGrowthFoul"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textColor="#AAAAAA" android:textSize="16sp"
+                    android:importantForAccessibility="yes" android:focusable="true" />
+
+                <TextView android:id="@+id/tvGrowthStrike"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textColor="#AAAAAA" android:textSize="16sp"
+                    android:importantForAccessibility="yes" android:focusable="true" />
+
+            </LinearLayout>
+
+            <!-- 타격 20구 미만 안내 -->
+            <TextView
+                android:id="@+id/tvBattingGrowthNotice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/llBattingGrowthRows"
+                android:layout_marginTop="12dp"
+                android:background="#1A1A1A"
+                android:padding="14dp"
+                android:text=""
+                android:textColor="#AAAAAA"
+                android:textSize="15sp"
+                android:visibility="gone"
+                android:importantForAccessibility="yes" />
+
+            <!-- ══════════════════════════════════ -->
+            <!--      🛡 수비 훈련 통계 (전체 평균)   -->
+            <!-- ══════════════════════════════════ -->
             <TextView
                 android:id="@+id/tv_defense_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/statsGrid"
+                android:layout_below="@id/tvBattingGrowthNotice"
                 android:layout_marginTop="30dp"
                 android:text="🛡 수비 훈련 통계"
                 android:contentDescription="수비 훈련 통계"
                 android:textColor="#38BDF8"
-                android:textSize="18sp"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -323,9 +300,9 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@id/tv_defense_label"
                 android:layout_marginTop="6dp"
-                android:text="기록 없음"
+                android:text="불러오는 중..."
                 android:textColor="#AAAAAA"
-                android:textSize="13sp" />
+                android:textSize="15sp" />
 
             <GridLayout
                 android:id="@+id/defenseStatsGrid"
@@ -333,122 +310,124 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@id/tvDefenseStatCount"
                 android:layout_marginTop="10dp"
-                android:layout_marginBottom="40dp"
                 android:columnCount="2">
 
-                <!-- 성공률 -->
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvDefenseStatSuccessRate"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#38BDF8"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="성공률"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvDefenseStatSuccessRate" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#38BDF8" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="성공률" android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
-                <!-- 반응속도 평균 -->
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvDefenseStatReaction"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#FFB74D"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="반응속도 평균"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvDefenseStatReaction" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#FFB74D" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="반응속도 평균" android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
-                <!-- 성공횟수 -->
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvDefenseStatSuccess"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#5CF387"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="성공횟수 (평균)"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvDefenseStatSuccess" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#5CF387" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="성공횟수 (20구 기준)" android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
-                <!-- ✅ 실패횟수 추가 -->
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:minHeight="100dp"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="5dp"
-                    android:background="#1A1A1A"
-                    android:gravity="center_vertical"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <TextView
-                        android:id="@+id/tvDefenseStatFail"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textColor="#F87171"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="실패횟수 (평균)"
-                        android:textColor="#8F8F8F"
-                        android:textSize="12sp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:minHeight="110dp" android:layout_columnWeight="1" android:layout_margin="5dp"
+                    android:background="#1A1A1A" android:gravity="center_vertical"
+                    android:orientation="vertical" android:padding="16dp">
+                    <TextView android:id="@+id/tvDefenseStatFail" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="-"
+                        android:textColor="#F87171" android:textSize="28sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="실패횟수 (20구 기준)" android:textColor="#8F8F8F" android:textSize="14sp" />
                 </LinearLayout>
 
             </GridLayout>
 
+            <!-- ══════════════════════════════════ -->
+            <!--       📈 수비 성장 추이 헤더         -->
+            <!-- ══════════════════════════════════ -->
+            <TextView
+                android:id="@+id/tvDefenseGrowthSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/defenseStatsGrid"
+                android:layout_marginTop="24dp"
+                android:background="#111820"
+                android:padding="16dp"
+                android:text="📈 수비 성장 추이"
+                android:contentDescription="수비 성장 추이"
+                android:textColor="#38BDF8"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:importantForAccessibility="yes"
+                android:focusable="true" />
+
+            <!-- 수비 성장 추이 행들 -->
+            <LinearLayout
+                android:id="@+id/llDefenseGrowthRows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/tvDefenseGrowthSection"
+                android:orientation="vertical"
+                android:background="#0D1218"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="12dp"
+                android:visibility="gone">
+
+                <TextView android:id="@+id/tvDefenseGrowthRate"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textColor="#AAAAAA" android:textSize="16sp"
+                    android:importantForAccessibility="yes" android:focusable="true" />
+
+                <TextView android:id="@+id/tvDefenseGrowthReaction"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textColor="#AAAAAA" android:textSize="16sp"
+                    android:importantForAccessibility="yes" android:focusable="true" />
+
+                <TextView android:id="@+id/tvDefenseGrowthSuccess"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textColor="#AAAAAA" android:textSize="16sp"
+                    android:importantForAccessibility="yes" android:focusable="true" />
+
+            </LinearLayout>
+
+            <!-- 수비 20구 미만 안내 -->
+            <TextView
+                android:id="@+id/tvDefenseGrowthNotice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/llDefenseGrowthRows"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="40dp"
+                android:background="#1A1A1A"
+                android:padding="14dp"
+                android:text=""
+                android:textColor="#AAAAAA"
+                android:textSize="15sp"
+                android:visibility="gone"
+                android:importantForAccessibility="yes" />
+
         </RelativeLayout>
     </ScrollView>
 
+    <!-- 하단 네비게이션 -->
     <LinearLayout
         android:id="@+id/layoutBottomNav"
         android:layout_width="match_parent"
@@ -462,84 +441,47 @@
 
         <LinearLayout
             android:id="@+id/navHome"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:clickable="true"
-            android:focusable="true"
-            android:contentDescription="홈 화면으로 이동">
-            <ImageView
-                android:layout_width="40dp"
-                android:layout_height="35dp"
-                android:background="@drawable/bg_nav_red"
-                android:backgroundTint="#441111"
-                android:padding="8dp"
-                android:src="@drawable/ic_home"
-                android:importantForAccessibility="no"
-                app:tint="#FFFFFF" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="홈"
-                android:textColor="#FF6B6B"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:importantForAccessibility="no" />
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="홈 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_red" android:backgroundTint="#441111"
+                android:padding="8dp" android:src="@drawable/ic_home"
+                android:importantForAccessibility="no" app:tint="#FFFFFF" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="홈" android:textColor="#FF6B6B" android:textSize="12sp"
+                android:textStyle="bold" android:importantForAccessibility="no" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/navTraining"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:clickable="true"
-            android:focusable="true"
-            android:contentDescription="훈련 화면으로 이동">
-            <ImageView
-                android:layout_width="40dp"
-                android:layout_height="35dp"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="훈련 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
                 android:background="@drawable/bg_nav_green_dark"
-                android:padding="8dp"
-                android:src="@drawable/training"
+                android:padding="8dp" android:src="@drawable/training"
                 android:importantForAccessibility="no" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="훈련"
-                android:textColor="#5CF387"
-                android:textSize="12sp"
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="훈련" android:textColor="#5CF387" android:textSize="12sp"
                 android:importantForAccessibility="no" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/navRecord"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:clickable="true"
-            android:focusable="true"
-            android:contentDescription="내 기록 화면으로 이동">
-            <ImageView
-                android:layout_width="40dp"
-                android:layout_height="35dp"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="내 기록 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
                 android:background="@drawable/bg_nav_yellow_vivid"
-                android:padding="8dp"
-                android:src="@drawable/baseline_person_24"
+                android:padding="8dp" android:src="@drawable/baseline_person_24"
                 android:importantForAccessibility="no" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="내 기록"
-                android:textColor="#FBBF24"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:importantForAccessibility="no" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="내 기록" android:textColor="#FBBF24" android:textSize="12sp"
+                android:textStyle="bold" android:importantForAccessibility="no" />
         </LinearLayout>
 
     </LinearLayout>
