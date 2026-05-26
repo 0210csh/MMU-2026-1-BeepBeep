@@ -25,6 +25,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity() {
 
@@ -83,6 +84,7 @@ class MainActivity : AppCompatActivity() {
     private var audioSignedVel  = 0f   // 오디오 전용 속도 (더 빠른 감쇠, 오버슈트 방지)
 
     private var ballCount = 5
+    private var wasInCatchRange = false   // 튜토리얼 4단계 캐치 범위 상태 추적
     private val HEADING_SENSITIVITY = 1.0f
 
     private val orientationListener = object : SensorEventListener {
@@ -213,7 +215,6 @@ class MainActivity : AppCompatActivity() {
             },
             onTutorialFinished    = {
                 gameEngine.isTutorialMode = false
-                finish()
             }
         )
 
@@ -381,6 +382,28 @@ class MainActivity : AppCompatActivity() {
                         GamePhase.TRAINING_COMPLETE -> updateSimpleStatus("훈련 완료!", 0xFF0A0A0A.toInt())
                     }
                 }
+
+                // ── 튜토리얼 4단계: 캐치 범위 실시간 TTS ──────────────────
+                if (defenseTutorialManager.isRunning && defenseTutorialManager.currentStep == 4) {
+                    when (state.phase) {
+                        GamePhase.LAUNCHED, GamePhase.LANDED -> {
+                            val dx   = state.ball.x - state.defenderX
+                            val dz   = state.ball.z - state.defenderZ
+                            val dist = sqrt(dx * dx + dz * dz)
+                            val inRange = dist <= 3.0f
+                            if (inRange && !wasInCatchRange) {
+                                wasInCatchRange = true
+                                defenseTtsManager.speak("범위 안에 있습니다")
+                            } else if (!inRange && wasInCatchRange) {
+                                wasInCatchRange = false
+                                defenseTtsManager.speak("범위를 벗어났습니다")
+                            }
+                        }
+                        GamePhase.IDLE, GamePhase.CAUGHT, GamePhase.RESULT, GamePhase.TRAINING_COMPLETE -> {
+                            wasInCatchRange = false
+                        }
+                    }
+                }
             }
         }
     }
@@ -527,7 +550,20 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (gameEngine.sessionActive && !defenseTutorialManager.isRunning) {
+            gameEngine.forceStopSession(silent = true)
+            finish()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
     override fun onDestroy() {
+        if (gameEngine.sessionActive && !defenseTutorialManager.isRunning) {
+            gameEngine.forceStopSession(silent = true)
+        }
         super.onDestroy()
         gameEngine.release()
         defenseTtsManager.shutdown()

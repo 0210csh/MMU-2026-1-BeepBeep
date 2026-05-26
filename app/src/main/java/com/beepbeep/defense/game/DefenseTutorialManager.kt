@@ -46,6 +46,7 @@ class DefenseTutorialManager(
         currentStep = 0
         scope.launch {
             isSpeaking = true
+
             if (isControllerConnected()) {
                 ttsManager.speakAndWait("수비 훈련 튜토리얼을 시작합니다.")
             } else {
@@ -67,6 +68,7 @@ class DefenseTutorialManager(
                 isSpeaking = false
             }
             delay(300)
+            ttsManager.speakAndWait("튜토리얼은 기록에 반영되지 않습니다.")
             runStep1()
             runStep2()
             runStep3()
@@ -139,16 +141,35 @@ class DefenseTutorialManager(
         Log.d(TAG, "3단계 시작")
 
         isSpeaking = true
-        ttsManager.speakAndWait("세 번째 단계입니다. 조작 방법을 알려드립니다.")
+        ttsManager.speakAndWait("세 번째 단계입니다. 수비 훈련과 조작 방법을 알려드립니다.")
         delay(300)
         ttsManager.speakAndWait(
-            "공이 날아오면 비프음이 들립니다. 소리 방향으로 좌측 조이스틱을 움직여 캐릭터를 이동시키세요."
+            "공이 정면에서 왼쪽, 중앙, 오른쪽으로 랜덤하게 날아옵니다, 공 자체에서 비프음이 들리기 때문에, 비프음이 들리는 방향이 곧 공의 위치 입니다," +
+                    "공이 착지하면 비프음은 계속 들리지만 공의 위치는 고정됩니다. "
         )
         delay(300)
         ttsManager.speakAndWait(
-            "비프음이 들리면 소리 방향의 착지 예상 지점으로 미리 이동하세요. 비프음이 멈추거나 공이 착지하면 A 버튼을 눌러 포구하세요."
+            "좌측 조이스틱으로 이동할 수 있으며 이동한 위치에 따라 공의 소리가 다르게 들립니다." +
+                "또한 머리를 돌려 바라보는 방향이 달라지면 현실처럼 소리가 들리는 방향도 같이 달라지니 이점을 활용해," +
+                "소리가 나는 방향으로 이동하세요."
         )
         delay(300)
+        ttsManager.speakAndWait(
+            "캐릭터와 공의 거리가 3미터 이내일 때 A 버튼을 눌러 포구하면 성공입니다, 3미터 밖에서 A버튼을 누르면 포구 실패입니다." +
+                    "튜토리얼에서는 3미터 범위안에 공이 들어오거나 나가면 음성으로 안내 해 드립니다."
+        )
+
+        delay(300)
+        ttsManager.speakAndWait(
+            "실제훈련 중, B, 버튼으로 조기종료할 수 있습니다." +
+                    "공이 있는 상황에서 누르면 누른 순간의 위치로 포구 판정 후 종료되고," +
+                    "공이 없는 대기 중에 누르면 그때까지의 기록이 저장됩니다. "
+        )
+        delay(300)
+        ttsManager.speakAndWait(
+            "훈련이 끝나면 훈련 결과를 요약하여 음성으로 안내하고," +
+                    "다시 포구 횟수를 설정할 수 있으며 x버튼을 누르면 훈련이 다시 시작됩니다."
+        )
         ttsManager.speakAndWait("준비되었으면 X 버튼을 눌러 연습을 시작하세요.")
         isSpeaking = false
 
@@ -178,12 +199,6 @@ class DefenseTutorialManager(
         step4Deferred?.await()
         step4Deferred = null
 
-        delay(300)
-        isSpeaking = true
-        ttsManager.speakAndWait(
-            "포구 훈련이 끝났습니다. 본 훈련에선 X 버튼을 누르면 다음 게임을 시작할 수 있습니다."
-        )
-        isSpeaking = false
         Log.d(TAG, "4단계 완료")
     }
 
@@ -195,7 +210,16 @@ class DefenseTutorialManager(
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_DEFENSE_DONE, true).apply()
         isSpeaking = true
-        ttsManager.speakAndWait("튜토리얼이 완료되었습니다. 훈련 화면으로 돌아갑니다.")
+        ttsManager.speakAndWait(
+            "튜토리얼이 완료되었습니다. " +
+                    "튜토리얼을 다시 보려면 설정에서 수비 튜토리얼 다시듣기 버튼을 누르고 확인버튼을 누른 뒤, " +
+                    "수비 훈련으로 다시 입장하세요. " +
+                    "실제 수비 훈련 도중 뒤로가기나 강제 종료하면 조기종료로 판단하여 해당 진행중이던 기록이 저장되니 주의하세요."
+        )
+        delay(300)
+        ttsManager.speakAndWait(
+            "지금 부터는 실제 훈련으로 훈련 결과가 기록됩니다."
+        )
         isSpeaking = false
         delay(500)
         isRunning = false

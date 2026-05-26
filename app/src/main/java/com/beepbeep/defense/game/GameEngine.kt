@@ -77,7 +77,8 @@ class GameEngine(private val context: Context) {
     private var targetBallCount = 5
     var sessionActive   = false
         private set
-    private val catchTimes      = mutableListOf<Long>()
+    private val catchTimes       = mutableListOf<Long>()
+    private val perCatchRecords  = mutableListOf<HashMap<String, Any?>>()
 
     var isTutorialMode: Boolean = false
 
@@ -192,6 +193,7 @@ class GameEngine(private val context: Context) {
         score           = 0
         attempts        = 0
         catchTimes.clear()
+        perCatchRecords.clear()
         _state.value = _state.value.copy(
             score = 0, totalAttempts = 0, targetBallCount = ballCount, phase = GamePhase.IDLE)
         if (ttsReady) {
@@ -244,6 +246,11 @@ class GameEngine(private val context: Context) {
         if (caught) {
             score++
             catchTimes.add(elapsedMs)
+            perCatchRecords.add(hashMapOf(
+                "회차"     to attempts,
+                "결과"     to "성공",
+                "반응속도" to elapsedMs
+            ))
             _state.value = _state.value.copy(
                 phase = GamePhase.CAUGHT,
                 score = score,
@@ -256,6 +263,11 @@ class GameEngine(private val context: Context) {
         } else {
             val dist = ballSim.distanceToDefender(defX, defZ)
             val dir  = getBallDirection(ballSim.currentPos.x, ballSim.currentPos.z, defX, defZ)
+            perCatchRecords.add(hashMapOf(
+                "회차"     to attempts,
+                "결과"     to "실패",
+                "반응속도" to -1L
+            ))
             _state.value = _state.value.copy(
                 phase = GamePhase.RESULT,
                 score = score,
@@ -288,7 +300,7 @@ class GameEngine(private val context: Context) {
     fun resetToIdle(sessionDone: Boolean = false) {
         defX = 0f; defZ = 25f
         if (sessionDone) {
-            score = 0; attempts = 0; catchTimes.clear()
+            score = 0; attempts = 0; catchTimes.clear(); perCatchRecords.clear()
             _state.value = _state.value.copy(
                 phase = GamePhase.IDLE,
                 score = 0, totalAttempts = 0, targetBallCount = 0,
@@ -307,7 +319,7 @@ class GameEngine(private val context: Context) {
         }
     }
 
-    fun forceStopSession() {
+    fun forceStopSession(silent: Boolean = false) {
         val phase = _state.value.phase
         if (!sessionActive) return
 
@@ -321,6 +333,11 @@ class GameEngine(private val context: Context) {
             if (caught) {
                 score++
                 catchTimes.add(elapsedMs)
+                perCatchRecords.add(hashMapOf(
+                    "회차"     to attempts,
+                    "결과"     to "성공",
+                    "반응속도" to elapsedMs
+                ))
                 _state.value = _state.value.copy(
                     phase         = GamePhase.CAUGHT,
                     score         = score,
@@ -332,6 +349,11 @@ class GameEngine(private val context: Context) {
             } else {
                 val dist = ballSim.distanceToDefender(defX, defZ)
                 val dir  = getBallDirection(ballSim.currentPos.x, ballSim.currentPos.z, defX, defZ)
+                perCatchRecords.add(hashMapOf(
+                    "회차"     to attempts,
+                    "결과"     to "실패",
+                    "반응속도" to -1L
+                ))
                 _state.value = _state.value.copy(
                     phase         = GamePhase.RESULT,
                     score         = score,
@@ -347,7 +369,7 @@ class GameEngine(private val context: Context) {
         targetBallCount = attempts
         sessionActive   = false
 
-        if (phase == GamePhase.LAUNCHED || phase == GamePhase.LANDED) {
+        if (!silent && (phase == GamePhase.LAUNCHED || phase == GamePhase.LANDED)) {
             // 공 판정 결과를 잠깐 보여준 후 결과창
             gameScope.launch {
                 delay(500L)
@@ -357,15 +379,15 @@ class GameEngine(private val context: Context) {
                 }
             }
         } else {
-            // 대기 중 → 이미 메인 스레드이므로 즉시 결과창
-            speakSessionSummary()
+            // silent 모드이거나 대기 중 → 즉시 처리
+            speakSessionSummary(silent)
             resetToIdle(sessionDone = true)
         }
     }
 
     fun isSessionComplete() = sessionActive && attempts >= targetBallCount
 
-    private fun speakSessionSummary() {
+    private fun speakSessionSummary(silent: Boolean = false) {
         val avgMs      = if (catchTimes.isNotEmpty()) catchTimes.average().toLong() else null
         val bestMs     = catchTimes.minOrNull()
         val worstMs    = catchTimes.maxOrNull()
@@ -376,12 +398,14 @@ class GameEngine(private val context: Context) {
         if (avgMs  != null) sb.append(" 평균 ${msToKoreanTime(avgMs)}.")
         if (bestMs != null) sb.append(" 최단 시간 ${msToKoreanTime(bestMs)}.")
         if (worstMs != null) sb.append(" 최장 시간 ${msToKoreanTime(worstMs)}.")
-        speak(sb.toString())
+        if (!silent) speak(sb.toString())
 
-        uploadToFirebase(avgMs, bestMs, worstMs, successRate)
-        saveToSharedPreferences(avgMs, successRate)
+        if (!isTutorialMode) {
+            uploadToFirebase(avgMs, bestMs, worstMs, successRate)
+            saveToSharedPreferences(avgMs, successRate)
+        }
 
-        onSessionComplete?.invoke(
+        if (!silent) onSessionComplete?.invoke(
             SessionResult(
                 target      = targetBallCount,
                 success     = score,
@@ -403,24 +427,34 @@ class GameEngine(private val context: Context) {
         val sessionId = System.currentTimeMillis().toString()
 
         val sessionData = hashMapOf(
-            "생성일시"         to com.google.firebase.Timestamp.now(),
-            "목표횟수"         to targetBallCount,
-            "성공횟수"         to score,
-            "실패횟수"         to (targetBallCount - score),
-            "성공률"           to successRate,
-            "평균반응속도"     to (avgMs ?: -1L),
-            "최단반응속도"     to (bestMs ?: -1L),
-            "최장반응속도"     to (worstMs ?: -1L),
-            "개인반응속도목록" to catchTimes
+            "생성일시" to com.google.firebase.Timestamp.now(),
+            "목표횟수" to targetBallCount,
+            "종합결과" to hashMapOf(
+                "성공횟수"     to score,
+                "실패횟수"     to (targetBallCount - score),
+                "성공률"       to successRate,
+                "평균반응속도" to (avgMs ?: -1L),
+                "최단반응속도" to (bestMs ?: -1L),
+                "최장반응속도" to (worstMs ?: -1L)
+            )
         )
 
-        db.collection("users")
+        // resetToIdle()이 비동기 콜백보다 먼저 perCatchRecords를 clear할 수 있으므로 미리 복사
+        val catchSnapshot = ArrayList(perCatchRecords)
+
+        val sessionRef = db.collection("users")
             .document(userId)
             .collection("수비훈련기록")
             .document(sessionId)
-            .set(sessionData)
+
+        sessionRef.set(sessionData)
             .addOnSuccessListener {
                 android.util.Log.d("Firebase", "수비 훈련 기록 업로드 성공")
+                catchSnapshot.forEachIndexed { index, record ->
+                    sessionRef.collection("포구별기록")
+                        .document("${index + 1}번포구")
+                        .set(record)
+                }
             }
             .addOnFailureListener { e ->
                 android.util.Log.e("Firebase", "업로드 실패: ${e.message}")
@@ -518,7 +552,7 @@ class GameEngine(private val context: Context) {
         audioEngine.stopBeep()
         sessionActive = false
         isTutorialMode = false
-        score = 0; attempts = 0; catchTimes.clear()
+        score = 0; attempts = 0; catchTimes.clear(); perCatchRecords.clear()
         defX = 0f; defZ = 25f
         _state.value = GameState()
     }

@@ -656,65 +656,107 @@ class RecordActivity : AppCompatActivity() {
     // ────────────────────────────────────────────────────────
     private fun loadDefenseStatsFromFirebase(userId: String) {
         db.collection("users").document(userId).collection("수비훈련기록")
-            .orderBy("생성일시", Query.Direction.DESCENDING)
+            .orderBy("생성일시", Query.Direction.ASCENDING)
             .get()
             .addOnSuccessListener { documents ->
-                val records = documents.mapNotNull { doc ->
-                    val pitchCount = (doc.get("목표횟수") as? Number)?.toInt() ?: 1
-                    DefenseRecord(
-                        pitchCount   = pitchCount,
-                        successRate  = (doc.get("성공률") as? Number)?.toFloat() ?: 0f,
-                        reactionAvg  = (doc.get("평균반응속도") as? Number)?.toFloat() ?: 0f,
-                        successCount = (doc.get("성공횟수") as? Number)?.toFloat() ?: 0f,
-                        failCount    = (doc.get("실패횟수") as? Number)?.toFloat() ?: 0f,
-                        date         = doc.getTimestamp("생성일시")
-                    )
+                if (documents.isEmpty) { setDefenseEmpty(); return@addOnSuccessListener }
+
+                // 포구별기록이 있는 세션만 대상 (없는 옛날 세션은 스킵)
+                val sessionDocs = documents.filter { doc ->
+                    doc.getTimestamp("생성일시") != null
                 }
+                if (sessionDocs.isEmpty()) { setDefenseEmpty(); return@addOnSuccessListener }
 
-                if (records.isEmpty()) { setDefenseEmpty(); return@addOnSuccessListener }
+                // 세션별로 (날짜, 포구리스트) 쌍을 모은 뒤 날짜순 정렬 후 flatten
+                // → forEach 병렬 콜백의 비결정적 순서 문제 해결
+                data class SessionCatches(val date: java.util.Date?, val catches: List<DefenseRecord>)
+                val sessionCatchesList = mutableListOf<SessionCatches>()
+                var completedCount = 0
+                val targetCount = sessionDocs.size
 
-                val totalPitches = records.sumOf { it.pitchCount }
-                binding.tvDefenseStatCount.text = "전체 ${totalPitches}구 기준"
-                binding.tvDefenseStatCount.contentDescription = "전체 ${totalPitches}구 기준 평균입니다"
-
-                val totalSuccess = records.sumOf { it.successCount.toDouble() }
-                val totalFail    = records.sumOf { it.failCount.toDouble() }
-                val weightedSuccessRate = totalSuccess / totalPitches * 100
-                val weightedReaction = records.filter { it.reactionAvg > 0 }.let { f ->
-                    if (f.isEmpty()) 0.0
-                    else f.sumOf { it.reactionAvg.toDouble() * it.successCount } / f.sumOf { it.successCount.toDouble() }.coerceAtLeast(1.0)
-                }
-
-                binding.tvDefenseStatSuccessRate.text = "${"%.0f".format(weightedSuccessRate)}%"
-                binding.tvDefenseStatReaction.text    = msToSec(weightedReaction)
-                // 20판 기준 환산 (성공+실패 = 20)
-                binding.tvDefenseStatSuccess.text     = "%.1f".format(totalSuccess / totalPitches * 20)
-                binding.tvDefenseStatFail.text        = "%.1f".format(totalFail / totalPitches * 20)
-
-                val (rawBundles, remainingPitches) = splitIntoBundles20(
-                    records, getCount = { it.pitchCount }, getDate = { it.date?.toDate() }
-                )
-                val completeBundles = rawBundles.mapIndexed { i, pitches ->
-                    makeDefenseBundle(pitches, i + 1, false)
-                }.toMutableList()
-                if (remainingPitches.isNotEmpty()) {
-                    completeBundles.add(makeDefenseBundle(remainingPitches, completeBundles.size + 1, true))
-                }
-                if (completeBundles.size >= 2) {
-                    defenseChartIndex = 0
-                    showDefenseGrowthChart(completeBundles)
-                } else {
-                    binding.tvDefenseGrowthSection.visibility = android.view.View.GONE
-                    binding.llDefenseGrowthRows.visibility    = android.view.View.GONE
-                    val needed = maxOf(0, BUNDLE_SIZE * 2 - totalPitches)
-                    binding.tvDefenseGrowthNotice.apply {
-                        visibility = android.view.View.VISIBLE
-                        text = "📊 ${needed}구 더 훈련하면 성장 추이를 볼 수 있어요!"
-                        contentDescription = "${needed}구 더 훈련하면 성장 추이를 확인할 수 있습니다"
-                    }
+                sessionDocs.forEach { doc ->
+                    val sessionDate = doc.getTimestamp("생성일시")?.toDate()
+                    doc.reference.collection("포구별기록")
+                        .orderBy("회차", Query.Direction.ASCENDING)
+                        .get()
+                        .addOnSuccessListener { catches ->
+                            if (!catches.isEmpty) {
+                                val records = catches.mapNotNull { c ->
+                                    val success = (c.getString("결과") == "성공")
+                                    val reaction = (c.get("반응속도") as? Number)?.toLong() ?: -1L
+                                    DefenseRecord(success = success, reactionMs = reaction, date = sessionDate)
+                                }
+                                synchronized(sessionCatchesList) {
+                                    sessionCatchesList.add(SessionCatches(sessionDate, records))
+                                }
+                            }
+                            synchronized(sessionCatchesList) { completedCount++ }
+                            if (completedCount == targetCount) {
+                                // 날짜 오름차순 정렬 후 flatten → 시간순 개별 포구 목록
+                                val allCatches = sessionCatchesList
+                                    .sortedBy { it.date }
+                                    .flatMap { it.catches }
+                                runOnUiThread { processDefenseCatches(allCatches) }
+                            }
+                        }
+                        .addOnFailureListener {
+                            synchronized(sessionCatchesList) { completedCount++ }
+                            if (completedCount == targetCount) {
+                                val allCatches = sessionCatchesList
+                                    .sortedBy { it.date }
+                                    .flatMap { it.catches }
+                                runOnUiThread { processDefenseCatches(allCatches) }
+                            }
+                        }
                 }
             }
             .addOnFailureListener { setDefenseEmpty() }
+    }
+
+    private fun processDefenseCatches(catches: List<DefenseRecord>) {
+        if (catches.isEmpty()) { setDefenseEmpty(); return }
+
+        val totalCount   = catches.size
+        val successList  = catches.filter { it.success }
+        val totalSuccess = successList.size
+        val totalFail    = totalCount - totalSuccess
+        val successRate  = totalSuccess.toDouble() / totalCount * 100
+        val avgReaction  = successList.filter { it.reactionMs > 0 }.let { f ->
+            if (f.isEmpty()) 0.0 else f.sumOf { it.reactionMs.toDouble() } / f.size
+        }
+
+        binding.tvDefenseStatCount.text = "전체 ${totalCount}구 기준"
+        binding.tvDefenseStatCount.contentDescription = "전체 ${totalCount}구 기준 평균입니다"
+        binding.tvDefenseStatSuccessRate.text = "${"%.0f".format(successRate)}%"
+        binding.tvDefenseStatReaction.text    = if (avgReaction > 0) msToSec(avgReaction) else "-"
+        // 20구 기준 환산
+        binding.tvDefenseStatSuccess.text = "%.1f".format(totalSuccess.toDouble() / totalCount * 20)
+        binding.tvDefenseStatFail.text    = "%.1f".format(totalFail.toDouble() / totalCount * 20)
+
+        // 번들 생성 (개별 포구 단위로 20개씩)
+        // splitIntoBundles20은 내림차순(최신→과거) 입력을 기대하므로 reversed() 후 전달
+        val (rawBundles, remainingPitches) = splitIntoBundles20(
+            catches.reversed(), getCount = { 1 }, getDate = { it.date }
+        )
+        val completeBundles = rawBundles.mapIndexed { i, pitches ->
+            makeDefenseBundle(pitches, i + 1, false)
+        }.toMutableList()
+        if (remainingPitches.isNotEmpty()) {
+            completeBundles.add(makeDefenseBundle(remainingPitches, completeBundles.size + 1, true))
+        }
+        if (completeBundles.size >= 2) {
+            defenseChartIndex = 0
+            showDefenseGrowthChart(completeBundles)
+        } else {
+            binding.tvDefenseGrowthSection.visibility = android.view.View.GONE
+            binding.llDefenseGrowthRows.visibility    = android.view.View.GONE
+            val needed = maxOf(0, BUNDLE_SIZE * 2 - totalCount)
+            binding.tvDefenseGrowthNotice.apply {
+                visibility = android.view.View.VISIBLE
+                text = "📊 ${needed}구 더 훈련하면 성장 추이를 볼 수 있어요!"
+                contentDescription = "${needed}구 더 훈련하면 성장 추이를 확인할 수 있습니다"
+            }
+        }
     }
 
     private fun makeDefenseBundle(
@@ -722,30 +764,31 @@ class RecordActivity : AppCompatActivity() {
         index: Int,
         isPartial: Boolean
     ): DefenseBundle {
-        val sessions  = pitches.map { it.session }
+        val catches   = pitches.map { it.session }
         val dates     = pitches.mapNotNull { it.date }
         val firstDate = dates.minOrNull()
         val lastDate  = dates.maxOrNull()
         val (label, ttsLabel) = makeDateLabels(firstDate, lastDate, index)
-        val pc = pitches.size
+        val pc = catches.size
 
-        val bSuccess  = sessions.sumOf { it.successCount.toDouble() / it.pitchCount } / sessions.size * pc
-        val bFail     = sessions.sumOf { it.failCount.toDouble() / it.pitchCount } / sessions.size * pc
-        val bRate     = if (pc > 0) bSuccess / pc * 100 else 0.0
-        val bReactionRaw = sessions.filter { it.reactionAvg > 0 }.let { f ->
+        val successCount = catches.count { it.success }.toDouble()
+        val failCount    = (pc - successCount)
+        val successRate  = if (pc > 0) successCount / pc * 100 else 0.0
+        val reactionAvg  = catches.filter { it.success && it.reactionMs > 0 }.let { f ->
             if (f.isEmpty()) null
-            else f.sumOf { it.reactionAvg.toDouble() } / f.size
+            else f.sumOf { it.reactionMs.toDouble() } / f.size
         }
+
         return DefenseBundle(
             index       = index,
             label       = label,
             ttsLabel    = ttsLabel,
             pitchCount  = pc,
             isPartial   = isPartial,
-            successRate = roundDiff2(bRate).toDouble(),
-            reactionAvg = bReactionRaw?.let { roundDiff2(it / 1000.0).toDouble() * 1000.0 },
-            successAvg  = roundDiff2(bSuccess).toDouble(),
-            failAvg     = roundDiff2(bFail).toDouble()
+            successRate = roundDiff2(successRate).toDouble(),
+            reactionAvg = reactionAvg?.let { roundDiff2(it / 1000.0).toDouble() * 1000.0 },
+            successAvg  = roundDiff2(successCount / pc * 20).toDouble(),
+            failAvg     = roundDiff2(failCount / pc * 20).toDouble()
         )
     }
 
@@ -834,11 +877,8 @@ class RecordActivity : AppCompatActivity() {
     )
 
     data class DefenseRecord(
-        val pitchCount: Int,
-        val successRate: Float,
-        val reactionAvg: Float,
-        val successCount: Float,
-        val failCount: Float,
-        val date: com.google.firebase.Timestamp? = null
+        val success: Boolean,
+        val reactionMs: Long,   // 성공 시 반응속도(ms), 실패 시 -1
+        val date: java.util.Date?
     )
 }
