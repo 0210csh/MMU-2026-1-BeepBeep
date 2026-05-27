@@ -245,15 +245,26 @@ class SwingTestActivity : AppCompatActivity() {
     // 심플 UI 상태 업데이트 (일반 사용자)
     // ─────────────────────────────────────────────────────
     private fun updateSimpleStatus(text: String, bgColor: Int = 0xFF0A0A0A.toInt()) {
+
+    }
+    private fun updateSimpleBleStatus(connected: Boolean, battery: Int = -1) {
         if (isAdmin) return
         runOnUiThread {
-            findViewById<TextView>(R.id.tvSimpleStatus)?.text = text
-            findViewById<View>(R.id.simpleRootLayout)?.setBackgroundColor(bgColor)
-            findViewById<TextView>(R.id.tvSimpleProgress)?.text =
-                if (isTraining) "${currentPitchNum}/${targetPitches}" else ""
+            val icon   = findViewById<TextView>(R.id.tvSimpleBleIcon)
+            val status = findViewById<TextView>(R.id.tvSimpleBleStatus)
+            val bat    = findViewById<TextView>(R.id.tvSimpleBattery)
+            if (connected) {
+                icon?.text  = "●"; icon?.setTextColor(0xFF4ADE80.toInt())
+                status?.text = "배트 연결됨"; status?.setTextColor(0xFF4ADE80.toInt())
+                bat?.text    = if (battery >= 0) "배터리  $battery%" else ""
+                bat?.setTextColor(0xFFFFFFFF.toInt())
+            } else {
+                icon?.text  = "●"; icon?.setTextColor(0xFFF87171.toInt())
+                status?.text = "배트 미연결"; status?.setTextColor(0xFFF87171.toInt())
+                bat?.text    = ""
+            }
         }
     }
-
     // ─────────────────────────────────────────────────────
     // 스윙 감지 리스너
     // ─────────────────────────────────────────────────────
@@ -1272,6 +1283,7 @@ class SwingTestActivity : AppCompatActivity() {
     private val bleCallback = object : BleManager.Callback {
         override fun onConnected() {
             bleConnected = true
+            updateSimpleBleStatus(connected = true)
             if (isAdmin) {
                 btnBleConnect?.isEnabled = true; btnBleConnect?.text = "배트 센서 해제"
                 tvBleStatus?.text = "● 연결됨"; tvBleStatus?.setTextColor(0xFF4ADE80.toInt())
@@ -1294,6 +1306,7 @@ class SwingTestActivity : AppCompatActivity() {
 
         override fun onReconnecting() {
             bleConnected = false
+            updateSimpleBleStatus(connected = false)
             if (isAdmin) {
                 btnBleConnect?.isEnabled = false; btnBleConnect?.text = "재연결 중..."
                 tvBleStatus?.text = "● 재연결 중..."; tvBleStatus?.setTextColor(0xFFFBBF24.toInt())
@@ -1302,6 +1315,7 @@ class SwingTestActivity : AppCompatActivity() {
 
         override fun onDisconnected() {
             bleConnected = false
+            updateSimpleBleStatus(connected = false)
             if (isAdmin) {
                 btnBleConnect?.isEnabled = true; btnBleConnect?.text = "배트 센서 연결"
                 tvBleStatus?.text = "● 미연결"; tvBleStatus?.setTextColor(0xFFF87171.toInt())
@@ -1314,6 +1328,7 @@ class SwingTestActivity : AppCompatActivity() {
         }
 
         override fun onBatteryLevel(level: Int) {
+            if (bleConnected) updateSimpleBleStatus(connected = true, battery = level)
             if (isAdmin) {
                 tvBatteryLevel?.text = "배터리 ${level}%"
                 tvBatteryLevel?.setTextColor(if (level <= 20) 0xFFF87171.toInt() else 0xFF64748B.toInt())
