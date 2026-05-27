@@ -276,7 +276,7 @@ class GameEngine(private val context: Context) {
                 catchTimeMs = null,
                 debugInfo = "❌ 포구 실패 (${"%.1f".format(dist)}m, $dir)"
             )
-            speak("포구 실패. $dir 방향으로 ${"%.0f".format(dist)}미터 차이였습니다")
+            speak("포구 실패. $dir 방향으로 ${"%.2f".format(dist)}미터 차이였습니다")
         }
 
         gameScope.launch {
