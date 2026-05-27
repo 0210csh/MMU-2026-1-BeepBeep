@@ -8,8 +8,13 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.media.AudioAttributes
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioTrack
+import android.os.Handler
+import android.os.Looper
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -206,9 +211,34 @@ class SwingTestActivity : AppCompatActivity() {
     @Volatile private var prevBtn2 = false
     private var batBtn1Job: Job? = null
     private var batBtn2Job: Job? = null
+    private var baseBeepTimeoutJob: Job? = null
 
     // ── 튜토리얼 ────────────────────────────────────────
     private lateinit var tutorialManager: SwingTutorialManager
+    private var angleCalibJob: Job? = null
+
+    // ── BT 오디오 기기 감지 ──────────────────────────────
+    private lateinit var audioManager: AudioManager
+    @Volatile private var btAudioLost = false
+    private val btAudioCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
+            val hasBtAudio = removedDevices.any {
+                it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+            }
+            if (!hasBtAudio) return
+            if (btAudioLost) return          // 중복 처리 방지
+            if (!isTraining) return          // 훈련 중일 때만 처리
+            btAudioLost = true
+            runOnUiThread {
+                earlyFinishTraining(speakTts = false, showSummary = false)
+                scope.launch {
+                    delay(200L)
+                    ttsManager.speak("블루투스 이어폰 연결이 해제되어 훈련이 종료되었습니다.")
+                }
+            }
+        }
+    }
 
     // ─────────────────────────────────────────────────────
     // 심플 UI 상태 업데이트 (일반 사용자)
@@ -415,10 +445,42 @@ class SwingTestActivity : AppCompatActivity() {
                 isWaitingForInput = true
             },
             onTutorialFinished = {
-                runOnUiThread { finish() }
+                runOnUiThread {
+                    isTraining    = false
+                    baseAzimuth   = null
+                    resetBaseVisuals()
+                    updateSimpleStatus("양쪽 버튼을 눌러 훈련을 시작하세요")
+                    if (isAdmin) {
+                        tvStatus?.text                = ""
+                        tvResult?.text                = ""
+                        tvSwingPitchProgress?.text    = ""
+                        btnStart?.isEnabled           = true
+                        btnStart?.text                = "훈련 시작"
+                        btnSwingPitchMinus?.isEnabled = true
+                        btnSwingPitchPlus?.isEnabled  = true
+                    }
+                }
+            },
+            onStartAngleCalibration = {
+                startAngleCalibration()
+            },
+            onStartFullTraining = {
+                btAudioLost     = false
+                baseAzimuth     = null
+                isTraining      = true
+                currentPitchNum = 1
+                successCount    = 0
+                hitCount        = 0
+                foulCount       = 0
+                strikeCount     = 0
+                reactionTimes.clear()
+                perPitchRecords.clear()
+                tutorialManager.targetPitchCount = targetPitches
+                startGame()
             }
         )
 
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         initAudioTrack()
         spatialAudio = SpatialAudioEngine(this)
         spatialAudio.init()
@@ -483,6 +545,7 @@ class SwingTestActivity : AppCompatActivity() {
     // 게임 메인 루프
     // ─────────────────────────────────────────────────────
     private fun startGame() {
+        btAudioLost         = false
         gameJob?.cancel()
         tvResult?.text      = ""
         ballTrackView?.reset()
@@ -719,6 +782,7 @@ class SwingTestActivity : AppCompatActivity() {
                 }
                 launch {
                     delay(100L)
+                    if (tutorialManager.isRunning && tutorialManager.currentStep == 4) return@launch
                     withContext(Dispatchers.Main) { if (isAdmin) activateBothBases() }
                     startBaseBeep()
                     isWaitingForInput = true
@@ -771,11 +835,11 @@ class SwingTestActivity : AppCompatActivity() {
             }
 
             // ━━━ 4단계: 결과 판정 ━━━
-            val hasValidMin  = snapMinAngleDeg < Float.MAX_VALUE
-            val minInWindow  = hasValidMin && snapMinAngleAbsMs >= hitWindowOpenAbsMs && snapMinAngleAbsMs <= hitWindowCloseAbsMs
-            val minBeforeWin = hasValidMin && snapMinAngleAbsMs < hitWindowOpenAbsMs
-            val minAfterWin  = hasValidMin && snapMinAngleAbsMs > hitWindowCloseAbsMs
-            val angleDiff    = if (hasValidMin) snapMinAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
+            val hasValidMin  = minBatAngleDeg < Float.MAX_VALUE
+            val minInWindow  = hasValidMin && minBatAngleAbsMs >= hitWindowOpenAbsMs && minBatAngleAbsMs <= hitWindowCloseAbsMs
+            val minBeforeWin = hasValidMin && minBatAngleAbsMs < hitWindowOpenAbsMs
+            val minAfterWin  = hasValidMin && minBatAngleAbsMs > hitWindowCloseAbsMs
+            val angleDiff    = if (hasValidMin) minBatAngleDeg - BATTING_ANGLE_DEG else Float.MAX_VALUE
             val winDelta     = windowClosePitchDeg - windowOpenPitchDeg
             val winSign      = if (winDelta >= 0f) "+" else ""
 
@@ -823,7 +887,7 @@ class SwingTestActivity : AppCompatActivity() {
                         }
                         tvResult?.text = "최저 각도: %.0f°".format(minBatAngleDeg)
                     }
-                    if (!gangSpoken) {
+                    if (!gangSpoken && !(tutorialManager.isRunning && tutorialManager.currentStep == 4)) {
                         launch {
                             delay(100L)
                             withContext(Dispatchers.Main) { if (isAdmin) activateBothBases() }
@@ -857,20 +921,26 @@ class SwingTestActivity : AppCompatActivity() {
                         delay(16)
                     }
 
+                    spatialAudio.stopBeep()
                     audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
 
                     // gangSpoken=true 케이스: earlyMinInWindow에서 시작한 베이스 비프음이
                     // divMs 애니메이션의 startBeep()에 의해 취소됨 → 여기서 재시작
-                    if (gangSpoken) startBaseBeep()
+                    // (튜토리얼 step4에서는 베이스 비프 불필요)
+                    if (gangSpoken && !(tutorialManager.isRunning && tutorialManager.currentStep == 4)) startBaseBeep()
 
                     withContext(Dispatchers.Main) {
                         ballTrackView?.reset()
-                        // 튜토리얼 step3: 정타 → 베이스 선택 대기
-                        // (onBasePressed에서 notifyStep3Done 호출 — scheduleNextOrFinish 호출 금지)
-                        if (tutorialManager.isRunning && tutorialManager.currentStep == 3) {
+                        if (tutorialManager.isRunning && tutorialManager.currentStep == 4) {
+                            isWaitingForInput = false
+                            stopAudio()
                             tvStatus?.text = "정타!"
                             tvStatus?.setTextColor(0xFF4ADE80.toInt())
-                            ttsManager.speak("정타입니다. 소리 방향의 버튼을 눌러보세요.")
+                            // speakAndWait 로 TTS 완료 후 다음 투구로 진행
+                            scope.launch {
+                                ttsManager.speakAndWait("정타입니다.", java.util.Locale.KOREAN)
+                                withContext(Dispatchers.Main) { scheduleNextOrFinish(true) }
+                            }
                             return@withContext
                         }
                         if (isAdmin) activateBothBases()
@@ -1009,6 +1079,17 @@ class SwingTestActivity : AppCompatActivity() {
             }
         }
         beepStartTime = SystemClock.elapsedRealtimeNanos()
+
+        // 튜토리얼 step 4, 5는 타임아웃 미적용
+        val applyTimeout = !tutorialManager.isRunning ||
+                tutorialManager.currentStep == 6
+        if (applyTimeout) {
+            baseBeepTimeoutJob?.cancel()
+            baseBeepTimeoutJob = scope.launch {
+                delay(10_000L)
+                withContext(Dispatchers.Main) { onBaseBeepTimeout() }
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────
@@ -1016,14 +1097,16 @@ class SwingTestActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────
     private fun onBasePressed(pressedBase: Int) {
         if (!isWaitingForInput) return
+        baseBeepTimeoutJob?.cancel()
+        baseBeepTimeoutJob = null
         isWaitingForInput = false
         stopAudio()
         gameJob?.cancel()
         resetBaseVisuals()
         ballTrackView?.reset()
 
-        // 튜토리얼 step3: 정타 후 베이스 선택 → 성공/실패 피드백 후 완료 통보
-        if (tutorialManager.isRunning && tutorialManager.currentStep == 3) {
+        // 튜토리얼 step4: 타격 체험 후 베이스 선택 → 성공/실패 피드백 후 완료 통보
+        if (tutorialManager.isRunning && tutorialManager.currentStep == 4) {
             val success = pressedBase == targetBase
             scope.launch {
                 if (success) {
@@ -1035,12 +1118,12 @@ class SwingTestActivity : AppCompatActivity() {
                 } else {
                     ttsManager.speakAndWait("틀렸습니다. 소리 방향의 버튼을 누르세요.", Locale.KOREAN)
                 }
-                tutorialManager.notifyStep3Done()
+                tutorialManager.notifyStep4Done()
             }
             return
         }
-        // 튜토리얼 step4: 실제 베이스 선택 연습
-        if (tutorialManager.isRunning && tutorialManager.currentStep == 4) {
+        // 튜토리얼 step5: 주루 체험 베이스 선택 연습
+        if (tutorialManager.isRunning && tutorialManager.currentStep == 5) {
             val success = pressedBase == targetBase
             scope.launch {
                 if (success) {
@@ -1052,7 +1135,7 @@ class SwingTestActivity : AppCompatActivity() {
                 } else {
                     ttsManager.speakAndWait("틀렸습니다.", Locale.KOREAN)
                 }
-                tutorialManager.notifyStep4Done()
+                tutorialManager.notifyStep5Done()
             }
             return
         }
@@ -1103,6 +1186,44 @@ class SwingTestActivity : AppCompatActivity() {
             showSwingGraph()
             btnStart?.isEnabled = true
             btnStart?.text = "다시하기"
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 베이스 선택 10초 타임아웃 처리
+    // ─────────────────────────────────────────────────────
+    private fun onBaseBeepTimeout() {
+        if (!isWaitingForInput) return
+        isWaitingForInput = false
+        stopAudio()
+        gameJob?.cancel()
+        resetBaseVisuals()
+        ballTrackView?.reset()
+
+        // 레코드 기록 — 틀린 베이스 선택과 동일 형식
+        currentPitchRecord["선택베이스"]     = 0
+        currentPitchRecord["베이스정답여부"] = false
+        currentPitchRecord["피드백"]         = "정타 — 주루 선택 시간 초과"
+        if (perPitchRecords.isNotEmpty()) {
+            val last = perPitchRecords.last()
+            last["피드백"]         = currentPitchRecord["피드백"] ?: ""
+            last["선택베이스"]     = 0
+            last["베이스정답여부"] = false
+        } else {
+            perPitchRecords.add(HashMap(currentPitchRecord))
+        }
+
+        tvStatus?.text = "시간 초과"
+        tvStatus?.setTextColor(0xFFF87171.toInt())
+        tvResult?.text = ""
+        updateSimpleStatus("시간 초과", 0xFF7F1D1D.toInt())
+
+        scope.launch {
+            ttsManager.speakAndWait("주루 선택 시간이 초과되었습니다.", Locale.KOREAN)
+            delay(1_000L)
+            withContext(Dispatchers.Main) {
+                earlyFinishTraining(speakTts = true)
+            }
         }
     }
 
@@ -1209,7 +1330,12 @@ class SwingTestActivity : AppCompatActivity() {
 
         if (tutorialManager.isRunning) {
             if (risingBtn1 || risingBtn2) tutorialManager.onTutorialButton(risingBtn1, risingBtn2)
-            if (tutorialManager.currentStep != 2 && tutorialManager.currentStep != 4) {
+            if (tutorialManager.currentStep != 2 && tutorialManager.currentStep != 5 && tutorialManager.currentStep != 6) {
+                prevBtn1 = btn1; prevBtn2 = btn2
+                return
+            }
+            // step 2, 6: TTS 안내 중에는 버튼 입력 차단
+            if ((tutorialManager.currentStep == 2 || tutorialManager.currentStep == 6) && tutorialManager.isSpeaking) {
                 prevBtn1 = btn1; prevBtn2 = btn2
                 return
             }
@@ -1220,7 +1346,8 @@ class SwingTestActivity : AppCompatActivity() {
             batBtn1Job?.cancel(); batBtn2Job?.cancel()
             when {
                 isTraining -> earlyFinishTraining(speakTts = true)
-                else       -> if (btnStart?.isEnabled == true) btnStart?.performClick()
+                isAdmin    -> if (btnStart?.isEnabled == true) btnStart?.performClick()
+                else       -> startSimpleTraining()
             }
             prevBtn1 = btn1; prevBtn2 = btn2
             return
@@ -1248,10 +1375,10 @@ class SwingTestActivity : AppCompatActivity() {
                         batBtn1Job = scope.launch {
                             delay(200L)
                             withContext(Dispatchers.Main) {
-                                if (batBtn2Job?.isActive != true && btnStart?.isEnabled == true && targetPitches < 20) {
+                                if (batBtn2Job?.isActive != true && targetPitches < 20) {
                                     targetPitches++
                                     tvSwingPitchCount?.text = targetPitches.toString()
-                                    ttsManager.speak("${targetPitches}회")
+                                    ttsManager.speak("투구횟수 ${targetPitches}회")
                                 }
                             }
                         }
@@ -1282,10 +1409,10 @@ class SwingTestActivity : AppCompatActivity() {
                         batBtn2Job = scope.launch {
                             delay(200L)
                             withContext(Dispatchers.Main) {
-                                if (batBtn1Job?.isActive != true && btnStart?.isEnabled == true && targetPitches > 1) {
+                                if (batBtn1Job?.isActive != true && targetPitches > 1) {
                                     targetPitches--
                                     tvSwingPitchCount?.text = targetPitches.toString()
-                                    ttsManager.speak("${targetPitches}회")
+                                    ttsManager.speak("투구횟수 ${targetPitches}회")
                                 }
                             }
                         }
@@ -1304,6 +1431,26 @@ class SwingTestActivity : AppCompatActivity() {
     private fun earlyFinishTraining(speakTts: Boolean, showSummary: Boolean = true) {
         if (!isTraining) return
         isTraining = false
+
+        // 튜토리얼 step 6 진행 중 양쪽 버튼 조기종료 → Firebase 저장 없이 결과 전달
+        baseBeepTimeoutJob?.cancel()
+        baseBeepTimeoutJob = null
+
+        if (tutorialManager.isRunning && tutorialManager.currentStep == 6) {
+            gameJob?.cancel()
+            ttsManager.stop()
+            stopAudio()
+            spatialAudio.stopBeep()
+            audioTrack?.stop()
+            isRecording          = false
+            isWaitingForInput    = false
+            hitWindowActive      = false
+            preWindowActive      = false
+            postWindowActive     = false
+            minAngleSearchActive = false
+            tutorialManager.notifyStep6Done(hitCount, foulCount, strikeCount)
+            return
+        }
 
         gameJob?.cancel()
         ttsManager.stop()
@@ -1426,12 +1573,109 @@ class SwingTestActivity : AppCompatActivity() {
     }
 
     // ─────────────────────────────────────────────────────
+    // 비관리자 훈련 시작 (양쪽 버튼 동시 → 직접 호출)
+    // ─────────────────────────────────────────────────────
+    private fun startSimpleTraining() {
+        if (tutorialManager.isRunning) return
+        btAudioLost      = false
+        baseAzimuth      = null
+        isTraining       = true
+        currentPitchNum  = 1
+        successCount     = 0
+        hitCount         = 0
+        foulCount        = 0
+        strikeCount      = 0
+        reactionTimes.clear()
+        perPitchRecords.clear()
+        tutorialManager.targetPitchCount = targetPitches
+        startGame()
+    }
+
+    // ─────────────────────────────────────────────────────
+    // 튜토리얼 3단계: 배트 각도 체험
+    //   목표 각도(BATTING_ANGLE_DEG) ± PITCH_TOLERANCE 범위에
+    //   5초간 유지하면 notifyStep3Done() 으로 다음 단계 진행
+    // ─────────────────────────────────────────────────────
+    private fun startAngleCalibration() {
+        angleCalibJob?.cancel()
+        angleCalibJob = scope.launch {
+            // startGame() 과 동일한 패턴으로 초기화 — 0→200ms→1 순서
+            if (bleConnected) {
+                bleManager.sendControl(0)
+                delay(200L)
+                bleManager.sendControl(1)
+            }
+            delay(300)
+
+            outer@ while (isActive) {
+                val angle = currentPitchDeg
+                val diff  = angle - BATTING_ANGLE_DEG
+                val nowInRange = abs(diff) <= PITCH_TOLERANCE
+
+                if (!nowInRange) {
+                    // speakAndWait 로 TTS 완료 후 다음 각도 안내
+                    val direction = if (diff > 0) "배트를 더 내리세요." else "배트를 조금 올리세요."
+                    ttsManager.speakAndWait("현재 ${angle.toInt()}도. $direction", Locale.KOREAN)
+                    // TTS 동안 펌웨어 스트리밍이 타임아웃될 수 있으므로 재활성화
+                    if (bleConnected) bleManager.sendControl(1)
+                    delay(300)
+                } else {
+                    // 목표 범위 진입 — 현재 각도 안내 후 카운트다운 시작
+                    ttsManager.speakAndWait(
+                        "목표 각도 ${angle.toInt()}도입니다. 이 자세를 유지하세요.",
+                        Locale.KOREAN
+                    )
+                    if (bleConnected) bleManager.sendControl(1)
+
+                    for (i in 5 downTo 1) {
+                        // 카운트다운 중 범위 이탈 확인
+                        if (abs(currentPitchDeg - BATTING_ANGLE_DEG) > PITCH_TOLERANCE) {
+                            val curr = currentPitchDeg
+                            val d    = curr - BATTING_ANGLE_DEG
+                            val dir  = if (d > 0) "배트를 더 내리세요." else "배트를 조금 올리세요."
+                            ttsManager.speakAndWait(
+                                "범위를 벗어났습니다. 현재 ${curr.toInt()}도. $dir",
+                                Locale.KOREAN
+                            )
+                            if (bleConnected) bleManager.sendControl(1)
+                            delay(300)
+                            continue@outer
+                        }
+                        ttsManager.speakAndWait("$i", Locale.KOREAN)
+                    }
+
+                    // 최종 범위 확인 후 완료
+                    if (abs(currentPitchDeg - BATTING_ANGLE_DEG) <= PITCH_TOLERANCE) {
+                        ttsManager.speakAndWait("잘 하셨습니다. 스윙할 때 이 각도로 스윙하면 됩니다.", Locale.KOREAN)
+                        delay(1000)
+                        // 스트리밍 중지 (startGame() 에서 sendControl(0→1) 로 재시작)
+                        if (bleConnected) bleManager.sendControl(0)
+                        tutorialManager.notifyStep3Done()
+                        return@launch
+                    }
+                    // 범위 이탈 → 안내 재시작
+                    if (bleConnected) bleManager.sendControl(1)
+                    delay(300)
+                }
+            }
+            // 코루틴 취소 시에도 스트리밍 정리
+            if (bleConnected) bleManager.sendControl(0)
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
     // 훈련 흐름 제어
     // ─────────────────────────────────────────────────────
     private fun scheduleNextOrFinish(success: Boolean) {
         if (tutorialManager.isRunning) {
+            // step 6에서만 베이스 정답 카운트 누적 (결과 TTS에 활용)
+            if (tutorialManager.currentStep == 6 && success) successCount++
             if (currentPitchNum >= targetPitches) {
-                tutorialManager.notifyStep3Done()
+                when (tutorialManager.currentStep) {
+                    4    -> { isTraining = false; tutorialManager.notifyStep4Done() }
+                    6    -> tutorialManager.notifyStep6Done(hitCount, foulCount, strikeCount)
+                    else -> { isTraining = false; tutorialManager.notifyStep4Done() }
+                }
             } else {
                 launchNextTrainingPitch()
             }
@@ -1453,6 +1697,9 @@ class SwingTestActivity : AppCompatActivity() {
         if (tutorialManager.isRunning) {
             isTraining = false
             audioTrack?.stop()
+            if (tutorialManager.currentStep == 6) {
+                tutorialManager.notifyStep6Done(hitCount, foulCount, strikeCount)
+            }
             return
         }
         isTraining = false
@@ -1801,10 +2048,12 @@ class SwingTestActivity : AppCompatActivity() {
         linearAccelSensor?.let { sensorManager.registerListener(swingListener,      it, SensorManager.SENSOR_DELAY_GAME) }
         gyroscopeSensor?.let   { sensorManager.registerListener(swingListener,      it, SensorManager.SENSOR_DELAY_GAME) }
         rotationSensor?.let    { sensorManager.registerListener(orientationListener, it, SensorManager.SENSOR_DELAY_GAME) }
+        audioManager.registerAudioDeviceCallback(btAudioCallback, Handler(Looper.getMainLooper()))
     }
 
     override fun onPause() {
         super.onPause()
+        audioManager.unregisterAudioDeviceCallback(btAudioCallback)
         sensorManager.unregisterListener(swingListener)
         sensorManager.unregisterListener(orientationListener)
         bleManager.stopScan()
