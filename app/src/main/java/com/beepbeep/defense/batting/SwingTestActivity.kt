@@ -1620,7 +1620,7 @@ class SwingTestActivity : AppCompatActivity() {
                 if (!nowInRange) {
                     // speakAndWait 로 TTS 완료 후 다음 각도 안내
                     val direction = if (diff > 0) "배트를 더 내리세요." else "배트를 조금 올리세요."
-                    ttsManager.speakAndWait("현재 ${angle.toInt()}도. $direction", Locale.KOREAN)
+                    ttsManager.speakAndWait("현재 ${angle.toInt()}도. $direction", Locale.KOREAN, speechRate = 2.0f)
                     // TTS 동안 펌웨어 스트리밍이 타임아웃될 수 있으므로 재활성화
                     if (bleConnected) bleManager.sendControl(1)
                     delay(300)
@@ -1628,7 +1628,7 @@ class SwingTestActivity : AppCompatActivity() {
                     // 목표 범위 진입 — 현재 각도 안내 후 카운트다운 시작
                     ttsManager.speakAndWait(
                         "목표 각도 ${angle.toInt()}도입니다. 이 자세를 유지하세요.",
-                        Locale.KOREAN
+                        Locale.KOREAN, speechRate = 2.0f
                     )
                     if (bleConnected) bleManager.sendControl(1)
 
@@ -1640,18 +1640,18 @@ class SwingTestActivity : AppCompatActivity() {
                             val dir  = if (d > 0) "배트를 더 내리세요." else "배트를 조금 올리세요."
                             ttsManager.speakAndWait(
                                 "범위를 벗어났습니다. 현재 ${curr.toInt()}도. $dir",
-                                Locale.KOREAN
+                                Locale.KOREAN, speechRate = 2.0f
                             )
                             if (bleConnected) bleManager.sendControl(1)
                             delay(300)
                             continue@outer
                         }
-                        ttsManager.speakAndWait("$i", Locale.KOREAN)
+                        ttsManager.speakAndWait("$i", Locale.KOREAN, speechRate = 2.0f)
                     }
 
                     // 최종 범위 확인 후 완료
                     if (abs(currentPitchDeg - BATTING_ANGLE_DEG) <= PITCH_TOLERANCE) {
-                        ttsManager.speakAndWait("잘 하셨습니다. 스윙할 때 이 각도로 스윙하면 됩니다.", Locale.KOREAN)
+                        ttsManager.speakAndWait("잘 하셨습니다. 스윙할 때 이 각도로 스윙하면 됩니다.", Locale.KOREAN, speechRate = 2.0f)
                         delay(1000)
                         // 스트리밍 중지 (startGame() 에서 sendControl(0→1) 로 재시작)
                         if (bleConnected) bleManager.sendControl(0)
