@@ -180,12 +180,11 @@ class MainActivity : AppCompatActivity() {
                 if (isGamepadConnected()) {
                     if (defenseTutorialManager.isRunning) {
                         defenseTutorialManager.notifyControllerConnected()
-                    } else {
+                    } else if (defenseTutorialManager.isTutorialDone()) {
+                        // 튜토리얼 완료 상태 → gameEngine이 직접 안내
                         gameEngine.speakControllerConnected()
-                        if (!defenseTutorialManager.isTutorialDone()) {
-                            defenseTutorialManager.notifyControllerConnected()
-                        }
                     }
+                    // 튜토리얼 미완료 상태 → 튜토리얼 내부에서 안내하므로 생략
                 } else {
                     gameEngine.speakControllerWarning()
                 }

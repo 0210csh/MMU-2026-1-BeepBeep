@@ -213,103 +213,135 @@ class RecordActivity : AppCompatActivity() {
     }
 
     // ────────────────────────────────────────────────────────
-    // 타격 통계
+    // 타격 통계 (개별 투구별기록 기반)
     // ────────────────────────────────────────────────────────
     private fun loadBattingStatsFromFirebase(userId: String) {
         db.collection("users").document(userId).collection("훈련기록")
-            .orderBy("생성일시", Query.Direction.DESCENDING)
+            .orderBy("생성일시", Query.Direction.ASCENDING)
             .get()
             .addOnSuccessListener { documents ->
-                val records = documents.mapNotNull { doc ->
-                    val result = doc.get("종합결과") as? Map<*, *> ?: return@mapNotNull null
-                    val pitchCount = (doc.get("목표투구수") as? Number)?.toInt() ?: 1
-                    BattingRecord(
-                        pitchCount     = pitchCount,
-                        battingAvg     = (result["타율"] as? Number)?.toFloat() ?: 0f,
-                        reactionAvg    = (result["반응속도평균"] as? Number)?.toFloat() ?: 0f,
-                        hitCount       = (result["정타수"] as? Number)?.toFloat() ?: 0f,
-                        foulCount      = (result["파울수"] as? Number)?.toFloat() ?: 0f,
-                        strikeCount    = (result["스트라이크수"] as? Number)?.toFloat() ?: 0f,
-                        baseCorrectPct = (result["베이스정답률"] as? Number)?.toFloat() ?: 0f,
-                        baseCorrect    = (result["베이스정답수"] as? Number)?.toFloat() ?: 0f,
-                        date           = doc.getTimestamp("생성일시")
-                    )
-                }
+                if (documents.isEmpty) { setBattingEmpty(); return@addOnSuccessListener }
 
-                if (records.isEmpty()) { setBattingEmpty(); return@addOnSuccessListener }
+                val sessionDocs = documents.filter { it.getTimestamp("생성일시") != null }
+                if (sessionDocs.isEmpty()) { setBattingEmpty(); return@addOnSuccessListener }
 
-                val totalPitches = records.sumOf { it.pitchCount }
-                binding.tvStatCount.text = "전체 ${totalPitches}구 기준"
-                binding.tvStatCount.contentDescription = "전체 ${totalPitches}구 기준 평균입니다"
+                data class SessionPitches(val date: java.util.Date?, val pitches: List<BattingPitch>)
+                val sessionPitchesList = mutableListOf<SessionPitches>()
+                var completedCount = 0
+                val targetCount = sessionDocs.size
 
-                val totalHit    = records.sumOf { it.hitCount.toDouble() }
-                val totalFoul   = records.sumOf { it.foulCount.toDouble() }
-                val totalStrike = records.sumOf { it.strikeCount.toDouble() }
-                val totalBase   = records.sumOf { it.baseCorrect.toDouble() }
-                val weightedBattingAvg = totalHit / totalPitches
-                val weightedReaction = records.filter { it.reactionAvg > 0 }.let { f ->
-                    if (f.isEmpty()) 0.0
-                    else f.sumOf { it.reactionAvg.toDouble() * it.hitCount } / f.sumOf { it.hitCount.toDouble() }.coerceAtLeast(1.0)
-                }
-                val weightedBaseCorrectPct = if (totalHit > 0) totalBase / totalHit * 100 else 0.0
-
-                binding.tvStatBattingAvg.text     = "%.3f".format(weightedBattingAvg)
-                binding.tvStatReaction.text       = msToSec(weightedReaction)
-                // 20판 기준 환산 (정타+파울+스트라이크 ≈ 20)
-                binding.tvStatHit.text            = "%.1f".format(totalHit / totalPitches * 20)
-                binding.tvStatFoul.text           = "%.1f".format(totalFoul / totalPitches * 20)
-                binding.tvStatStrike.text         = "%.1f".format(totalStrike / totalPitches * 20)
-                binding.tvStatBaseCorrect.text    = "%.1f".format(totalBase / totalPitches * 20)
-                binding.tvStatBaseCorrectPct.text = "${"%.0f".format(weightedBaseCorrectPct)}%"
-
-                val (rawBundles, remainingPitches) = splitIntoBundles20(
-                    records, getCount = { it.pitchCount }, getDate = { it.date?.toDate() }
-                )
-                val completeBundles = rawBundles.mapIndexed { i, pitches ->
-                    makeBattingBundle(pitches, i + 1, false)
-                }.toMutableList()
-                if (remainingPitches.isNotEmpty()) {
-                    completeBundles.add(makeBattingBundle(remainingPitches, completeBundles.size + 1, true))
-                }
-                if (completeBundles.size >= 2) {
-                    battingChartIndex = 0
-                    showBattingGrowthChart(completeBundles)
-                } else {
-                    binding.tvBattingGrowthSection.visibility = android.view.View.GONE
-                    binding.llBattingGrowthRows.visibility    = android.view.View.GONE
-                    val needed = maxOf(0, BUNDLE_SIZE * 2 - totalPitches)
-                    binding.tvBattingGrowthNotice.apply {
-                        visibility = android.view.View.VISIBLE
-                        text = "📊 ${needed}구 더 훈련하면 성장 추이를 볼 수 있어요!"
-                        contentDescription = "${needed}구 더 훈련하면 성장 추이를 확인할 수 있습니다"
-                    }
+                sessionDocs.forEach { doc ->
+                    val sessionDate = doc.getTimestamp("생성일시")?.toDate()
+                    doc.reference.collection("투구별기록")
+                        .orderBy("투구번호", Query.Direction.ASCENDING)
+                        .get()
+                        .addOnSuccessListener { pitchDocs ->
+                            if (!pitchDocs.isEmpty) {
+                                val records = pitchDocs.mapNotNull { p ->
+                                    val result = p.getString("판정") ?: return@mapNotNull null
+                                    BattingPitch(
+                                        result      = result,
+                                        baseCorrect = p.getBoolean("베이스정답여부"),
+                                        reactionMs  = (p.get("주루반응속도") as? Number)?.toLong(),
+                                        date        = sessionDate
+                                    )
+                                }
+                                synchronized(sessionPitchesList) {
+                                    sessionPitchesList.add(SessionPitches(sessionDate, records))
+                                }
+                            }
+                            synchronized(sessionPitchesList) { completedCount++ }
+                            if (completedCount == targetCount) {
+                                val allPitches = sessionPitchesList
+                                    .sortedBy { it.date }
+                                    .flatMap { it.pitches }
+                                runOnUiThread { processBattingPitches(allPitches) }
+                            }
+                        }
+                        .addOnFailureListener {
+                            synchronized(sessionPitchesList) { completedCount++ }
+                            if (completedCount == targetCount) {
+                                val allPitches = sessionPitchesList
+                                    .sortedBy { it.date }
+                                    .flatMap { it.pitches }
+                                runOnUiThread { processBattingPitches(allPitches) }
+                            }
+                        }
                 }
             }
             .addOnFailureListener { setBattingEmpty() }
     }
 
+    private fun processBattingPitches(pitches: List<BattingPitch>) {
+        if (pitches.isEmpty()) { setBattingEmpty(); return }
+
+        val totalPitches = pitches.size
+        val hits         = pitches.filter { it.result == "정타" }
+        val fouls        = pitches.filter { it.result == "파울" }
+        val strikes      = pitches.filter { it.result.startsWith("스트라이크") }
+        val baseCorrects = hits.filter { it.baseCorrect == true }
+        val reactions    = hits.mapNotNull { it.reactionMs }
+
+        val battingAvg     = hits.size.toDouble() / totalPitches
+        val avgReaction    = if (reactions.isNotEmpty()) reactions.average() else 0.0
+        val baseCorrectPct = if (hits.isNotEmpty()) baseCorrects.size.toDouble() / hits.size * 100 else 0.0
+
+        binding.tvStatCount.text = "전체 ${totalPitches}구 기준"
+        binding.tvStatCount.contentDescription = "전체 ${totalPitches}구 기준 평균입니다"
+        binding.tvStatBattingAvg.text     = "%.3f".format(battingAvg)
+        binding.tvStatReaction.text       = if (avgReaction > 0) msToSec(avgReaction) else "-"
+        // 20구 기준 환산
+        binding.tvStatHit.text            = "%.1f".format(hits.size.toDouble()         / totalPitches * 20)
+        binding.tvStatFoul.text           = "%.1f".format(fouls.size.toDouble()        / totalPitches * 20)
+        binding.tvStatStrike.text         = "%.1f".format(strikes.size.toDouble()      / totalPitches * 20)
+        binding.tvStatBaseCorrect.text    = "%.1f".format(baseCorrects.size.toDouble() / totalPitches * 20)
+        binding.tvStatBaseCorrectPct.text = "${"%.0f".format(baseCorrectPct)}%"
+
+        // splitIntoBundles20 은 내림차순(최신→과거) 입력을 기대하므로 reversed() 후 전달
+        val (rawBundles, remainingPitches) = splitIntoBundles20(
+            pitches.reversed(), getCount = { 1 }, getDate = { it.date }
+        )
+        val completeBundles = rawBundles.mapIndexed { i, bundle ->
+            makeBattingBundle(bundle, i + 1, false)
+        }.toMutableList()
+        if (remainingPitches.isNotEmpty()) {
+            completeBundles.add(makeBattingBundle(remainingPitches, completeBundles.size + 1, true))
+        }
+        if (completeBundles.size >= 2) {
+            battingChartIndex = 0
+            showBattingGrowthChart(completeBundles)
+        } else {
+            binding.tvBattingGrowthSection.visibility = android.view.View.GONE
+            binding.llBattingGrowthRows.visibility    = android.view.View.GONE
+            val needed = maxOf(0, BUNDLE_SIZE * 2 - totalPitches)
+            binding.tvBattingGrowthNotice.apply {
+                visibility = android.view.View.VISIBLE
+                text = "📊 ${needed}구 더 훈련하면 성장 추이를 볼 수 있어요!"
+                contentDescription = "${needed}구 더 훈련하면 성장 추이를 확인할 수 있습니다"
+            }
+        }
+    }
+
     private fun makeBattingBundle(
-        pitches: List<PitchUnit<BattingRecord>>,
+        pitches: List<PitchUnit<BattingPitch>>,
         index: Int,
         isPartial: Boolean
     ): BattingBundle {
-        val sessions  = pitches.map { it.session }
         val dates     = pitches.mapNotNull { it.date }
         val firstDate = dates.minOrNull()
         val lastDate  = dates.maxOrNull()
         val (label, ttsLabel) = makeDateLabels(firstDate, lastDate, index)
         val pc = pitches.size
 
-        val bHit         = sessions.sumOf { it.hitCount.toDouble() / it.pitchCount } / sessions.size * pc
-        val bFoul        = sessions.sumOf { it.foulCount.toDouble() / it.pitchCount } / sessions.size * pc
-        val bStrike      = sessions.sumOf { it.strikeCount.toDouble() / it.pitchCount } / sessions.size * pc
-        val bBatAvg      = if (pc > 0) bHit / pc else 0.0
-        val bBaseCorrectRaw = sessions.sumOf { it.baseCorrect.toDouble() / it.pitchCount } / sessions.size * pc
-        val bBaseCorrect = if (sessions.all { it.hitCount == 0f }) null else bBaseCorrectRaw
-        val bReactionRaw = sessions.filter { it.reactionAvg > 0 }.let { f ->
-            if (f.isEmpty()) null
-            else f.sumOf { it.reactionAvg.toDouble() * it.hitCount } / f.sumOf { it.hitCount.toDouble() }.coerceAtLeast(1.0)
-        }
+        val hits         = pitches.filter { it.session.result == "정타" }
+        val fouls        = pitches.filter { it.session.result == "파울" }
+        val strikes      = pitches.filter { it.session.result.startsWith("스트라이크") }
+        val baseCorrects = hits.filter { it.session.baseCorrect == true }
+        val reactions    = hits.mapNotNull { it.session.reactionMs }
+
+        val bBatAvg   = hits.size.toDouble() / pc
+        val bReaction = if (reactions.isEmpty()) null else reactions.average()
+
         return BattingBundle(
             index          = index,
             label          = label,
@@ -317,11 +349,11 @@ class RecordActivity : AppCompatActivity() {
             pitchCount     = pc,
             isPartial      = isPartial,
             battingAvg     = roundDiff2(bBatAvg).toDouble(),
-            reactionAvg    = bReactionRaw?.let { roundDiff2(it / 1000.0).toDouble() * 1000.0 },
-            hitAvg         = roundDiff2(bHit).toDouble(),
-            foulAvg        = roundDiff2(bFoul).toDouble(),
-            strikeAvg      = roundDiff2(bStrike).toDouble(),
-            baseCorrectAvg = bBaseCorrect?.let { roundDiff2(it).toDouble() }
+            reactionAvg    = bReaction?.let { roundDiff2(it / 1000.0).toDouble() * 1000.0 },
+            hitAvg         = hits.size.toDouble(),
+            foulAvg        = fouls.size.toDouble(),
+            strikeAvg      = strikes.size.toDouble(),
+            baseCorrectAvg = if (hits.isEmpty()) null else baseCorrects.size.toDouble()
         )
     }
 
@@ -864,16 +896,11 @@ class RecordActivity : AppCompatActivity() {
         }
     }
 
-    data class BattingRecord(
-        val pitchCount: Int,
-        val battingAvg: Float,
-        val reactionAvg: Float,
-        val hitCount: Float,
-        val foulCount: Float,
-        val strikeCount: Float,
-        val baseCorrectPct: Float,
-        val baseCorrect: Float,
-        val date: com.google.firebase.Timestamp? = null
+    data class BattingPitch(
+        val result: String,        // "정타", "파울", "스트라이크(무스윙)" 등
+        val baseCorrect: Boolean?, // 정타일 때만 true/false, 나머지 null
+        val reactionMs: Long?,     // 정타+정답일 때만 값, 나머지 null
+        val date: java.util.Date?
     )
 
     data class DefenseRecord(
@@ -881,4 +908,5 @@ class RecordActivity : AppCompatActivity() {
         val reactionMs: Long,   // 성공 시 반응속도(ms), 실패 시 -1
         val date: java.util.Date?
     )
+
 }
