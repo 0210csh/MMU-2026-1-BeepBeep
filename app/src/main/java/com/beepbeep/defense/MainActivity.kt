@@ -11,6 +11,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.beepbeep.defense.databinding.ActivityMainBinding
@@ -217,6 +218,19 @@ class MainActivity : AppCompatActivity() {
                 gameEngine.isTutorialMode = false
             }
         )
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (gameEngine.sessionActive && !defenseTutorialManager.isRunning) {
+                    gameEngine.forceStopSession(silent = true)
+                    finish()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
+            }
+        })
 
         if (isAdmin) setupButtons()
         observeGameState()
@@ -548,16 +562,6 @@ class MainActivity : AppCompatActivity() {
                     } else false
                 }
             }
-    }
-
-    @Suppress("DEPRECATION")
-    override fun onBackPressed() {
-        if (gameEngine.sessionActive && !defenseTutorialManager.isRunning) {
-            gameEngine.forceStopSession(silent = true)
-            finish()
-        } else {
-            super.onBackPressed()
-        }
     }
 
     override fun onDestroy() {
