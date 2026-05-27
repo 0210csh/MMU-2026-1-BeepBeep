@@ -77,7 +77,7 @@ class SwingTestActivity : AppCompatActivity() {
     private var targetPitches   = 3
     private var currentPitchNum = 0
     private var successCount    = 0
-    private var isTraining      = false
+    @Volatile private var isTraining = false
     private var hitCount        = 0
     private var foulCount       = 0
     private var strikeCount     = 0
@@ -1683,6 +1683,8 @@ class SwingTestActivity : AppCompatActivity() {
     // 훈련 흐름 제어
     // ─────────────────────────────────────────────────────
     private fun scheduleNextOrFinish(success: Boolean) {
+        // 조기종료 후 독립 코루틴(onBasePressed delay 등)에서 호출되는 경우 차단
+        if (!isTraining) return
         if (tutorialManager.isRunning) {
             // step 6에서만 베이스 정답 카운트 누적 (결과 TTS에 활용)
             if (tutorialManager.currentStep == 6 && success) successCount++
