@@ -22,8 +22,18 @@ class LoginActivity : AppCompatActivity() {
         // 자동로그인 체크
         val pref = getSharedPreferences("UserInfo", MODE_PRIVATE)
         if (pref.getBoolean("auto_login", false)) {
-            startActivity(Intent(this, HomeActivity::class.java))
-            finish()
+            val userId = pref.getString("id", "anonymous") ?: "anonymous"
+            db.collection("admins").document(userId).get()
+                .addOnSuccessListener { adminDoc ->
+                    getSharedPreferences("AdminCache", MODE_PRIVATE)
+                        .edit().putBoolean("isAdmin", adminDoc.exists()).apply()
+                    startActivity(Intent(this, HomeActivity::class.java))
+                    finish()
+                }
+                .addOnFailureListener {
+                    startActivity(Intent(this, HomeActivity::class.java))
+                    finish()
+                }
             return
         }
 
@@ -64,9 +74,21 @@ class LoginActivity : AppCompatActivity() {
                                 .putBoolean("auto_login", cbAutoLogin.isChecked)
                                 .apply()
 
-                            Toast.makeText(this, "로그인 성공!", Toast.LENGTH_SHORT).show()
-                            startActivity(Intent(this, HomeActivity::class.java))
-                            finish()
+                            db.collection("admins").document(id).get()
+                                .addOnSuccessListener { adminDoc ->
+                                    getSharedPreferences("AdminCache", MODE_PRIVATE)
+                                        .edit().putBoolean("isAdmin", adminDoc.exists()).apply()
+                                    Toast.makeText(this, "로그인 성공!", Toast.LENGTH_SHORT).show()
+                                    startActivity(Intent(this, HomeActivity::class.java))
+                                    finish()
+                                }
+                                .addOnFailureListener {
+                                    getSharedPreferences("AdminCache", MODE_PRIVATE)
+                                        .edit().putBoolean("isAdmin", false).apply()
+                                    Toast.makeText(this, "로그인 성공!", Toast.LENGTH_SHORT).show()
+                                    startActivity(Intent(this, HomeActivity::class.java))
+                                    finish()
+                                }
                         } else {
                             Toast.makeText(this, "비밀번호가 틀렸습니다", Toast.LENGTH_SHORT).show()
                         }

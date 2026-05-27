@@ -388,10 +388,8 @@ class SwingTestActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ── 관리자 여부 체크 ──
-        val userId = getSharedPreferences("UserInfo", MODE_PRIVATE)
-            .getString("id", "anonymous") ?: "anonymous"
-        isAdmin = userId == "123402"
+        // ── 관리자 여부 체크 (로그인 시 저장된 캐시 사용) ──
+        isAdmin = getSharedPreferences("AdminCache", MODE_PRIVATE).getBoolean("isAdmin", false)
         // 관리자: 가로 강제 (매니페스트 기본값 portrait → 1회 재생성 허용)
         // 일반 사용자: 매니페스트 portrait 그대로 → 재생성 없음
         if (isAdmin) {
@@ -950,16 +948,20 @@ class SwingTestActivity : AppCompatActivity() {
                     val tDiv       = System.currentTimeMillis()
                     val targetPanX = if (targetBase == 3) -1f else 1f
 
-                    spatialAudio.updateBallPosition(0f, 0f, -0.5f)
-                    spatialAudio.updateHeading(currentHeadingDeg)
-                    spatialAudio.startBeep()
+                    if (!gangSpoken) {
+                        spatialAudio.updateBallPosition(0f, 0f, -0.5f)
+                        spatialAudio.updateHeading(currentHeadingDeg)
+                        spatialAudio.startBeep()
+                    }
 
                     while (isActive) {
                         val progress = ((System.currentTimeMillis() - tDiv).toFloat() / divMs)
                             .coerceIn(0f, 1f)
                         divProgress = progress
-                        spatialAudio.updateBallPosition(targetPanX * progress * 5f, 0f, -0.5f)
-                        spatialAudio.updateHeading(currentHeadingDeg)
+                        if (!gangSpoken) {
+                            spatialAudio.updateBallPosition(targetPanX * progress * 5f, 0f, -0.5f)
+                            spatialAudio.updateHeading(currentHeadingDeg)
+                        }
                         if (isAdmin) withContext(Dispatchers.Main) {
                             ballTrackView?.updateBall(
                                 targetPanX * progress,
@@ -971,13 +973,10 @@ class SwingTestActivity : AppCompatActivity() {
                         delay(16)
                     }
 
-                    spatialAudio.stopBeep()
-                    audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
-
-                    // gangSpoken=true 케이스: earlyMinInWindow에서 시작한 베이스 비프음이
-                    // divMs 애니메이션의 startBeep()에 의해 취소됨 → 여기서 재시작
-                    // (튜토리얼 step4에서는 베이스 비프 불필요)
-                    if (gangSpoken && !(tutorialManager.isRunning && tutorialManager.currentStep == 4)) startBaseBeep()
+                    if (!gangSpoken) {
+                        spatialAudio.stopBeep()
+                        audioTrack?.pause(); audioTrack?.flush(); audioTrack?.play()
+                    }
 
                     withContext(Dispatchers.Main) {
                         ballTrackView?.reset()

@@ -1,5 +1,7 @@
 package com.beepbeep.defense
 
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -52,15 +54,14 @@ class MainActivity : AppCompatActivity() {
             if ((dev.sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD) {
                 if (isAdmin) runOnUiThread { binding?.switchFakeController?.isChecked = true }
                 if (defenseTutorialManager.isRunning) {
-                    // 튜토리얼 실행 중 → 튜토리얼에 알림 (튜토리얼이 TTS 담당)
                     defenseTutorialManager.notifyControllerConnected()
                 } else {
-                    // 튜토리얼 미실행 시 항상 연결 TTS 재생
                     gameEngine.speakControllerConnected()
                     if (!defenseTutorialManager.isTutorialDone()) {
                         defenseTutorialManager.notifyControllerConnected()
                     }
                 }
+                updateSimpleBleStatus()
             }
         }
         override fun onInputDeviceChanged(deviceId: Int) {}
@@ -68,6 +69,7 @@ class MainActivity : AppCompatActivity() {
             if (!isRealGamepadConnected()) {
                 if (isAdmin) runOnUiThread { binding?.switchFakeController?.isChecked = false }
                 gameEngine.speakControllerDisconnected()
+                updateSimpleBleStatus()
             }
         }
     }
@@ -146,10 +148,8 @@ class MainActivity : AppCompatActivity() {
                         or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 )
 
-        // ── 관리자 여부 체크 ──
-        val userId = getSharedPreferences("UserInfo", MODE_PRIVATE)
-            .getString("id", "anonymous") ?: "anonymous"
-        isAdmin = userId == "123402"
+        // ── 관리자 여부 체크 (로그인 시 저장된 캐시 사용) ──
+        isAdmin = getSharedPreferences("AdminCache", MODE_PRIVATE).getBoolean("isAdmin", false)
         requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
         if (isAdmin) {
@@ -249,17 +249,37 @@ class MainActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────
     // 심플 UI 상태 업데이트 (일반 사용자)
     // ─────────────────────────────────────────────────────
-    private fun updateSimpleStatus(text: String, bgColor: Int = 0xFF0A0A0A.toInt()) {
+    private fun updateSimpleStatus(text: String, bgColor: Int = 0xFF0A0A0A.toInt()) {}
+
+    private fun updateSimpleBleStatus() {
         if (isAdmin) return
+        val connected = isRealGamepadConnected()
+        val battery   = getGamepadBattery()
         runOnUiThread {
-            findViewById<TextView>(R.id.tvSimpleStatus)?.text = text
-            findViewById<View>(R.id.simpleRootLayout)?.setBackgroundColor(bgColor)
-            val state = gameEngine.state.value
-            val scoreText = if (state.targetBallCount > 0)
-                "성공 ${state.score} / ${state.totalAttempts} (목표 ${state.targetBallCount}회)"
-            else ""
-            findViewById<TextView>(R.id.tvSimpleScore)?.text = scoreText
+            val color = if (connected) 0xFF4ADE80.toInt() else 0xFFF87171.toInt()
+            val label = if (connected) "컨트롤러 연결됨" else "컨트롤러 미연결"
+            findViewById<TextView>(R.id.tvSimpleBleIcon)?.setTextColor(color)
+            findViewById<TextView>(R.id.tvSimpleBleStatus)?.text = label
+            findViewById<TextView>(R.id.tvSimpleBleStatus)?.setTextColor(color)
+            val tvBattery = findViewById<TextView>(R.id.tvSimpleBattery)
+            if (battery >= 0) {
+                tvBattery?.text = "배터리 $battery%"
+                tvBattery?.visibility = View.VISIBLE
+            } else {
+                tvBattery?.visibility = View.GONE
+            }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun getGamepadBattery(): Int {
+        return try {
+            val adapter = getSystemService(BluetoothManager::class.java)?.adapter ?: return -1
+            adapter.bondedDevices.firstNotNullOfOrNull { device ->
+                val level = device.javaClass.getMethod("getBatteryLevel").invoke(device) as? Int ?: -1
+                if (level >= 0) level else null
+            } ?: -1
+        } catch (_: Exception) { -1 }
     }
 
     private fun registerOrientationSensor() {
@@ -432,6 +452,7 @@ class MainActivity : AppCompatActivity() {
         if (isAdmin) {
             binding?.switchFakeController?.isChecked = isRealGamepadConnected()
         }
+        updateSimpleBleStatus()
     }
 
     override fun onPause() {
