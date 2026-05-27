@@ -243,91 +243,100 @@ class TrainingActivity : AppCompatActivity() {
                 if (sessions.isEmpty) { showDefenseEmpty(); return@addOnSuccessListener }
 
                 val doc         = sessions.documents[0]
+                val sessionId   = doc.id
                 val targetCount = (doc.get("목표횟수") as? Number)?.toInt() ?: 0
-                val successRate = (doc.get("성공률") as? Number)?.toFloat() ?: 0f
-                val successCnt  = (doc.get("성공횟수") as? Number)?.toFloat() ?: 0f
-                val failCnt     = (doc.get("실패횟수") as? Number)?.toFloat() ?: 0f
-                val reactions   = doc.get("개인반응속도목록") as? List<*>
+                val result      = doc.get("종합결과") as? Map<*, *>
+                val successRate = (result?.get("성공률") as? Number)?.toFloat() ?: 0f
+                val successCnt  = (result?.get("성공횟수") as? Number)?.toFloat() ?: 0f
+                val failCnt     = (result?.get("실패횟수") as? Number)?.toFloat() ?: 0f
 
                 binding.tvDefSummary.text =
                     "최근 ${targetCount}회  |  성공률 ${"%.0f".format(successRate)}%\n성공 ${"%.0f".format(successCnt)} / 실패 ${"%.0f".format(failCnt)}"
                 binding.tvDefSummary.visibility = android.view.View.VISIBLE
 
-                binding.llDefCards.removeAllViews()
+                db.collection("users").document(userId)
+                    .collection("수비훈련기록").document(sessionId)
+                    .collection("포구별기록")
+                    .orderBy("회차", Query.Direction.ASCENDING)
+                    .get()
+                    .addOnSuccessListener { catches ->
+                        binding.llDefCards.removeAllViews()
+                        if (catches.isEmpty) {
+                            val tv = TextView(this).apply {
+                                text = "회차별 기록 없음"
+                                textSize = 15f
+                                setTextColor(0xFF888888.toInt())
+                                setPadding(4, 8, 4, 8)
+                            }
+                            binding.llDefCards.addView(tv)
+                            return@addOnSuccessListener
+                        }
 
-                if (reactions.isNullOrEmpty()) {
-                    val tv = TextView(this).apply {
-                        text = "반응속도 기록 없음"
-                        textSize = 15f
-                        setTextColor(0xFF888888.toInt())
-                        setPadding(4, 8, 4, 8)
+                        for ((idx, catchDoc) in catches.documents.withIndex()) {
+                            val round     = (catchDoc.get("회차") as? Number)?.toInt() ?: (idx + 1)
+                            val isSuccess = catchDoc.getString("결과") == "성공"
+                            val ms        = (catchDoc.get("반응속도") as? Number)?.toLong() ?: -1L
+
+                            val cardColor   = if (isSuccess) 0xFF0D2233.toInt() else 0xFF2A1010.toInt()
+                            val resultColor = if (isSuccess) 0xFF38BDF8.toInt() else 0xFFF87171.toInt()
+                            val resultEmoji = if (isSuccess) "✅" else "❌"
+                            val resultText  = if (isSuccess) "성공" else "실패"
+                            val reactionStr = if (ms > 0) "반응속도 ${"%.2f".format(ms / 1000.0)}초" else ""
+
+                            val cardDesc = listOf("${round}번", resultText, reactionStr)
+                                .filter { it.isNotEmpty() }.joinToString(" ")
+
+                            val card = LinearLayout(this).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity     = Gravity.CENTER_VERTICAL
+                                setBackgroundColor(cardColor)
+                                val lp = LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                )
+                                lp.setMargins(0, 0, 0, 6)
+                                layoutParams = lp
+                                setPadding(16, 14, 16, 14)
+                                importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_YES
+                                contentDescription = cardDesc
+                                isFocusable = true
+                            }
+
+                            val tvNum = TextView(this).apply {
+                                text = "${round}번"
+                                textSize = 16f
+                                setTextColor(0xFF888888.toInt())
+                                layoutParams = LinearLayout.LayoutParams(120, ViewGroup.LayoutParams.WRAP_CONTENT)
+                                importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                            }
+
+                            val tvResult = TextView(this).apply {
+                                text = "$resultEmoji $resultText"
+                                textSize = 17f
+                                setTextColor(resultColor)
+                                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                                importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                            }
+
+                            val tvReaction = TextView(this).apply {
+                                text = if (ms > 0) "${"%.2f".format(ms / 1000.0)}s" else "-"
+                                textSize = 15f
+                                setTextColor(0xFFFFB74D.toInt())
+                                layoutParams = LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                )
+                                importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                            }
+
+                            card.addView(tvNum)
+                            card.addView(tvResult)
+                            card.addView(tvReaction)
+                            binding.llDefCards.addView(card)
+                        }
                     }
-                    binding.llDefCards.addView(tv)
-                    return@addOnSuccessListener
-                }
-
-                reactions.forEachIndexed { idx, v ->
-                    val ms        = (v as? Number)?.toLong() ?: 0L
-                    val isSuccess = idx < successCnt.toInt()
-
-                    val cardColor   = if (isSuccess) 0xFF0D2233.toInt() else 0xFF2A1010.toInt()
-                    val resultColor = if (isSuccess) 0xFF38BDF8.toInt() else 0xFFF87171.toInt()
-                    val resultEmoji = if (isSuccess) "✅" else "❌"
-                    val resultText  = if (isSuccess) "성공" else "실패"
-                    val reactionStr = if (ms > 0) "반응속도 ${"%.2f".format(ms / 1000.0)}초" else ""
-
-                    val cardDesc = listOf("${idx + 1}번", resultText, reactionStr)
-                        .filter { it.isNotEmpty() }.joinToString(" ")
-
-                    val card = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity     = Gravity.CENTER_VERTICAL
-                        setBackgroundColor(cardColor)
-                        val lp = LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                        )
-                        lp.setMargins(0, 0, 0, 6)
-                        layoutParams = lp
-                        setPadding(16, 14, 16, 14)
-                        importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_YES
-                        contentDescription = cardDesc
-                        isFocusable = true
-                    }
-
-                    val tvNum = TextView(this).apply {
-                        text = "${idx + 1}번"
-                        textSize = 16f
-                        setTextColor(0xFF888888.toInt())
-                        layoutParams = LinearLayout.LayoutParams(120, ViewGroup.LayoutParams.WRAP_CONTENT)
-                        importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                    }
-
-                    val tvResult = TextView(this).apply {
-                        text = "$resultEmoji $resultText"
-                        textSize = 17f
-                        setTextColor(resultColor)
-                        typeface = android.graphics.Typeface.DEFAULT_BOLD
-                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                        importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                    }
-
-                    val tvReaction = TextView(this).apply {
-                        text = if (ms > 0) "${"%.2f".format(ms / 1000.0)}s" else "-"
-                        textSize = 15f
-                        setTextColor(0xFFFFB74D.toInt())
-                        layoutParams = LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.WRAP_CONTENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                        )
-                        importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                    }
-
-                    card.addView(tvNum)
-                    card.addView(tvResult)
-                    card.addView(tvReaction)
-                    binding.llDefCards.addView(card)
-                }
+                    .addOnFailureListener { showDefenseEmpty() }
             }
             .addOnFailureListener { showDefenseEmpty() }
     }
