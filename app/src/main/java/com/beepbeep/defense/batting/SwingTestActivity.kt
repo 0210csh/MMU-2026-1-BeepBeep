@@ -176,7 +176,7 @@ class SwingTestActivity : AppCompatActivity() {
     @Volatile private var swingWasStrong:  Boolean = false
     @Volatile private var swingBatHeight:  Float   = Float.NaN
 
-    private var isWaitingForInput = false
+    @Volatile private var isWaitingForInput = false
     private var beepStartTime     = 0L
 
     private val pitchHistory = ArrayList<Pair<Long, Float>>()
