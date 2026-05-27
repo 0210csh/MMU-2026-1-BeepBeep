@@ -14,6 +14,9 @@ class SwingTtsManager(private val context: Context) {
     var isReady: Boolean = false
         private set
 
+    // speakTwoSequentially 진행 중 stop() 호출 시 두 번째 발화 차단
+    @Volatile private var sequenceActive = false
+
     fun init(onReady: () -> Unit = {}) {
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
@@ -85,8 +88,11 @@ class SwingTtsManager(private val context: Context) {
         onFirstDone: () -> Unit = {}
     ) {
         if (!isReady) return
+        sequenceActive = true
         val deferred = CompletableDeferred<Unit>()
         withContext(Dispatchers.Main) {
+            // stop()이 먼저 호출된 경우 발화 없이 즉시 완료
+            if (!sequenceActive) { deferred.complete(Unit); return@withContext }
             tts?.setLanguage(locale)
             tts?.setSpeechRate(speechRate)
             tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -106,6 +112,7 @@ class SwingTtsManager(private val context: Context) {
     }
 
     fun stop() {
+        sequenceActive = false
         tts?.stop()
     }
 

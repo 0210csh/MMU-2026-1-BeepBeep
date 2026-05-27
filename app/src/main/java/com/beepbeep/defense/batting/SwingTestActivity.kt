@@ -177,6 +177,7 @@ class SwingTestActivity : AppCompatActivity() {
     @Volatile private var swingBatHeight:  Float   = Float.NaN
 
     @Volatile private var isWaitingForInput = false
+    @Volatile private var isResultSpeaking  = false   // 결과 TTS 중 버튼 차단
     private var beepStartTime     = 0L
 
     private val pitchHistory = ArrayList<Pair<Long, Float>>()
@@ -1346,6 +1347,12 @@ class SwingTestActivity : AppCompatActivity() {
             }
         }
 
+        // 결과 TTS 중 모든 버튼 차단
+        if (isResultSpeaking) {
+            prevBtn1 = btn1; prevBtn2 = btn2
+            return
+        }
+
         // 양쪽 버튼 동시 상승 에지
         if (btn1 && !wasBtn1 && btn2 && !wasBtn2) {
             batBtn1Job?.cancel(); batBtn2Job?.cancel()
@@ -1482,7 +1489,9 @@ class SwingTestActivity : AppCompatActivity() {
                     append("정타 ${hitCount}개, 타율 ${battingAvgPct}퍼센트. ")
                     if (avgReaction >= 0L) append("평균 반응속도 %.1f초.".format(avgReaction / 1000.0))
                 }
+                isResultSpeaking = true
                 ttsManager.speakWithDone(ttsText) {
+                    isResultSpeaking = false
                     runOnUiThread {
                         btnStart?.isEnabled           = true
                         btnSwingPitchMinus?.isEnabled = true
@@ -1542,7 +1551,9 @@ class SwingTestActivity : AppCompatActivity() {
             editor.putFloat("total_sum_base_correct",     statsPref.getFloat("total_sum_base_correct",     0f) + successCount.toFloat())
             editor.apply()
         } else if (speakTts) {
+            isResultSpeaking = true
             ttsManager.speakWithDone("조기종료") {
+                isResultSpeaking = false
                 runOnUiThread {
                     btnStart?.isEnabled           = true
                     btnSwingPitchMinus?.isEnabled = true
@@ -1726,7 +1737,9 @@ class SwingTestActivity : AppCompatActivity() {
             append("정타 ${hitCount}개, 타율 ${battingAvgPct}퍼센트. ")
             if (avgReactionForTts >= 0L) append("평균 반응속도 %.1f초.".format(avgReactionForTts / 1000.0))
         }
+        isResultSpeaking = true
         ttsManager.speakWithDone(ttsText) {
+            isResultSpeaking = false
             runOnUiThread {
                 btnStart?.isEnabled           = true
                 btnSwingPitchMinus?.isEnabled = true
