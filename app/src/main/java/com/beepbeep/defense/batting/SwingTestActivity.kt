@@ -775,16 +775,51 @@ class SwingTestActivity : AppCompatActivity() {
 
             if (earlyMinInWindow && swingWasStrong && abs(earlyAngleDiff) <= PITCH_TOLERANCE) {
                 gangSpoken = true
+                // gameJob이 취소되기 전에 그래프 데이터 스냅샷을 미리 저장
+                val gangSnapHistory     = ArrayList(pitchHistory)
+                val gangSnapHitTime     = hitTimeRelMs
+                val gangSnapWinOpen     = graphHitWindowOpenRelMs
+                val gangSnapWinClose    = graphHitWindowCloseRelMs
+                val gangSnapMinSearch   = graphMinSearchStartRelMs
+                val gangSnapMinRel      = if (minBatAngleAbsMs > 0L && minBatAngleDeg < Float.MAX_VALUE) minBatAngleRelMs else -1L
+                val gangSnapMinDeg      = minBatAngleDeg
+                val gangSnapPitchWin    = graphPitchWindowStartMs
+                val gangSnapPitchTts    = graphPitchTtsStartMs
+                val gangSnapP2Rel       = phase2StartAbsMs - pitchRecordStart
+                val gangSnapP3Rel       = phase3StartAbsMs - pitchRecordStart
+                val gangSnapWinOpenDeg  = windowOpenPitchDeg
+                val gangSnapWinCloseDeg = windowClosePitchDeg
                 withContext(Dispatchers.Main) {
                     ttsManager.speak("깡")
                     tvStatus?.text = "소리 들어봐!"
                     tvStatus?.setTextColor(0xFFFBBF24.toInt())
                     updateSimpleStatus("정타!", 0xFF166534.toInt())
+                    if (isAdmin) {
+                        perPitchFullHistory.add(gangSnapHistory)
+                        perPitchHitTimeRelFull.add(gangSnapHitTime)
+                        perPitchWinOpenRelFull.add(gangSnapWinOpen)
+                        perPitchWinCloseRelFull.add(gangSnapWinClose)
+                        perPitchMinSearchRelFull.add(gangSnapMinSearch)
+                        perPitchMinAngleRelFull.add(gangSnapMinRel)
+                        perPitchMinAngleDegList.add(gangSnapMinDeg)
+                        perPitchPitchWinStartRelFull.add(gangSnapPitchWin)
+                        perPitchPitchTtsStartRelFull.add(gangSnapPitchTts)
+                        perPitchPhase2RelFull.add(gangSnapP2Rel)
+                        perPitchPhase3RelFull.add(gangSnapP3Rel)
+                        perPitchWinOpenDeg.add(gangSnapWinOpenDeg)
+                        perPitchWinCloseDeg.add(gangSnapWinCloseDeg)
+                    }
                 }
                 launch {
                     delay(100L)
                     if (tutorialManager.isRunning && tutorialManager.currentStep == 4) return@launch
-                    withContext(Dispatchers.Main) { if (isAdmin) activateBothBases() }
+                    withContext(Dispatchers.Main) {
+                        if (isAdmin) activateBothBases()
+                        currentPitchRecord["판정"] = "정타"
+                        currentPitchRecord["피드백"] = "정타 — 베이스 선택"
+                        perPitchRecords.add(HashMap(currentPitchRecord))
+                        hitCount++
+                    }
                     startBaseBeep()
                     isWaitingForInput = true
                 }
@@ -819,7 +854,8 @@ class SwingTestActivity : AppCompatActivity() {
             val snapP3Rel         = phase3StartAbsMs - pitchRecordStart
             val snapWinOpenDeg    = windowOpenPitchDeg
             val snapWinCloseDeg   = windowClosePitchDeg
-            if (isAdmin) withContext(Dispatchers.Main) {
+            // gangSpoken=true면 윈도우 마감 시점에 이미 추가됨 → 중복 방지
+            if (isAdmin && !gangSpoken) withContext(Dispatchers.Main) {
                 perPitchFullHistory.add(ArrayList(pitchHistory))
                 perPitchHitTimeRelFull.add(snapHitTime)
                 perPitchWinOpenRelFull.add(snapWinOpen)
@@ -877,8 +913,10 @@ class SwingTestActivity : AppCompatActivity() {
                     currentPitchRecord["판정"] = "정타"
                     currentPitchRecord["피드백"] = "정타 — 베이스 선택"
                     withContext(Dispatchers.Main) {
-                        perPitchRecords.add(HashMap(currentPitchRecord))
-                        hitCount++
+                        if (!gangSpoken) {
+                            perPitchRecords.add(HashMap(currentPitchRecord))
+                            hitCount++
+                        }
                         // gangSpoken=false면 조기 발화가 안 된 경우 — 여기서 fallback 발화
                         if (!gangSpoken) {
                             ttsManager.speak("깡")
@@ -1839,7 +1877,7 @@ class SwingTestActivity : AppCompatActivity() {
             allSetAngles.forEachIndexed { i, a -> appendLine("  #${i + 1}: ${"%.1f".format(a)}°") }
         }
 
-        val totalData  = perPitchFullHistory.size
+        val totalData  = perPitchRecords.size
         val heightPx   = (340 * resources.displayMetrics.density).toInt()
         var currentIdx = 0
 
