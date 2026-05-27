@@ -130,10 +130,10 @@ class SwingTestActivity : AppCompatActivity() {
     private val perPitchHitTimesPhase3 = mutableListOf<Long>()
 
     // ── 임계값 ──────────────────────────────────────────
-    private val HIT_ACCEL_THRESHOLD  = 48f
-    private val HIT_GYRO_THRESHOLD   = 30f
+    private val HIT_ACCEL_THRESHOLD  = 65f
+    private val HIT_GYRO_THRESHOLD   = 35f
     private val MIN_ACCEL_THRESHOLD  = 48f
-    private val MIN_GYRO_THRESHOLD   = 30f
+    private val MIN_GYRO_THRESHOLD   = 35f
     private val PITCH_TOLERANCE      = 15f
 
     // ── 물리 상수 ────────────────────────────────────────
@@ -1288,17 +1288,15 @@ class SwingTestActivity : AppCompatActivity() {
                 btnBleConnect?.isEnabled = true; btnBleConnect?.text = "배트 센서 해제"
                 tvBleStatus?.text = "● 연결됨"; tvBleStatus?.setTextColor(0xFF4ADE80.toInt())
             }
-            // 튜토리얼 미완료 → 자동 시작
-            if (!tutorialManager.isTutorialDone() && !tutorialManager.isRunning) {
-                scope.launch {
-                    delay(1_000L)
+            // 튜토리얼 완료 여부: 로컬 우선, 없으면 Firebase 조회
+            scope.launch {
+                delay(1_000L)
+                val done = tutorialManager.syncTutorialDoneFromFirebase()
+                if (!done && !tutorialManager.isRunning) {
                     ttsManager.speakAndWait("배트가 연결되었습니다.", Locale.KOREAN)
                     delay(500)
                     withContext(Dispatchers.Main) { tutorialManager.startTutorial() }
-                }
-            } else {
-                scope.launch {
-                    delay(1_000L)
+                } else {
                     ttsManager.speak("배트가 연결되었습니다")
                 }
             }

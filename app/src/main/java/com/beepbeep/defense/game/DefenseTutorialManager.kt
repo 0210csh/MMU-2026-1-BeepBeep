@@ -3,6 +3,8 @@ package com.beepbeep.defense.game
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 class DefenseTutorialManager(
     private val context: Context,
@@ -36,6 +38,33 @@ class DefenseTutorialManager(
     fun isTutorialDone(): Boolean =
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             .getBoolean(KEY_DEFENSE_DONE, false)
+
+    // ─────────────────────────────────────────────────────
+    // Firebase 동기화: 로컬 우선, 없으면 Firestore 조회 후 로컬 캐시
+    // ─────────────────────────────────────────────────────
+    suspend fun syncTutorialDoneFromFirebase(): Boolean {
+        if (isTutorialDone()) return true
+        val userId = context.getSharedPreferences("UserInfo", Context.MODE_PRIVATE)
+            .getString("id", "anonymous") ?: "anonymous"
+        if (userId == "anonymous") return false
+        return suspendCoroutine { cont ->
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("users").document(userId)
+                .get()
+                .addOnSuccessListener { doc ->
+                    val done = doc.getBoolean("defenseTutorialDone") ?: false
+                    if (done) {
+                        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                            .edit().putBoolean(KEY_DEFENSE_DONE, true).apply()
+                    }
+                    cont.resume(done)
+                }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Firebase 수비 튜토리얼 조회 실패: ${e.message}")
+                    cont.resume(false)
+                }
+        }
+    }
 
     // ─────────────────────────────────────────────────────
     // 튜토리얼 시작
@@ -209,6 +238,16 @@ class DefenseTutorialManager(
         currentStep = 0
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_DEFENSE_DONE, true).apply()
+        // Firebase에도 완료 플래그 저장 (다른 기기에서도 skip 가능하도록)
+        val userId = context.getSharedPreferences("UserInfo", Context.MODE_PRIVATE)
+            .getString("id", "anonymous") ?: "anonymous"
+        if (userId != "anonymous") {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("users").document(userId)
+                .set(mapOf("defenseTutorialDone" to true),
+                    com.google.firebase.firestore.SetOptions.merge())
+                .addOnFailureListener { e -> Log.e(TAG, "Firebase 수비 튜토리얼 완료 저장 실패: ${e.message}") }
+        }
         isSpeaking = true
         ttsManager.speakAndWait(
             "튜토리얼이 완료되었습니다. " +

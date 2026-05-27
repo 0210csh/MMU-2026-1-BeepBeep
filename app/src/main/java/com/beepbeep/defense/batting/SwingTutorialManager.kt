@@ -3,6 +3,8 @@ package com.beepbeep.defense.batting
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 /**
  * 타격 훈련 튜토리얼 매니저 (최초 1회)
@@ -58,11 +60,38 @@ class SwingTutorialManager(
     private var step6Strike = 0
 
     // ─────────────────────────────────────────────────────
-    // 튜토리얼 완료 여부 확인
+    // 튜토리얼 완료 여부 확인 (로컬)
     // ─────────────────────────────────────────────────────
     fun isTutorialDone(): Boolean {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             .getBoolean(KEY_BATTING_DONE, false)
+    }
+
+    // ─────────────────────────────────────────────────────
+    // Firebase 동기화: 로컬 우선, 없으면 Firestore 조회 후 로컬 캐시
+    // ─────────────────────────────────────────────────────
+    suspend fun syncTutorialDoneFromFirebase(): Boolean {
+        if (isTutorialDone()) return true
+        val userId = context.getSharedPreferences("UserInfo", Context.MODE_PRIVATE)
+            .getString("id", "anonymous") ?: "anonymous"
+        if (userId == "anonymous") return false
+        return suspendCoroutine { cont ->
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("users").document(userId)
+                .get()
+                .addOnSuccessListener { doc ->
+                    val done = doc.getBoolean("battingTutorialDone") ?: false
+                    if (done) {
+                        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                            .edit().putBoolean(KEY_BATTING_DONE, true).apply()
+                    }
+                    cont.resume(done)
+                }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Firebase 타격 튜토리얼 조회 실패: ${e.message}")
+                    cont.resume(false)
+                }
+        }
     }
 
     // ─────────────────────────────────────────────────────
@@ -264,6 +293,16 @@ class SwingTutorialManager(
         currentStep = 0
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_BATTING_DONE, true).apply()
+        // Firebase에도 완료 플래그 저장 (다른 기기에서도 skip 가능하도록)
+        val userId = context.getSharedPreferences("UserInfo", Context.MODE_PRIVATE)
+            .getString("id", "anonymous") ?: "anonymous"
+        if (userId != "anonymous") {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("users").document(userId)
+                .set(mapOf("battingTutorialDone" to true),
+                    com.google.firebase.firestore.SetOptions.merge())
+                .addOnFailureListener { e -> Log.e(TAG, "Firebase 타격 튜토리얼 완료 저장 실패: ${e.message}") }
+        }
 
         ttsManager.speakAndWait(
             "튜토리얼이 완료되었습니다. 이제 투구 횟수를 조절한 후 훈련을 시작하시면 됩니다.",

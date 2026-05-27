@@ -237,7 +237,11 @@ class MainActivity : AppCompatActivity() {
         if (intent.getBooleanExtra("start_tutorial", false)) {
             tutorialScope.launch {
                 kotlinx.coroutines.delay(1_000L)
-                defenseTutorialManager.startTutorial()
+                // 로컬 우선, 없으면 Firebase 조회 — 완료된 사용자는 튜토리얼 skip
+                val done = defenseTutorialManager.syncTutorialDoneFromFirebase()
+                if (!done) {
+                    defenseTutorialManager.startTutorial()
+                }
             }
         }
     }

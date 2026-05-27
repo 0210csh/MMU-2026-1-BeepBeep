@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 
 class SettingActivity : AppCompatActivity() {
 
@@ -90,8 +91,14 @@ class SettingActivity : AppCompatActivity() {
                 .setTitle("타격 튜토리얼 초기화")
                 .setMessage("다음 타격 훈련 시작 시 튜토리얼이 다시 진행됩니다.")
                 .setPositiveButton("확인") { _, _ ->
+                    // 로컬 초기화
                     getSharedPreferences("TutorialPrefs", MODE_PRIVATE)
                         .edit().putBoolean("batting_tutorial_done", false).apply()
+                    // Firebase도 함께 초기화
+                    if (userId.isNotEmpty()) {
+                        db.collection("users").document(userId)
+                            .set(mapOf("battingTutorialDone" to false), SetOptions.merge())
+                    }
                     Toast.makeText(this, "타격 튜토리얼이 초기화되었습니다", Toast.LENGTH_SHORT).show()
                 }
                 .setNegativeButton("취소", null)
@@ -104,8 +111,14 @@ class SettingActivity : AppCompatActivity() {
                 .setTitle("수비 튜토리얼 초기화")
                 .setMessage("다음 수비 훈련 시작 시 튜토리얼이 다시 진행됩니다.")
                 .setPositiveButton("확인") { _, _ ->
+                    // 로컬 초기화
                     getSharedPreferences("TutorialPrefs", MODE_PRIVATE)
                         .edit().putBoolean("defense_tutorial_done", false).apply()
+                    // Firebase도 함께 초기화
+                    if (userId.isNotEmpty()) {
+                        db.collection("users").document(userId)
+                            .set(mapOf("defenseTutorialDone" to false), SetOptions.merge())
+                    }
                     Toast.makeText(this, "수비 튜토리얼이 초기화되었습니다", Toast.LENGTH_SHORT).show()
                 }
                 .setNegativeButton("취소", null)
