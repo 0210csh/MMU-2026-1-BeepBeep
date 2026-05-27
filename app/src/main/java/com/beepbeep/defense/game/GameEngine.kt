@@ -2,6 +2,7 @@ package com.beepbeep.defense.game
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
+import com.beepbeep.defense.PendingUploadManager
 import com.beepbeep.defense.audio.SpatialAudioEngine
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -423,8 +424,9 @@ class GameEngine(private val context: Context) {
         val userId = context.getSharedPreferences("UserInfo", Context.MODE_PRIVATE)
             .getString("id", "anonymous") ?: "anonymous"
 
-        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-        val sessionId = System.currentTimeMillis().toString()
+        val db            = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val sessionMillis = System.currentTimeMillis()
+        val sessionId     = sessionMillis.toString()
 
         val sessionData = hashMapOf(
             "생성일시" to com.google.firebase.Timestamp.now(),
@@ -458,6 +460,14 @@ class GameEngine(private val context: Context) {
             }
             .addOnFailureListener { e ->
                 android.util.Log.e("Firebase", "업로드 실패: ${e.message}")
+                PendingUploadManager.saveDefense(
+                    context       = context,
+                    userId        = userId,
+                    sessionId     = sessionId,
+                    sessionMillis = sessionMillis,
+                    sessionData   = sessionData,
+                    catchRecords  = catchSnapshot
+                )
             }
     }
 

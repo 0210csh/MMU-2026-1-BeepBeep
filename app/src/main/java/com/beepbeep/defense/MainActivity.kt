@@ -7,6 +7,10 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.hardware.input.InputManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Bundle
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -47,6 +51,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var defenseTtsManager: DefenseTtsManager
     private lateinit var defenseTutorialManager: DefenseTutorialManager
     private val tutorialScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    // ── 네트워크 콜백 (오프라인 → 복구 자동 동기화) ──────────
+    private lateinit var connectivityManager: ConnectivityManager
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            tutorialScope.launch(Dispatchers.IO) {
+                if (PendingUploadManager.hasPendingDefense(this@MainActivity)) {
+                    PendingUploadManager.syncDefense(this@MainActivity)
+                }
+            }
+        }
+    }
 
     private val inputDeviceListener = object : InputManager.InputDeviceListener {
         override fun onInputDeviceAdded(deviceId: Int) {
@@ -244,6 +260,13 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // ── 네트워크 콜백 등록 ──────────────────────────────
+        connectivityManager = getSystemService(ConnectivityManager::class.java)
+        val networkRequest = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
     }
 
     // ─────────────────────────────────────────────────────
@@ -453,6 +476,13 @@ class MainActivity : AppCompatActivity() {
             binding?.switchFakeController?.isChecked = isRealGamepadConnected()
         }
         updateSimpleBleStatus()
+        // 펜딩 수비 기록 재시도 (화면 복귀 시)
+        if (PendingUploadManager.hasPendingDefense(this) &&
+            PendingUploadManager.isNetworkAvailable(this)) {
+            tutorialScope.launch(Dispatchers.IO) {
+                PendingUploadManager.syncDefense(this@MainActivity)
+            }
+        }
     }
 
     override fun onPause() {
@@ -593,6 +623,7 @@ class MainActivity : AppCompatActivity() {
             gameEngine.forceStopSession(silent = true)
         }
         super.onDestroy()
+        connectivityManager.unregisterNetworkCallback(networkCallback)
         gameEngine.release()
         defenseTtsManager.shutdown()
         tutorialScope.cancel()

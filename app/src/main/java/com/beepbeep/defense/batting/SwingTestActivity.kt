@@ -35,7 +35,12 @@ import kotlinx.coroutines.*
 import kotlin.math.*
 import kotlin.random.Random
 import java.util.Locale
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.util.Log
+import com.beepbeep.defense.PendingUploadManager
 
 class SwingTestActivity : AppCompatActivity() {
 
@@ -236,6 +241,19 @@ class SwingTestActivity : AppCompatActivity() {
                 scope.launch {
                     delay(200L)
                     ttsManager.speak("블루투스 이어폰 연결이 해제되어 훈련이 종료되었습니다.")
+                }
+            }
+        }
+    }
+
+    // ── 네트워크 콜백 (오프라인 → 복구 자동 동기화) ──────────
+    private lateinit var connectivityManager: ConnectivityManager
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            if (isTraining) return
+            scope.launch(Dispatchers.IO) {
+                if (PendingUploadManager.hasPendingBatting(this@SwingTestActivity)) {
+                    PendingUploadManager.syncBatting(this@SwingTestActivity)
                 }
             }
         }
@@ -496,6 +514,13 @@ class SwingTestActivity : AppCompatActivity() {
         spatialAudio.init()
         bleManager = BleManager(this)
         bleManager.setCallback(bleCallback)
+
+        // ── 네트워크 콜백 등록 ──────────────────────────────
+        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networkRequest = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
 
         if (isAdmin) {
             btnBleConnect?.setOnClickListener {
@@ -1550,9 +1575,10 @@ class SwingTestActivity : AppCompatActivity() {
                 }
             }
 
-            val userId    = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
-            val db        = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-            val sessionId = System.currentTimeMillis().toString()
+            val userId       = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
+            val db           = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            val sessionMillis = System.currentTimeMillis()
+            val sessionId    = sessionMillis.toString()
             val sessionData = hashMapOf(
                 "생성일시"   to com.google.firebase.Timestamp.now(),
                 "목표투구수" to targetPitches,
@@ -1571,14 +1597,25 @@ class SwingTestActivity : AppCompatActivity() {
                     "반응속도최대" to (reactionTimes.maxOrNull() ?: -1L)
                 )
             )
+            val recordsSnapshot = perPitchRecords.toList()
             val sessionRef = db.collection("users").document(userId).collection("훈련기록").document(sessionId)
             sessionRef.set(sessionData)
                 .addOnSuccessListener {
-                    perPitchRecords.forEachIndexed { index, record ->
+                    recordsSnapshot.forEachIndexed { index, record ->
                         sessionRef.collection("투구별기록").document("${index + 1}번투구").set(record)
                     }
                 }
-                .addOnFailureListener { e -> Log.e("Firebase", "조기종료 업로드 실패: ${e.message}") }
+                .addOnFailureListener { e ->
+                    Log.e("Firebase", "조기종료 업로드 실패: ${e.message}")
+                    PendingUploadManager.saveBatting(
+                        context         = this@SwingTestActivity,
+                        userId          = userId,
+                        sessionId       = sessionId,
+                        sessionMillis   = sessionMillis,
+                        sessionData     = sessionData,
+                        perPitchRecords = recordsSnapshot
+                    )
+                }
 
             val statsPref = getSharedPreferences("TrainingStats_$userId", MODE_PRIVATE)
             val editor    = statsPref.edit()
@@ -1804,7 +1841,8 @@ class SwingTestActivity : AppCompatActivity() {
         val baseCorrectPct = if (hitCount > 0) successCount.toFloat() / hitCount * 100f else 0f
         val userId         = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
         val db             = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-        val sessionId      = System.currentTimeMillis().toString()
+        val sessionMillis  = System.currentTimeMillis()
+        val sessionId      = sessionMillis.toString()
 
         val sessionData = hashMapOf(
             "생성일시"   to com.google.firebase.Timestamp.now(),
@@ -1822,14 +1860,25 @@ class SwingTestActivity : AppCompatActivity() {
                 "반응속도최대" to (reactionTimes.maxOrNull() ?: -1L)
             )
         )
+        val recordsSnapshot = perPitchRecords.toList()
         val sessionRef = db.collection("users").document(userId).collection("훈련기록").document(sessionId)
         sessionRef.set(sessionData)
             .addOnSuccessListener {
-                perPitchRecords.forEachIndexed { index, record ->
+                recordsSnapshot.forEachIndexed { index, record ->
                     sessionRef.collection("투구별기록").document("${index + 1}번투구").set(record)
                 }
             }
-            .addOnFailureListener { e -> Log.e("Firebase", "업로드 실패: ${e.message}") }
+            .addOnFailureListener { e ->
+                Log.e("Firebase", "업로드 실패: ${e.message}")
+                PendingUploadManager.saveBatting(
+                    context         = this@SwingTestActivity,
+                    userId          = userId,
+                    sessionId       = sessionId,
+                    sessionMillis   = sessionMillis,
+                    sessionData     = sessionData,
+                    perPitchRecords = recordsSnapshot
+                )
+            }
 
         val statsPref = getSharedPreferences("TrainingStats_$userId", MODE_PRIVATE)
         val editor    = statsPref.edit()
@@ -2119,6 +2168,14 @@ class SwingTestActivity : AppCompatActivity() {
         gyroscopeSensor?.let   { sensorManager.registerListener(swingListener,      it, SensorManager.SENSOR_DELAY_GAME) }
         rotationSensor?.let    { sensorManager.registerListener(orientationListener, it, SensorManager.SENSOR_DELAY_GAME) }
         audioManager.registerAudioDeviceCallback(btAudioCallback, Handler(Looper.getMainLooper()))
+        // 펜딩 타격 기록 재시도 (화면 복귀 시)
+        if (!isTraining &&
+            PendingUploadManager.hasPendingBatting(this) &&
+            PendingUploadManager.isNetworkAvailable(this)) {
+            scope.launch(Dispatchers.IO) {
+                PendingUploadManager.syncBatting(this@SwingTestActivity)
+            }
+        }
     }
 
     override fun onPause() {
@@ -2134,6 +2191,7 @@ class SwingTestActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        connectivityManager.unregisterNetworkCallback(networkCallback)
         ttsManager.shutdown()
         audioTrack?.stop(); audioTrack?.release()
         spatialAudio.release()
