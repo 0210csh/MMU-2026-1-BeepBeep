@@ -1334,6 +1334,11 @@ class SwingTestActivity : AppCompatActivity() {
                 prevBtn1 = btn1; prevBtn2 = btn2
                 return
             }
+            // step 5: 베이스 비프가 울릴 때(isWaitingForInput=true)만 허용, 그 외 전 구간 차단
+            if (tutorialManager.currentStep == 5 && !isWaitingForInput) {
+                prevBtn1 = btn1; prevBtn2 = btn2
+                return
+            }
             // step 2, 6: TTS 안내 중에는 버튼 입력 차단
             if ((tutorialManager.currentStep == 2 || tutorialManager.currentStep == 6) && tutorialManager.isSpeaking) {
                 prevBtn1 = btn1; prevBtn2 = btn2

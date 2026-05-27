@@ -44,7 +44,7 @@ class SwingTutorialManager(
     var currentStep = 0
         private set
 
-    var isSpeaking = false
+    @Volatile var isSpeaking = false
         private set
 
     private var rightBtnDeferred: CompletableDeferred<Unit>? = null
