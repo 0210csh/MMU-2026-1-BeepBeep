@@ -13,7 +13,7 @@ class GrowthChartView @JvmOverloads constructor(
 
     data class ChartPoint(
         val label: String,
-        val value: Float,          // Float.NaN → 기록 없음
+        val value: Float,
         val isPartial: Boolean = false
     )
 
@@ -33,12 +33,8 @@ class GrowthChartView @JvmOverloads constructor(
     private val axisPaint    = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF555555.toInt(); style = Paint.Style.STROKE; strokeWidth = 2f }
     private val legendPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 32f }
     private val bgPaint      = Paint().apply { color = 0xFF111111.toInt() }
-    private val notePaint    = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF888888.toInt(); textSize = 28f; textAlign = Paint.Align.LEFT }
     private val hintPaint    = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF555555.toInt(); textSize = 26f; textAlign = Paint.Align.CENTER }
-    // NaN 포인트 "없음" 텍스트용
-    private val nanTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF888888.toInt(); textSize = 32f; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
-    // NaN 포인트 X 표시용
-    private val nanDotPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 4f; color = 0xFF666666.toInt() }
+    private val noDataPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF888888.toInt(); textSize = 48f; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD }
 
     private var selectedLine  = -1
     private var selectedPoint = -1
@@ -50,7 +46,9 @@ class GrowthChartView @JvmOverloads constructor(
     private val padL = 50f
     private val padR = 50f
     private val padT = 80f
-    private val padB = 100f
+    private val padB = 140f
+
+    private val NAN_Y_FRAC = 0.95f
 
     fun setData(lines: List<List<ChartPoint>>, colors: List<Int>, labels: List<String>) {
         dataLines.clear(); dataLines.addAll(lines)
@@ -58,6 +56,78 @@ class GrowthChartView @JvmOverloads constructor(
         lineLabels.clear(); lineLabels.addAll(labels)
         selectedLine = -1; selectedPoint = -1
         invalidate()
+
+        isFocusable = true
+        isClickable = true
+        setOnClickListener {
+            if (dataLines.isEmpty()) return@setOnClickListener
+            val pointCount = dataLines.firstOrNull()?.size ?: return@setOnClickListener
+            if (pointCount == 0) return@setOnClickListener
+
+            if (selectedPoint < 0) {
+                selectedLine  = 0
+                selectedPoint = 0
+            } else {
+                val nextPoint = (selectedPoint + 1) % pointCount
+                if (nextPoint == 0) {
+                    val nextLine = (selectedLine + 1) % dataLines.size
+                    selectedLine  = nextLine
+                    selectedPoint = 0
+                } else {
+                    selectedPoint = nextPoint
+                }
+            }
+            invalidate()
+            onPointClick?.invoke(selectedLine, selectedPoint)
+        }
+    }
+
+    private fun getYPos(value: Float, chartH: Float, yMin: Float, yRange: Float): Float {
+        return if (value.isNaN()) {
+            padT + chartH * NAN_Y_FRAC
+        } else {
+            val yFrac = (value - yMin) / yRange
+            padT + chartH * (1f - yFrac)
+        }
+    }
+
+    private fun textAlignFor(i: Int, size: Int): Paint.Align = when (i) {
+        0        -> Paint.Align.LEFT
+        size - 1 -> Paint.Align.RIGHT
+        else     -> Paint.Align.CENTER
+    }
+
+    // 다른 선들과 겹치지 않도록 텍스트 y 위치 동적 계산
+    private fun getTextY(
+        yPos: Float,
+        li: Int,
+        i: Int,
+        chartH: Float,
+        yMin: Float,
+        yRange: Float
+    ): Float {
+        val aboveY = yPos - 65f
+        val belowY = yPos + 80f
+
+        // 다른 선들의 같은 x 위치 y값 수집
+        val otherYPositions = dataLines.indices
+            .filter { it != li }
+            .mapNotNull { otherLi ->
+                val v = dataLines[otherLi].getOrNull(i)?.value ?: return@mapNotNull null
+                getYPos(v, chartH, yMin, yRange)
+            }
+
+        // 위쪽에 다른 선이나 텍스트와 60px 이상 거리 있으면 위에 배치
+        val aboveClear = otherYPositions.none { kotlin.math.abs(it - aboveY) < 60f }
+        // 아래쪽도 확인
+        val belowClear = otherYPositions.none { kotlin.math.abs(it - belowY) < 60f }
+
+        return when {
+            aboveClear -> aboveY
+            belowClear -> belowY
+            // 둘 다 겹치면 점에서 더 멀리
+            else -> if (li % 2 == 0) aboveY - 40f else belowY + 40f
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -71,8 +141,7 @@ class GrowthChartView @JvmOverloads constructor(
         val chartW = w - padL - padR
         val chartH = h - padT - padB
 
-        // NaN은 0으로 대체하여 y축 범위 계산
-        val allValues = dataLines.flatten().map { if (it.value.isNaN()) 0f else it.value }
+        val allValues = dataLines.flatten().map { it.value }.filter { !it.isNaN() }
         if (allValues.isEmpty()) return
         val minV  = allValues.min()
         val maxV  = allValues.max()
@@ -97,15 +166,14 @@ class GrowthChartView @JvmOverloads constructor(
         canvas.drawLine(padL, padT, padL, padT + chartH, axisPaint)
         canvas.drawLine(padL, padT + chartH, padL + chartW, padT + chartH, axisPaint)
 
-        // x축 레이블
+        // x축 레이블 (줄바꿈 처리)
         for (i in xLabels.indices) {
             val xPos = padL + (if (pointCount > 1) i * xStep else chartW / 2)
-            textPaint.textAlign = when (i) {
-                0              -> Paint.Align.LEFT
-                xLabels.size-1 -> Paint.Align.RIGHT
-                else           -> Paint.Align.CENTER
+            textPaint.textAlign = textAlignFor(i, xLabels.size)
+            val lines = xLabels[i].split("\n")
+            lines.forEachIndexed { lineIdx, line ->
+                canvas.drawText(line, xPos, padT + chartH + 65f + lineIdx * 40f, textPaint)
             }
-            canvas.drawText(xLabels[i], xPos, padT + chartH + 65f, textPaint)
         }
         textPaint.textAlign = Paint.Align.CENTER
 
@@ -117,95 +185,85 @@ class GrowthChartView @JvmOverloads constructor(
             dotPaint.color  = color
             dashPaint.color = color
 
-            // NaN → 값 0으로 치환한 y좌표 헬퍼
-            fun resolvedY(pt: ChartPoint): Float {
-                val v = if (pt.value.isNaN()) 0f else pt.value
-                return padT + chartH * (1f - (v - yMin) / yRange)
-            }
-
-            // 일반 선 — NaN 포인트는 점선 구간으로 넘기고 solid에서 끊기
-            val solidPath = Path()
-            var solidStarted = false
-            for (i in pts.indices) {
-                if (pts[i].value.isNaN() || pts[i].isPartial) { solidStarted = false; continue }
-                val xPos = padL + (if (pointCount > 1) i * xStep else chartW / 2)
-                val yPos = resolvedY(pts[i])
-                if (!solidStarted) { solidPath.moveTo(xPos, yPos); solidStarted = true }
-                else solidPath.lineTo(xPos, yPos)
-            }
-            canvas.drawPath(solidPath, linePaint)
-
-            // 점선 — partial 구간 OR NaN 포함 구간 모두 점선으로 연결
+            // 선 그리기
             for (i in 1 until pts.size) {
-                val prevNan = pts[i-1].value.isNaN()
-                val currNan = pts[i].value.isNaN()
-                val isDash  = pts[i].isPartial || pts[i-1].isPartial || prevNan || currNan
-                if (!isDash) continue
                 val x1 = padL + (if (pointCount > 1) (i-1) * xStep else chartW / 2)
-                val y1 = resolvedY(pts[i-1])
                 val x2 = padL + (if (pointCount > 1) i * xStep else chartW / 2)
-                val y2 = resolvedY(pts[i])
-                val dp = Path(); dp.moveTo(x1, y1); dp.lineTo(x2, y2)
-                canvas.drawPath(dp, dashPaint)
+                val y1 = getYPos(pts[i-1].value, chartH, yMin, yRange)
+                val y2 = getYPos(pts[i].value, chartH, yMin, yRange)
+
+                val isNanSegment = pts[i].value.isNaN() || pts[i-1].value.isNaN()
+                val isPartialSeg = pts[i].isPartial || pts[i-1].isPartial
+
+                if (isNanSegment || isPartialSeg) {
+                    val dp = Path(); dp.moveTo(x1, y1); dp.lineTo(x2, y2)
+                    canvas.drawPath(dp, dashPaint)
+                } else {
+                    val sp = Path(); sp.moveTo(x1, y1); sp.lineTo(x2, y2)
+                    canvas.drawPath(sp, linePaint)
+                }
             }
 
-            // 점 & NaN 표시
+            // 점 그리기
             for (i in pts.indices) {
                 val xPos = padL + (if (pointCount > 1) i * xStep else chartW / 2)
-
-                // ── NaN: y=0 위치에 partial 스타일 점선 원만 표시 ──
-                if (pts[i].value.isNaN()) {
-                    val yPos0 = padT + chartH * (1f - (0f - yMin) / yRange)
-                    val r = if (li == selectedLine && i == selectedPoint) 44f else 32f
-                    dotPaint.color = 0xFF444444.toInt()
-                    canvas.drawCircle(xPos, yPos0, r, dotPaint)
-                    partialRing.color = color
-                    canvas.drawCircle(xPos, yPos0, r, partialRing)
-                    if (li == selectedLine && i == selectedPoint) {
-                        valuePaint.color = 0xFF888888.toInt()
-                        valuePaint.textAlign = when (i) {
-                            0            -> Paint.Align.LEFT
-                            pts.size - 1 -> Paint.Align.RIGHT
-                            else         -> Paint.Align.CENTER
-                        }
-                        canvas.drawText("기록없음", xPos, yPos0 - r - 16f, valuePaint)
-                        valuePaint.textAlign = Paint.Align.CENTER
-                    }
-                    continue
-                }
-
-                val yFrac = (pts[i].value - yMin) / yRange
-                val yPos  = padT + chartH * (1f - yFrac)
+                val yPos = getYPos(pts[i].value, chartH, yMin, yRange)
                 val isSelected = li == selectedLine && i == selectedPoint
                 val radius = if (isSelected) 44f else 32f
+                val isNan = pts[i].value.isNaN()
+                val textY = getTextY(yPos, li, i, chartH, yMin, yRange)
 
-                if (pts[i].isPartial) {
-                    dotPaint.color = 0xFF444444.toInt()
-                    canvas.drawCircle(xPos, yPos, radius, dotPaint)
-                    partialRing.color = color
-                    canvas.drawCircle(xPos, yPos, radius, partialRing)
-                    dotPaint.color = color
-                } else {
-                    dotPaint.color = color
-                    canvas.drawCircle(xPos, yPos, radius, dotPaint)
-                    canvas.drawCircle(xPos, yPos, radius, dotRingPaint)
-                }
-
-                if (isSelected) {
-                    // 마지막 포인트이고 partial이면 숫자 대신 "기록없음" 표시
-                    val isLastPartial = pts[i].isPartial && i == pts.size - 1
-                    val valStr = if (isLastPartial) "기록없음"
-                    else if (pts[i].value >= 100f) "%.0f".format(pts[i].value)
-                    else "%.2f".format(pts[i].value)
-                    valuePaint.color = if (isLastPartial) 0xFF888888.toInt() else color
-                    // 첫 포인트는 왼쪽 정렬, 마지막은 오른쪽 정렬, 나머지는 가운데
-                    valuePaint.textAlign = when (i) {
-                        0            -> Paint.Align.LEFT
-                        pts.size - 1 -> Paint.Align.RIGHT
-                        else         -> Paint.Align.CENTER
+                when {
+                    isNan && pts[i].isPartial -> {
+                        dotPaint.color = 0xFF444444.toInt()
+                        canvas.drawCircle(xPos, yPos, radius, dotPaint)
+                        partialRing.color = color
+                        canvas.drawCircle(xPos, yPos, radius, partialRing)
+                        if (isSelected) {
+                            valuePaint.color = color
+                            valuePaint.textAlign = textAlignFor(i, pts.size)
+                            canvas.drawText("진행중", xPos, textY, valuePaint)
+                            valuePaint.textAlign = Paint.Align.CENTER
+                        }
                     }
-                    canvas.drawText(valStr, xPos, yPos - 42f, valuePaint)
-                    valuePaint.textAlign = Paint.Align.CENTER  // 원복
+                    isNan -> {
+                        dotPaint.color = 0xFF333333.toInt()
+                        canvas.drawCircle(xPos, yPos, radius, dotPaint)
+                        dotRingPaint.color = 0xFF666666.toInt()
+                        canvas.drawCircle(xPos, yPos, radius, dotRingPaint)
+                        if (isSelected) {
+                            noDataPaint.color = 0xFF888888.toInt()
+                            noDataPaint.textAlign = textAlignFor(i, pts.size)
+                            canvas.drawText("기록없음", xPos, textY, noDataPaint)
+                            noDataPaint.textAlign = Paint.Align.CENTER
+                        }
+                    }
+                    pts[i].isPartial -> {
+                        dotPaint.color = 0xFF444444.toInt()
+                        canvas.drawCircle(xPos, yPos, radius, dotPaint)
+                        partialRing.color = color
+                        canvas.drawCircle(xPos, yPos, radius, partialRing)
+                        if (isSelected) {
+                            valuePaint.color = color
+                            valuePaint.textAlign = textAlignFor(i, pts.size)
+                            canvas.drawText("진행중", xPos, textY, valuePaint)
+                            valuePaint.textAlign = Paint.Align.CENTER
+                        }
+                    }
+                    else -> {
+                        dotPaint.color = color
+                        canvas.drawCircle(xPos, yPos, radius, dotPaint)
+                        dotRingPaint.color = Color.WHITE
+                        canvas.drawCircle(xPos, yPos, radius, dotRingPaint)
+                        if (isSelected) {
+                            val valStr = if (pts[i].value >= 100f) "%.0f".format(pts[i].value)
+                            else "%.2f".format(pts[i].value)
+                            valuePaint.color = color
+                            valuePaint.textAlign = textAlignFor(i, pts.size)
+                            canvas.drawText(valStr, xPos, textY, valuePaint)
+                            valuePaint.textAlign = Paint.Align.CENTER
+                        }
+                    }
                 }
             }
         }
@@ -221,11 +279,7 @@ class GrowthChartView @JvmOverloads constructor(
             legendX += legendPaint.measureText(lineLabels[li]) + 60f
         }
 
-        // partial 안내
-        val hasPartial = dataLines.flatten().any { it.isPartial }
-        if (hasPartial) canvas.drawText("* 20판 미만 묶음 (점선)", padL, padT - 12f, notePaint)
-
-        // 포인트 선택 시 스와이프 힌트
+        // 스와이프 힌트
         if (selectedPoint >= 0) {
             val pointCount2 = dataLines.firstOrNull()?.size ?: 0
             val hint = when {
@@ -248,10 +302,8 @@ class GrowthChartView @JvmOverloads constructor(
                 val dx = event.x - touchStartX
                 val dy = event.y - touchStartY
 
-                // ── 스와이프 ──────────────────────────────────────
                 if (kotlin.math.abs(dx) >= SWIPE_THRESHOLD &&
                     kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
-
                     if (selectedPoint >= 0 && dataLines.isNotEmpty()) {
                         val pointCount = dataLines.firstOrNull()?.size ?: return true
                         val newPoint = if (dx < 0) {
@@ -268,7 +320,6 @@ class GrowthChartView @JvmOverloads constructor(
                     return true
                 }
 
-                // ── 탭: 가장 가까운 포인트 찾기 ──────────────────
                 if (dataLines.isEmpty()) return true
 
                 val chartW     = width.toFloat() - padL - padR
@@ -277,15 +328,14 @@ class GrowthChartView @JvmOverloads constructor(
                 val xStep      = if (pointCount > 1) chartW / (pointCount - 1) else chartW / 2
                 val tx = touchStartX; val ty = touchStartY
 
-                // onDraw와 동일하게 NaN→0으로 치환해 yMin/yRange 계산
-                val allValues = dataLines.flatten().map { if (it.value.isNaN()) 0f else it.value }
+                val allValues = dataLines.flatten().map { it.value }.filter { !it.isNaN() }
                 if (allValues.isEmpty()) return true
-                val minV   = allValues.min(); val maxV = allValues.max()
-                val range  = if (maxV - minV < 0.001f) 1f else maxV - minV
-                val yMin   = minV - range * 0.15f; val yMax = maxV + range * 0.15f
-                val yRange = yMax - yMin
+                val minV  = allValues.min(); val maxV = allValues.max()
+                val range = if (maxV - minV < 0.001f) 1f else maxV - minV
+                val yMin  = minV - range * 0.15f
+                val yMax  = maxV + range * 0.15f
+                val yRange= yMax - yMin
 
-                // x축 가장 가까운 포인트 인덱스
                 var closestPointIdx = 0
                 var minXDist = Float.MAX_VALUE
                 for (i in 0 until pointCount) {
@@ -300,11 +350,8 @@ class GrowthChartView @JvmOverloads constructor(
 
                 for (li in dataLines.indices) {
                     val i = closestPointIdx
-                    val pt = dataLines[li][i]
                     val xPos = padL + (if (pointCount > 1) i * xStep else chartW / 2)
-                    // NaN 포인트도 탭 가능하도록 — y는 값 0 위치 기준
-                    val v    = if (pt.value.isNaN()) 0f else pt.value
-                    val yPos = padT + chartH * (1f - (v - yMin) / yRange)
+                    val yPos = getYPos(dataLines[li][i].value, chartH, yMin, yRange)
                     val dist = kotlin.math.sqrt(
                         (tx - xPos) * (tx - xPos) + (ty - yPos) * (ty - yPos)
                     )

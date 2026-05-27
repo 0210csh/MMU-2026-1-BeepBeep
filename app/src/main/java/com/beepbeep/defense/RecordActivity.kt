@@ -146,7 +146,7 @@ class RecordActivity : AppCompatActivity() {
             firstDate == null -> Pair("$index", "${index}번째 묶음")
             firstDate == lastDate -> Pair(shortFmt.format(firstDate), ttsFmt.format(firstDate))
             else -> Pair(
-                "${shortFmt.format(firstDate)}~${shortFmt.format(lastDate!!)}",
+                "${shortFmt.format(firstDate)}\n~${shortFmt.format(lastDate!!)}",
                 "${ttsFmt.format(firstDate)}부터 ${ttsFmt.format(lastDate!!)}"
             )
         }
