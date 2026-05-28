@@ -349,7 +349,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding?.btnEarlyStop?.setOnClickListener { gameEngine.forceStopSession() }
+        binding?.btnEarlyStop?.setOnClickListener {
+            if (!defenseTutorialManager.isRunning) gameEngine.forceStopSession()
+        }
 
         binding?.btnBallCountDown?.setOnClickListener { adjustBallCount(-1) }
         binding?.btnBallCountUp?.setOnClickListener   { adjustBallCount(+1) }
@@ -518,6 +520,7 @@ class MainActivity : AppCompatActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD) {
             if (event.action == KeyEvent.ACTION_DOWN) {
+                if (gameEngine.isResultSpeaking) return true
                 when (event.keyCode) {
                     KeyEvent.KEYCODE_BUTTON_A -> {
                         // 결과 다이얼로그 표시 중 → 닫기 (관리자)
@@ -606,6 +609,7 @@ class MainActivity : AppCompatActivity() {
             .also { dialog ->
                 // 다이얼로그에 직접 키 리스너 등록 → A 버튼 한 번에 닫기
                 dialog.setOnKeyListener { _, keyCode, event ->
+                    if (gameEngine.isResultSpeaking) return@setOnKeyListener true
                     if (event.source and android.view.InputDevice.SOURCE_GAMEPAD == android.view.InputDevice.SOURCE_GAMEPAD
                         && keyCode == android.view.KeyEvent.KEYCODE_BUTTON_A
                         && event.action == android.view.KeyEvent.ACTION_DOWN) {

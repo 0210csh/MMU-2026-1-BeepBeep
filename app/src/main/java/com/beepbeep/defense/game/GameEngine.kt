@@ -82,6 +82,7 @@ class GameEngine(private val context: Context) {
     private val perCatchRecords  = mutableListOf<HashMap<String, Any?>>()
 
     var isTutorialMode: Boolean = false
+    @Volatile var isResultSpeaking: Boolean = false
 
     @Volatile var joystickDx = 0f
     @Volatile var joystickDz = 0f
@@ -399,7 +400,15 @@ class GameEngine(private val context: Context) {
         if (avgMs  != null) sb.append(" 평균 ${msToKoreanTime(avgMs)}.")
         if (bestMs != null) sb.append(" 최단 시간 ${msToKoreanTime(bestMs)}.")
         if (worstMs != null) sb.append(" 최장 시간 ${msToKoreanTime(worstMs)}.")
-        if (!silent) speak(sb.toString())
+        if (!silent) {
+            isResultSpeaking = true
+            tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {}
+                override fun onDone(utteranceId: String?)  { isResultSpeaking = false }
+                override fun onError(utteranceId: String?) { isResultSpeaking = false }
+            })
+            if (ttsReady) tts?.speak(sb.toString(), TextToSpeech.QUEUE_FLUSH, null, "session_summary")
+        }
 
         if (!isTutorialMode) {
             uploadToFirebase(avgMs, bestMs, worstMs, successRate)
@@ -530,7 +539,7 @@ class GameEngine(private val context: Context) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
-    fun stopSpeak() { tts?.stop() }
+    fun stopSpeak() { tts?.stop(); isResultSpeaking = false }
 
     private fun msToKoreanTime(ms: Long): String {
         val formatted = "%.1f".format(ms / 1000.0)

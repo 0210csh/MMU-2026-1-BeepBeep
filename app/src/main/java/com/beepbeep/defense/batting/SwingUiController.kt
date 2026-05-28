@@ -222,12 +222,25 @@ internal fun SwingTestActivity.showTrainingSummary(
 }
 
 internal fun SwingTestActivity.initAudioTrack() {
-    audioTrack?.stop(); audioTrack?.release()
+    if (audioTrack?.state == AudioTrack.STATE_INITIALIZED) {
+        try { audioTrack?.stop() } catch (_: IllegalStateException) {}
+    }
+    audioTrack?.release()
+    audioTrack = null
+
     val sr     = 44100
     val minBuf = AudioTrack.getMinBufferSize(sr, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT)
-    audioTrack = AudioTrack.Builder()
-        .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
-        .setAudioFormat(AudioFormat.Builder().setSampleRate(sr).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_STEREO).build())
-        .setBufferSizeInBytes(minBuf * 4).setTransferMode(AudioTrack.MODE_STREAM).build()
-    audioTrack?.play()
+    val newTrack = try {
+        AudioTrack.Builder()
+            .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
+            .setAudioFormat(AudioFormat.Builder().setSampleRate(sr).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_STEREO).build())
+            .setBufferSizeInBytes(minBuf * 4).setTransferMode(AudioTrack.MODE_STREAM).build()
+    } catch (_: Exception) { null }
+
+    if (newTrack?.state == AudioTrack.STATE_INITIALIZED) {
+        audioTrack = newTrack
+        audioTrack?.play()
+    } else {
+        newTrack?.release()
+    }
 }

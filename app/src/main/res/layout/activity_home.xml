@@ -109,7 +109,7 @@
                         android:layout_height="wrap_content"
                         android:text="훈련 선택"
                         android:textColor="#FFFFFF"
-                        android:textSize="22sp"
+                        android:textSize="26sp"
                         android:textStyle="bold"
                         android:importantForAccessibility="no" />
                     <TextView
@@ -117,7 +117,7 @@
                         android:layout_height="wrap_content"
                         android:text="Training"
                         android:textColor="#5CF387"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:importantForAccessibility="no" />
                 </LinearLayout>
             </LinearLayout>
@@ -160,7 +160,7 @@
                         android:layout_height="wrap_content"
                         android:text="내 기록"
                         android:textColor="#FFFFFF"
-                        android:textSize="22sp"
+                        android:textSize="26sp"
                         android:textStyle="bold"
                         android:importantForAccessibility="no" />
                     <TextView
@@ -168,7 +168,7 @@
                         android:layout_height="wrap_content"
                         android:text="My Record"
                         android:textColor="#FBBF24"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:importantForAccessibility="no" />
                 </LinearLayout>
             </LinearLayout>
