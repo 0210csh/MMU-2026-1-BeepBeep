@@ -31,7 +31,6 @@ class BallParabolaView @JvmOverloads constructor(
     private var arcH             = 0.3f
     private var isHit            = false
     private var hasData          = false
-    private var liveMode         = false   // true: HIT/MISS 레이블·요약 숨김, 이동 공 표시
     private var liveBallProgress = -1f     // 0~1: 공 현재 위치. -1이면 이동 공 미표시
 
     // ── Paint ────────────────────────────────────────────────
@@ -102,7 +101,6 @@ class BallParabolaView @JvmOverloads constructor(
 
     // ── 공개 API ─────────────────────────────────────────────
 
-    /** 정적 결과 표시용. 다이얼로그에서 호출. liveMode=false → HIT/MISS 레이블 표시. */
     fun setData(
         pitcherDist: Float,
         pitcherH: Float,
@@ -119,12 +117,6 @@ class BallParabolaView @JvmOverloads constructor(
         this.isHit       = isHit
         this.hasData     = true
         invalidate()
-    }
-
-    /** 라이브 모드 활성화. 게임 진행 중 인-레이아웃 뷰에 호출. HIT/MISS 레이블·요약 숨김. */
-    fun setLiveMode() {
-        liveMode = true
-        postInvalidate()
     }
 
     /**
@@ -240,13 +232,11 @@ class BallParabolaView @JvmOverloads constructor(
             })
         }
 
-        // ── HIT / MISS 레이블 (결과 모드에서만) ─────────────
-        if (!liveMode) {
-            labelPaint.color     = if (isHit) Color.argb(230, 74, 222, 128) else Color.argb(220, 248, 113, 113)
-            labelPaint.textSize  = 26f
-            labelPaint.textAlign = Paint.Align.RIGHT
-            canvas.drawText(if (isHit) "HIT" else "MISS", xBatter - 6f, padT + 30f, labelPaint)
-        }
+        // ── HIT / MISS 레이블 ──────────────────────────────
+        labelPaint.color     = if (isHit) Color.argb(230, 74, 222, 128) else Color.argb(220, 248, 113, 113)
+        labelPaint.textSize  = 26f
+        labelPaint.textAlign = Paint.Align.RIGHT
+        canvas.drawText(if (isHit) "HIT" else "MISS", xBatter - 6f, padT + 30f, labelPaint)
 
         // ── 제목 ─────────────────────────────────────────────
         labelPaint.color     = Color.WHITE
@@ -254,14 +244,12 @@ class BallParabolaView @JvmOverloads constructor(
         labelPaint.textAlign = Paint.Align.CENTER
         canvas.drawText("공 궤적", padL + gW / 2f, padT - 12f, labelPaint)
 
-        // ── 하단 요약 텍스트 (결과 모드에서만) ──────────────
-        if (!liveMode) {
-            val diff = abs(batH - contactH)
-            summaryPaint.color = if (isHit) Color.argb(220, 74, 222, 128) else Color.argb(220, 248, 113, 113)
-            canvas.drawText(
-                "배트 %.2fm  /  목표 %.2fm  /  차이 %.2fm".format(batH, contactH, diff),
-                padL + gW / 2f, padT + gH + 58f, summaryPaint
-            )
-        }
+        // ── 하단 요약 텍스트 ──────────────────────────────
+        val diff = abs(batH - contactH)
+        summaryPaint.color = if (isHit) Color.argb(220, 74, 222, 128) else Color.argb(220, 248, 113, 113)
+        canvas.drawText(
+            "배트 %.2fm  /  목표 %.2fm  /  차이 %.2fm".format(batH, contactH, diff),
+            padL + gW / 2f, padT + gH + 58f, summaryPaint
+        )
     }
 }
