@@ -121,7 +121,7 @@ class SwingTestActivity : AppCompatActivity() {
     internal val HIT_GYRO_THRESHOLD  = 35f
     internal val MIN_ACCEL_THRESHOLD = 48f
     internal val MIN_GYRO_THRESHOLD  = 35f
-    internal val PITCH_TOLERANCE     = 15f
+    internal val PITCH_TOLERANCE     = 5f
 
     // ── 물리 상수 ────────────────────────────────────────
     internal val PITCHER_DIST    = 6.53f

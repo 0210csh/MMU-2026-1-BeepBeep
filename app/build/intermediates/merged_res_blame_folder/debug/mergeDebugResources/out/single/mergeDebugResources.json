@@ -184,6 +184,10 @@
         "source": "com.beepbeep.defense.app-main-44:/drawable/bg_menu_card_defense.xml"
     },
     {
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_main_simple.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_main_simple.xml"
+    },
+    {
         "merged": "com.beepbeep.defense.app-debug-42:/drawable_training.xml.flat",
         "source": "com.beepbeep.defense.app-main-44:/drawable/training.xml"
     },
@@ -242,6 +246,10 @@
     {
         "merged": "com.beepbeep.defense.app-debug-42:/mipmap-xxxhdpi_ic_launcher.webp.flat",
         "source": "com.beepbeep.defense.app-main-44:/mipmap-xxxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-debug-42:/layout_activity_swing_simple.xml.flat",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_swing_simple.xml"
     },
     {
         "merged": "com.beepbeep.defense.app-debug-42:/drawable_ic_home.png.flat",

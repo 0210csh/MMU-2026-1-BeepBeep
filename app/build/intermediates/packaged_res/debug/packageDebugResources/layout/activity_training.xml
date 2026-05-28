@@ -70,7 +70,7 @@
                 android:layout_marginTop="30dp"
                 android:text="훈련 선택"
                 android:textColor="#FF8C00"
-                android:textSize="18sp"
+                android:textSize="22sp"
                 android:textStyle="bold"
                 android:importantForAccessibility="no" />
 
@@ -118,7 +118,7 @@
                             android:layout_height="wrap_content"
                             android:text="타격 훈련"
                             android:textColor="#FFFFFF"
-                            android:textSize="20sp"
+                            android:textSize="26sp"
                             android:textStyle="bold"
                             android:importantForAccessibility="no" />
                         <TextView
@@ -166,7 +166,7 @@
                             android:layout_height="wrap_content"
                             android:text="수비 훈련"
                             android:textColor="#FFFFFF"
-                            android:textSize="20sp"
+                            android:textSize="26sp"
                             android:textStyle="bold"
                             android:importantForAccessibility="no" />
                         <TextView
@@ -188,7 +188,7 @@
                 android:layout_below="@id/ll_training_cards"
                 android:text="최근 기록"
                 android:textColor="#FF8C00"
-                android:textSize="18sp"
+                android:textSize="22sp"
                 android:textStyle="bold"
                 android:importantForAccessibility="no" />
 
@@ -201,36 +201,49 @@
                 android:paddingBottom="40dp"
                 android:importantForAccessibility="no">
 
+                <!-- 타격 최근 기록 -->
                 <LinearLayout
                     android:id="@+id/rl_bat_record"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="25dp"
                     android:orientation="vertical"
-                    android:importantForAccessibility="yes"
-                    android:contentDescription="타격 훈련 최근 기록">
+                    android:importantForAccessibility="no">
 
                     <TextView
                         android:id="@+id/tv_rec_bat"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="타격 훈련"
-                        android:textColor="#FFFFFF"
-                        android:textSize="17sp"
+                        android:textColor="#5CF387"
+                        android:textSize="22sp"
                         android:textStyle="bold"
                         android:importantForAccessibility="no" />
 
+                    <!-- 요약 행 -->
                     <TextView
-                        android:id="@+id/tv_bat_rate"
+                        android:id="@+id/tv_bat_summary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:paddingHorizontal="4dp"
-                        android:paddingVertical="5dp"
-                        android:text="기록 없음"
-                        android:textColor="#5CF387"
-                        android:textSize="13sp"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="10dp"
+                        android:text=""
+                        android:textColor="#FFFFFF"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:background="#1A2A1A"
                         android:lineSpacingMultiplier="1.4"
+                        android:focusable="true"
+                        android:importantForAccessibility="yes" />
+
+                    <!-- 투구별 카드 컨테이너 -->
+                    <LinearLayout
+                        android:id="@+id/ll_bat_cards"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical"
                         android:importantForAccessibility="no" />
 
                 </LinearLayout>
@@ -242,35 +255,48 @@
                     android:layout_marginBottom="25dp"
                     android:importantForAccessibility="no" />
 
+                <!-- 수비 최근 기록 -->
                 <LinearLayout
                     android:id="@+id/rl_def_record"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:importantForAccessibility="yes"
-                    android:contentDescription="수비 훈련 최근 기록">
+                    android:importantForAccessibility="no">
 
                     <TextView
                         android:id="@+id/tv_rec_def"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="수비 훈련"
-                        android:textColor="#FFFFFF"
-                        android:textSize="17sp"
+                        android:textColor="#38BDF8"
+                        android:textSize="22sp"
                         android:textStyle="bold"
                         android:importantForAccessibility="no" />
 
+                    <!-- 요약 행 -->
                     <TextView
-                        android:id="@+id/tv_def_rate"
+                        android:id="@+id/tv_def_summary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:paddingHorizontal="4dp"
-                        android:paddingVertical="5dp"
-                        android:text="기록 없음"
-                        android:textColor="#38BDF8"
-                        android:textSize="13sp"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="10dp"
+                        android:text=""
+                        android:textColor="#FFFFFF"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:background="#0D1E2A"
                         android:lineSpacingMultiplier="1.4"
+                        android:focusable="true"
+                        android:importantForAccessibility="yes" />
+
+                    <!-- 회차별 카드 컨테이너 -->
+                    <LinearLayout
+                        android:id="@+id/ll_def_cards"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical"
                         android:importantForAccessibility="no" />
 
                 </LinearLayout>
@@ -291,7 +317,6 @@
         android:elevation="10dp"
         android:importantForAccessibility="no">
 
-        <!-- ✅ 홈 아이콘 하얀색으로 변경 -->
         <LinearLayout
             android:id="@+id/navHome"
             android:layout_width="0dp"

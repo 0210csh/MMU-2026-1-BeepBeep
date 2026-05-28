@@ -32,6 +32,12 @@ public final class ActivityRecordBinding implements ViewBinding {
   public final LinearLayout layoutBottomNav;
 
   @NonNull
+  public final LinearLayout llBattingGrowthRows;
+
+  @NonNull
+  public final LinearLayout llDefenseGrowthRows;
+
+  @NonNull
   public final LinearLayout llRecordHeader;
 
   @NonNull
@@ -50,7 +56,61 @@ public final class ActivityRecordBinding implements ViewBinding {
   public final GridLayout statsGrid;
 
   @NonNull
+  public final LinearLayout tileBaseCorrect;
+
+  @NonNull
+  public final LinearLayout tileBaseCorrectPct;
+
+  @NonNull
+  public final LinearLayout tileBattingAvg;
+
+  @NonNull
+  public final LinearLayout tileDefenseReaction;
+
+  @NonNull
+  public final LinearLayout tileFail;
+
+  @NonNull
+  public final LinearLayout tileFoul;
+
+  @NonNull
+  public final LinearLayout tileHit;
+
+  @NonNull
+  public final LinearLayout tileReaction;
+
+  @NonNull
+  public final LinearLayout tileStrike;
+
+  @NonNull
+  public final LinearLayout tileSuccess;
+
+  @NonNull
+  public final LinearLayout tileSuccessRate;
+
+  @NonNull
+  public final TextView tvBattingGrowthNotice;
+
+  @NonNull
+  public final TextView tvBattingGrowthSection;
+
+  @NonNull
   public final TextView tvBattingLabel;
+
+  @NonNull
+  public final TextView tvDefenseGrowthNotice;
+
+  @NonNull
+  public final TextView tvDefenseGrowthRate;
+
+  @NonNull
+  public final TextView tvDefenseGrowthReaction;
+
+  @NonNull
+  public final TextView tvDefenseGrowthSection;
+
+  @NonNull
+  public final TextView tvDefenseGrowthSuccess;
 
   @NonNull
   public final TextView tvDefenseLabel;
@@ -69,6 +129,21 @@ public final class ActivityRecordBinding implements ViewBinding {
 
   @NonNull
   public final TextView tvDefenseStatSuccessRate;
+
+  @NonNull
+  public final TextView tvGrowthBattingAvg;
+
+  @NonNull
+  public final TextView tvGrowthFoul;
+
+  @NonNull
+  public final TextView tvGrowthHit;
+
+  @NonNull
+  public final TextView tvGrowthReaction;
+
+  @NonNull
+  public final TextView tvGrowthStrike;
 
   @NonNull
   public final TextView tvStatBaseCorrect;
@@ -99,13 +174,25 @@ public final class ActivityRecordBinding implements ViewBinding {
 
   private ActivityRecordBinding(@NonNull RelativeLayout rootView, @NonNull ImageButton btnSetting,
       @NonNull GridLayout defenseStatsGrid, @NonNull LinearLayout layoutBottomNav,
+      @NonNull LinearLayout llBattingGrowthRows, @NonNull LinearLayout llDefenseGrowthRows,
       @NonNull LinearLayout llRecordHeader, @NonNull LinearLayout llUserProfile,
       @NonNull LinearLayout navHome, @NonNull LinearLayout navRecord,
       @NonNull LinearLayout navTraining, @NonNull GridLayout statsGrid,
-      @NonNull TextView tvBattingLabel, @NonNull TextView tvDefenseLabel,
-      @NonNull TextView tvDefenseStatCount, @NonNull TextView tvDefenseStatFail,
-      @NonNull TextView tvDefenseStatReaction, @NonNull TextView tvDefenseStatSuccess,
-      @NonNull TextView tvDefenseStatSuccessRate, @NonNull TextView tvStatBaseCorrect,
+      @NonNull LinearLayout tileBaseCorrect, @NonNull LinearLayout tileBaseCorrectPct,
+      @NonNull LinearLayout tileBattingAvg, @NonNull LinearLayout tileDefenseReaction,
+      @NonNull LinearLayout tileFail, @NonNull LinearLayout tileFoul, @NonNull LinearLayout tileHit,
+      @NonNull LinearLayout tileReaction, @NonNull LinearLayout tileStrike,
+      @NonNull LinearLayout tileSuccess, @NonNull LinearLayout tileSuccessRate,
+      @NonNull TextView tvBattingGrowthNotice, @NonNull TextView tvBattingGrowthSection,
+      @NonNull TextView tvBattingLabel, @NonNull TextView tvDefenseGrowthNotice,
+      @NonNull TextView tvDefenseGrowthRate, @NonNull TextView tvDefenseGrowthReaction,
+      @NonNull TextView tvDefenseGrowthSection, @NonNull TextView tvDefenseGrowthSuccess,
+      @NonNull TextView tvDefenseLabel, @NonNull TextView tvDefenseStatCount,
+      @NonNull TextView tvDefenseStatFail, @NonNull TextView tvDefenseStatReaction,
+      @NonNull TextView tvDefenseStatSuccess, @NonNull TextView tvDefenseStatSuccessRate,
+      @NonNull TextView tvGrowthBattingAvg, @NonNull TextView tvGrowthFoul,
+      @NonNull TextView tvGrowthHit, @NonNull TextView tvGrowthReaction,
+      @NonNull TextView tvGrowthStrike, @NonNull TextView tvStatBaseCorrect,
       @NonNull TextView tvStatBaseCorrectPct, @NonNull TextView tvStatBattingAvg,
       @NonNull TextView tvStatCount, @NonNull TextView tvStatFoul, @NonNull TextView tvStatHit,
       @NonNull TextView tvStatReaction, @NonNull TextView tvStatStrike,
@@ -114,19 +201,44 @@ public final class ActivityRecordBinding implements ViewBinding {
     this.btnSetting = btnSetting;
     this.defenseStatsGrid = defenseStatsGrid;
     this.layoutBottomNav = layoutBottomNav;
+    this.llBattingGrowthRows = llBattingGrowthRows;
+    this.llDefenseGrowthRows = llDefenseGrowthRows;
     this.llRecordHeader = llRecordHeader;
     this.llUserProfile = llUserProfile;
     this.navHome = navHome;
     this.navRecord = navRecord;
     this.navTraining = navTraining;
     this.statsGrid = statsGrid;
+    this.tileBaseCorrect = tileBaseCorrect;
+    this.tileBaseCorrectPct = tileBaseCorrectPct;
+    this.tileBattingAvg = tileBattingAvg;
+    this.tileDefenseReaction = tileDefenseReaction;
+    this.tileFail = tileFail;
+    this.tileFoul = tileFoul;
+    this.tileHit = tileHit;
+    this.tileReaction = tileReaction;
+    this.tileStrike = tileStrike;
+    this.tileSuccess = tileSuccess;
+    this.tileSuccessRate = tileSuccessRate;
+    this.tvBattingGrowthNotice = tvBattingGrowthNotice;
+    this.tvBattingGrowthSection = tvBattingGrowthSection;
     this.tvBattingLabel = tvBattingLabel;
+    this.tvDefenseGrowthNotice = tvDefenseGrowthNotice;
+    this.tvDefenseGrowthRate = tvDefenseGrowthRate;
+    this.tvDefenseGrowthReaction = tvDefenseGrowthReaction;
+    this.tvDefenseGrowthSection = tvDefenseGrowthSection;
+    this.tvDefenseGrowthSuccess = tvDefenseGrowthSuccess;
     this.tvDefenseLabel = tvDefenseLabel;
     this.tvDefenseStatCount = tvDefenseStatCount;
     this.tvDefenseStatFail = tvDefenseStatFail;
     this.tvDefenseStatReaction = tvDefenseStatReaction;
     this.tvDefenseStatSuccess = tvDefenseStatSuccess;
     this.tvDefenseStatSuccessRate = tvDefenseStatSuccessRate;
+    this.tvGrowthBattingAvg = tvGrowthBattingAvg;
+    this.tvGrowthFoul = tvGrowthFoul;
+    this.tvGrowthHit = tvGrowthHit;
+    this.tvGrowthReaction = tvGrowthReaction;
+    this.tvGrowthStrike = tvGrowthStrike;
     this.tvStatBaseCorrect = tvStatBaseCorrect;
     this.tvStatBaseCorrectPct = tvStatBaseCorrectPct;
     this.tvStatBattingAvg = tvStatBattingAvg;
@@ -183,6 +295,18 @@ public final class ActivityRecordBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.llBattingGrowthRows;
+      LinearLayout llBattingGrowthRows = ViewBindings.findChildViewById(rootView, id);
+      if (llBattingGrowthRows == null) {
+        break missingId;
+      }
+
+      id = R.id.llDefenseGrowthRows;
+      LinearLayout llDefenseGrowthRows = ViewBindings.findChildViewById(rootView, id);
+      if (llDefenseGrowthRows == null) {
+        break missingId;
+      }
+
       id = R.id.ll_record_header;
       LinearLayout llRecordHeader = ViewBindings.findChildViewById(rootView, id);
       if (llRecordHeader == null) {
@@ -219,9 +343,117 @@ public final class ActivityRecordBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.tileBaseCorrect;
+      LinearLayout tileBaseCorrect = ViewBindings.findChildViewById(rootView, id);
+      if (tileBaseCorrect == null) {
+        break missingId;
+      }
+
+      id = R.id.tileBaseCorrectPct;
+      LinearLayout tileBaseCorrectPct = ViewBindings.findChildViewById(rootView, id);
+      if (tileBaseCorrectPct == null) {
+        break missingId;
+      }
+
+      id = R.id.tileBattingAvg;
+      LinearLayout tileBattingAvg = ViewBindings.findChildViewById(rootView, id);
+      if (tileBattingAvg == null) {
+        break missingId;
+      }
+
+      id = R.id.tileDefenseReaction;
+      LinearLayout tileDefenseReaction = ViewBindings.findChildViewById(rootView, id);
+      if (tileDefenseReaction == null) {
+        break missingId;
+      }
+
+      id = R.id.tileFail;
+      LinearLayout tileFail = ViewBindings.findChildViewById(rootView, id);
+      if (tileFail == null) {
+        break missingId;
+      }
+
+      id = R.id.tileFoul;
+      LinearLayout tileFoul = ViewBindings.findChildViewById(rootView, id);
+      if (tileFoul == null) {
+        break missingId;
+      }
+
+      id = R.id.tileHit;
+      LinearLayout tileHit = ViewBindings.findChildViewById(rootView, id);
+      if (tileHit == null) {
+        break missingId;
+      }
+
+      id = R.id.tileReaction;
+      LinearLayout tileReaction = ViewBindings.findChildViewById(rootView, id);
+      if (tileReaction == null) {
+        break missingId;
+      }
+
+      id = R.id.tileStrike;
+      LinearLayout tileStrike = ViewBindings.findChildViewById(rootView, id);
+      if (tileStrike == null) {
+        break missingId;
+      }
+
+      id = R.id.tileSuccess;
+      LinearLayout tileSuccess = ViewBindings.findChildViewById(rootView, id);
+      if (tileSuccess == null) {
+        break missingId;
+      }
+
+      id = R.id.tileSuccessRate;
+      LinearLayout tileSuccessRate = ViewBindings.findChildViewById(rootView, id);
+      if (tileSuccessRate == null) {
+        break missingId;
+      }
+
+      id = R.id.tvBattingGrowthNotice;
+      TextView tvBattingGrowthNotice = ViewBindings.findChildViewById(rootView, id);
+      if (tvBattingGrowthNotice == null) {
+        break missingId;
+      }
+
+      id = R.id.tvBattingGrowthSection;
+      TextView tvBattingGrowthSection = ViewBindings.findChildViewById(rootView, id);
+      if (tvBattingGrowthSection == null) {
+        break missingId;
+      }
+
       id = R.id.tv_batting_label;
       TextView tvBattingLabel = ViewBindings.findChildViewById(rootView, id);
       if (tvBattingLabel == null) {
+        break missingId;
+      }
+
+      id = R.id.tvDefenseGrowthNotice;
+      TextView tvDefenseGrowthNotice = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefenseGrowthNotice == null) {
+        break missingId;
+      }
+
+      id = R.id.tvDefenseGrowthRate;
+      TextView tvDefenseGrowthRate = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefenseGrowthRate == null) {
+        break missingId;
+      }
+
+      id = R.id.tvDefenseGrowthReaction;
+      TextView tvDefenseGrowthReaction = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefenseGrowthReaction == null) {
+        break missingId;
+      }
+
+      id = R.id.tvDefenseGrowthSection;
+      TextView tvDefenseGrowthSection = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefenseGrowthSection == null) {
+        break missingId;
+      }
+
+      id = R.id.tvDefenseGrowthSuccess;
+      TextView tvDefenseGrowthSuccess = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefenseGrowthSuccess == null) {
         break missingId;
       }
 
@@ -258,6 +490,36 @@ public final class ActivityRecordBinding implements ViewBinding {
       id = R.id.tvDefenseStatSuccessRate;
       TextView tvDefenseStatSuccessRate = ViewBindings.findChildViewById(rootView, id);
       if (tvDefenseStatSuccessRate == null) {
+        break missingId;
+      }
+
+      id = R.id.tvGrowthBattingAvg;
+      TextView tvGrowthBattingAvg = ViewBindings.findChildViewById(rootView, id);
+      if (tvGrowthBattingAvg == null) {
+        break missingId;
+      }
+
+      id = R.id.tvGrowthFoul;
+      TextView tvGrowthFoul = ViewBindings.findChildViewById(rootView, id);
+      if (tvGrowthFoul == null) {
+        break missingId;
+      }
+
+      id = R.id.tvGrowthHit;
+      TextView tvGrowthHit = ViewBindings.findChildViewById(rootView, id);
+      if (tvGrowthHit == null) {
+        break missingId;
+      }
+
+      id = R.id.tvGrowthReaction;
+      TextView tvGrowthReaction = ViewBindings.findChildViewById(rootView, id);
+      if (tvGrowthReaction == null) {
+        break missingId;
+      }
+
+      id = R.id.tvGrowthStrike;
+      TextView tvGrowthStrike = ViewBindings.findChildViewById(rootView, id);
+      if (tvGrowthStrike == null) {
         break missingId;
       }
 
@@ -316,11 +578,16 @@ public final class ActivityRecordBinding implements ViewBinding {
       }
 
       return new ActivityRecordBinding((RelativeLayout) rootView, btnSetting, defenseStatsGrid,
-          layoutBottomNav, llRecordHeader, llUserProfile, navHome, navRecord, navTraining,
-          statsGrid, tvBattingLabel, tvDefenseLabel, tvDefenseStatCount, tvDefenseStatFail,
-          tvDefenseStatReaction, tvDefenseStatSuccess, tvDefenseStatSuccessRate, tvStatBaseCorrect,
-          tvStatBaseCorrectPct, tvStatBattingAvg, tvStatCount, tvStatFoul, tvStatHit,
-          tvStatReaction, tvStatStrike, tvUserName);
+          layoutBottomNav, llBattingGrowthRows, llDefenseGrowthRows, llRecordHeader, llUserProfile,
+          navHome, navRecord, navTraining, statsGrid, tileBaseCorrect, tileBaseCorrectPct,
+          tileBattingAvg, tileDefenseReaction, tileFail, tileFoul, tileHit, tileReaction,
+          tileStrike, tileSuccess, tileSuccessRate, tvBattingGrowthNotice, tvBattingGrowthSection,
+          tvBattingLabel, tvDefenseGrowthNotice, tvDefenseGrowthRate, tvDefenseGrowthReaction,
+          tvDefenseGrowthSection, tvDefenseGrowthSuccess, tvDefenseLabel, tvDefenseStatCount,
+          tvDefenseStatFail, tvDefenseStatReaction, tvDefenseStatSuccess, tvDefenseStatSuccessRate,
+          tvGrowthBattingAvg, tvGrowthFoul, tvGrowthHit, tvGrowthReaction, tvGrowthStrike,
+          tvStatBaseCorrect, tvStatBaseCorrectPct, tvStatBattingAvg, tvStatCount, tvStatFoul,
+          tvStatHit, tvStatReaction, tvStatStrike, tvUserName);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -48,6 +49,9 @@ public final class ActivitySwingTestBinding implements ViewBinding {
 
   @NonNull
   public final LinearLayout pitchControlLayout;
+
+  @NonNull
+  public final Switch switchTestForceHit;
 
   @NonNull
   public final TextView tvBatteryLevel;
@@ -105,15 +109,15 @@ public final class ActivitySwingTestBinding implements ViewBinding {
       @NonNull Button btnBleConnect, @NonNull Button btnResultView,
       @NonNull Button btnSwingPitchMinus, @NonNull Button btnSwingPitchPlus,
       @NonNull Button btnV2Start, @NonNull LinearLayout pitchControlLayout,
-      @NonNull TextView tvBatteryLevel, @NonNull TextView tvBleStatus,
-      @NonNull TextView tvSwingPitchCount, @NonNull TextView tvSwingPitchProgress,
-      @NonNull TextView tvV2Result, @NonNull TextView tvV2Status,
-      @NonNull BallTrackView v2BallTrackView, @NonNull FrameLayout v2Base1Container,
-      @NonNull View v2Base1Diamond, @NonNull View v2Base1Glow,
-      @NonNull FrameLayout v2Base3Container, @NonNull View v2Base3Diamond,
-      @NonNull View v2Base3Glow, @NonNull BallParabolaView v2LiveParabolaView,
-      @NonNull SwingGraphView v2SwingGraphView, @NonNull TextView v2TvBase1Label,
-      @NonNull TextView v2TvBase3Label) {
+      @NonNull Switch switchTestForceHit, @NonNull TextView tvBatteryLevel,
+      @NonNull TextView tvBleStatus, @NonNull TextView tvSwingPitchCount,
+      @NonNull TextView tvSwingPitchProgress, @NonNull TextView tvV2Result,
+      @NonNull TextView tvV2Status, @NonNull BallTrackView v2BallTrackView,
+      @NonNull FrameLayout v2Base1Container, @NonNull View v2Base1Diamond,
+      @NonNull View v2Base1Glow, @NonNull FrameLayout v2Base3Container,
+      @NonNull View v2Base3Diamond, @NonNull View v2Base3Glow,
+      @NonNull BallParabolaView v2LiveParabolaView, @NonNull SwingGraphView v2SwingGraphView,
+      @NonNull TextView v2TvBase1Label, @NonNull TextView v2TvBase3Label) {
     this.rootView = rootView;
     this.bleControlLayout = bleControlLayout;
     this.bottomBtnRow = bottomBtnRow;
@@ -123,6 +127,7 @@ public final class ActivitySwingTestBinding implements ViewBinding {
     this.btnSwingPitchPlus = btnSwingPitchPlus;
     this.btnV2Start = btnV2Start;
     this.pitchControlLayout = pitchControlLayout;
+    this.switchTestForceHit = switchTestForceHit;
     this.tvBatteryLevel = tvBatteryLevel;
     this.tvBleStatus = tvBleStatus;
     this.tvSwingPitchCount = tvSwingPitchCount;
@@ -214,6 +219,12 @@ public final class ActivitySwingTestBinding implements ViewBinding {
       id = R.id.pitchControlLayout;
       LinearLayout pitchControlLayout = ViewBindings.findChildViewById(rootView, id);
       if (pitchControlLayout == null) {
+        break missingId;
+      }
+
+      id = R.id.switchTestForceHit;
+      Switch switchTestForceHit = ViewBindings.findChildViewById(rootView, id);
+      if (switchTestForceHit == null) {
         break missingId;
       }
 
@@ -321,10 +332,10 @@ public final class ActivitySwingTestBinding implements ViewBinding {
 
       return new ActivitySwingTestBinding((ConstraintLayout) rootView, bleControlLayout,
           bottomBtnRow, btnBleConnect, btnResultView, btnSwingPitchMinus, btnSwingPitchPlus,
-          btnV2Start, pitchControlLayout, tvBatteryLevel, tvBleStatus, tvSwingPitchCount,
-          tvSwingPitchProgress, tvV2Result, tvV2Status, v2BallTrackView, v2Base1Container,
-          v2Base1Diamond, v2Base1Glow, v2Base3Container, v2Base3Diamond, v2Base3Glow,
-          v2LiveParabolaView, v2SwingGraphView, v2TvBase1Label, v2TvBase3Label);
+          btnV2Start, pitchControlLayout, switchTestForceHit, tvBatteryLevel, tvBleStatus,
+          tvSwingPitchCount, tvSwingPitchProgress, tvV2Result, tvV2Status, v2BallTrackView,
+          v2Base1Container, v2Base1Diamond, v2Base1Glow, v2Base3Container, v2Base3Diamond,
+          v2Base3Glow, v2LiveParabolaView, v2SwingGraphView, v2TvBase1Label, v2TvBase3Label);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

@@ -493,9 +493,9 @@ internal fun SwingTestActivity.startGame() {
             minInWindow -> {
                 val absDiff = abs(angleDiff).toInt()
                 val foulAdvice = when {
-                    !swingWasStrong  -> "더 강하게 휘두르세요"
-                    angleDiff > 0    -> "배트를 ${absDiff}도 더 내려서 치세요"
-                    else             -> "배트를 ${absDiff}도 더 올려서 치세요"
+                    abs(angleDiff) > PITCH_TOLERANCE && angleDiff > 0 -> "배트를 ${absDiff}도 더 내려서 치세요"
+                    abs(angleDiff) > PITCH_TOLERANCE                   -> "배트를 ${absDiff}도 더 올려서 치세요"
+                    else                                               -> "더 강하게 휘두르세요"
                 }
                 currentPitchRecord["판정"] = "파울"
                 currentPitchRecord["피드백"] = foulAdvice
@@ -506,7 +506,7 @@ internal fun SwingTestActivity.startGame() {
                     foulCount++
                     tvStatus?.text = "파울!"
                     tvStatus?.setTextColor(0xFFFBBF24.toInt())
-                    val resultLabel = if (!swingWasStrong) "파울 — 힘 부족" else "파울 — 각도 불일치"
+                    val resultLabel = if (abs(angleDiff) > PITCH_TOLERANCE) "파울 — 각도 불일치" else "파울 — 힘 부족"
                     tvResult?.text = "$resultLabel\n최저 각도: %.0f°".format(minBatAngleDeg)
                     updateSimpleStatus("파울!", 0xFF78350F.toInt())
                     if (isAdmin && !isTraining) {
@@ -829,13 +829,13 @@ internal fun SwingTestActivity.startAngleCalibration() {
 
             if (!nowInRange) {
                 val direction = if (diff > 0) "배트를 더 내리세요." else "배트를 조금 올리세요."
-                ttsManager.speakAndWait("현재 ${angle.toInt()}도. $direction", Locale.KOREAN, speechRate = 2.0f)
+                ttsManager.speakAndWait("현재 ${angle.toInt()}도. $direction", Locale.KOREAN, speechRate = 1.0f)
                 if (bleConnected) bleManager.sendControl(1)
                 delay(300)
             } else {
                 ttsManager.speakAndWait(
                     "목표 각도 ${angle.toInt()}도입니다. 이 자세를 유지하세요.",
-                    Locale.KOREAN, speechRate = 2.0f
+                    Locale.KOREAN, speechRate = 1.0f
                 )
                 if (bleConnected) bleManager.sendControl(1)
 
@@ -846,17 +846,17 @@ internal fun SwingTestActivity.startAngleCalibration() {
                         val dir  = if (d > 0) "배트를 더 내리세요." else "배트를 조금 올리세요."
                         ttsManager.speakAndWait(
                             "범위를 벗어났습니다. 현재 ${curr.toInt()}도. $dir",
-                            Locale.KOREAN, speechRate = 2.0f
+                            Locale.KOREAN, speechRate = 1.0f
                         )
                         if (bleConnected) bleManager.sendControl(1)
                         delay(300)
                         continue@outer
                     }
-                    ttsManager.speakAndWait("$i", Locale.KOREAN, speechRate = 2.0f)
+                    ttsManager.speakAndWait("$i", Locale.KOREAN, speechRate = 1.0f)
                 }
 
                 if (abs(currentPitchDeg - BATTING_ANGLE_DEG) <= PITCH_TOLERANCE) {
-                    ttsManager.speakAndWait("잘 하셨습니다. 스윙할 때 이 각도로 스윙하면 됩니다.", Locale.KOREAN, speechRate = 2.0f)
+                    ttsManager.speakAndWait("잘 하셨습니다. 스윙할 때 이 각도로 스윙하면 됩니다.", Locale.KOREAN, speechRate = 1.0f)
                     delay(1000)
                     if (bleConnected) bleManager.sendControl(0)
                     tutorialManager.notifyStep3Done()

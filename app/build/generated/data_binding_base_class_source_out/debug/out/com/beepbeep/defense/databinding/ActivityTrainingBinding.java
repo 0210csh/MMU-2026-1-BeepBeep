@@ -34,6 +34,12 @@ public final class ActivityTrainingBinding implements ViewBinding {
   public final LinearLayout layoutBottomNav;
 
   @NonNull
+  public final LinearLayout llBatCards;
+
+  @NonNull
+  public final LinearLayout llDefCards;
+
+  @NonNull
   public final LinearLayout llTrainingCards;
 
   @NonNull
@@ -55,10 +61,10 @@ public final class ActivityTrainingBinding implements ViewBinding {
   public final LinearLayout rlDefRecord;
 
   @NonNull
-  public final TextView tvBatRate;
+  public final TextView tvBatSummary;
 
   @NonNull
-  public final TextView tvDefRate;
+  public final TextView tvDefSummary;
 
   @NonNull
   public final TextView tvLabelRecent;
@@ -74,17 +80,21 @@ public final class ActivityTrainingBinding implements ViewBinding {
 
   private ActivityTrainingBinding(@NonNull RelativeLayout rootView, @NonNull ImageButton btnSetting,
       @NonNull LinearLayout btnStartBatting, @NonNull LinearLayout btnStartDefense,
-      @NonNull LinearLayout layoutBottomNav, @NonNull LinearLayout llTrainingCards,
+      @NonNull LinearLayout layoutBottomNav, @NonNull LinearLayout llBatCards,
+      @NonNull LinearLayout llDefCards, @NonNull LinearLayout llTrainingCards,
       @NonNull LinearLayout llTrainingHeader, @NonNull LinearLayout navHome,
       @NonNull LinearLayout navRecord, @NonNull LinearLayout navTraining,
       @NonNull LinearLayout rlBatRecord, @NonNull LinearLayout rlDefRecord,
-      @NonNull TextView tvBatRate, @NonNull TextView tvDefRate, @NonNull TextView tvLabelRecent,
-      @NonNull TextView tvLabelSelect, @NonNull TextView tvRecBat, @NonNull TextView tvRecDef) {
+      @NonNull TextView tvBatSummary, @NonNull TextView tvDefSummary,
+      @NonNull TextView tvLabelRecent, @NonNull TextView tvLabelSelect, @NonNull TextView tvRecBat,
+      @NonNull TextView tvRecDef) {
     this.rootView = rootView;
     this.btnSetting = btnSetting;
     this.btnStartBatting = btnStartBatting;
     this.btnStartDefense = btnStartDefense;
     this.layoutBottomNav = layoutBottomNav;
+    this.llBatCards = llBatCards;
+    this.llDefCards = llDefCards;
     this.llTrainingCards = llTrainingCards;
     this.llTrainingHeader = llTrainingHeader;
     this.navHome = navHome;
@@ -92,8 +102,8 @@ public final class ActivityTrainingBinding implements ViewBinding {
     this.navTraining = navTraining;
     this.rlBatRecord = rlBatRecord;
     this.rlDefRecord = rlDefRecord;
-    this.tvBatRate = tvBatRate;
-    this.tvDefRate = tvDefRate;
+    this.tvBatSummary = tvBatSummary;
+    this.tvDefSummary = tvDefSummary;
     this.tvLabelRecent = tvLabelRecent;
     this.tvLabelSelect = tvLabelSelect;
     this.tvRecBat = tvRecBat;
@@ -151,6 +161,18 @@ public final class ActivityTrainingBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.ll_bat_cards;
+      LinearLayout llBatCards = ViewBindings.findChildViewById(rootView, id);
+      if (llBatCards == null) {
+        break missingId;
+      }
+
+      id = R.id.ll_def_cards;
+      LinearLayout llDefCards = ViewBindings.findChildViewById(rootView, id);
+      if (llDefCards == null) {
+        break missingId;
+      }
+
       id = R.id.ll_training_cards;
       LinearLayout llTrainingCards = ViewBindings.findChildViewById(rootView, id);
       if (llTrainingCards == null) {
@@ -193,15 +215,15 @@ public final class ActivityTrainingBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.tv_bat_rate;
-      TextView tvBatRate = ViewBindings.findChildViewById(rootView, id);
-      if (tvBatRate == null) {
+      id = R.id.tv_bat_summary;
+      TextView tvBatSummary = ViewBindings.findChildViewById(rootView, id);
+      if (tvBatSummary == null) {
         break missingId;
       }
 
-      id = R.id.tv_def_rate;
-      TextView tvDefRate = ViewBindings.findChildViewById(rootView, id);
-      if (tvDefRate == null) {
+      id = R.id.tv_def_summary;
+      TextView tvDefSummary = ViewBindings.findChildViewById(rootView, id);
+      if (tvDefSummary == null) {
         break missingId;
       }
 
@@ -230,9 +252,9 @@ public final class ActivityTrainingBinding implements ViewBinding {
       }
 
       return new ActivityTrainingBinding((RelativeLayout) rootView, btnSetting, btnStartBatting,
-          btnStartDefense, layoutBottomNav, llTrainingCards, llTrainingHeader, navHome, navRecord,
-          navTraining, rlBatRecord, rlDefRecord, tvBatRate, tvDefRate, tvLabelRecent, tvLabelSelect,
-          tvRecBat, tvRecDef);
+          btnStartDefense, layoutBottomNav, llBatCards, llDefCards, llTrainingCards,
+          llTrainingHeader, navHome, navRecord, navTraining, rlBatRecord, rlDefRecord, tvBatSummary,
+          tvDefSummary, tvLabelRecent, tvLabelSelect, tvRecBat, tvRecDef);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

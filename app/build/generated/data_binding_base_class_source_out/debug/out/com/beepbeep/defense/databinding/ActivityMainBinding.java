@@ -6,7 +6,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -35,6 +34,9 @@ public final class ActivityMainBinding implements ViewBinding {
   public final Button btnCatch;
 
   @NonNull
+  public final Button btnEarlyStop;
+
+  @NonNull
   public final Button btnStart;
 
   @NonNull
@@ -53,9 +55,6 @@ public final class ActivityMainBinding implements ViewBinding {
   public final JoystickView joystickView;
 
   @NonNull
-  public final Spinner spinnerDifficulty;
-
-  @NonNull
   public final Switch switchFakeController;
 
   @NonNull
@@ -71,23 +70,23 @@ public final class ActivityMainBinding implements ViewBinding {
   public final TextView tvScore;
 
   private ActivityMainBinding(@NonNull ConstraintLayout rootView, @NonNull Button btnBallCountDown,
-      @NonNull Button btnBallCountUp, @NonNull Button btnCatch, @NonNull Button btnStart,
-      @NonNull LinearLayout controlLayout, @NonNull LinearLayout debugControllerLayout,
-      @NonNull FieldView fieldView, @NonNull LinearLayout headerLayout,
-      @NonNull JoystickView joystickView, @NonNull Spinner spinnerDifficulty,
+      @NonNull Button btnBallCountUp, @NonNull Button btnCatch, @NonNull Button btnEarlyStop,
+      @NonNull Button btnStart, @NonNull LinearLayout controlLayout,
+      @NonNull LinearLayout debugControllerLayout, @NonNull FieldView fieldView,
+      @NonNull LinearLayout headerLayout, @NonNull JoystickView joystickView,
       @NonNull Switch switchFakeController, @NonNull TextView tvBallCount,
       @NonNull TextView tvDebug, @NonNull TextView tvPhase, @NonNull TextView tvScore) {
     this.rootView = rootView;
     this.btnBallCountDown = btnBallCountDown;
     this.btnBallCountUp = btnBallCountUp;
     this.btnCatch = btnCatch;
+    this.btnEarlyStop = btnEarlyStop;
     this.btnStart = btnStart;
     this.controlLayout = controlLayout;
     this.debugControllerLayout = debugControllerLayout;
     this.fieldView = fieldView;
     this.headerLayout = headerLayout;
     this.joystickView = joystickView;
-    this.spinnerDifficulty = spinnerDifficulty;
     this.switchFakeController = switchFakeController;
     this.tvBallCount = tvBallCount;
     this.tvDebug = tvDebug;
@@ -140,6 +139,12 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.btnEarlyStop;
+      Button btnEarlyStop = ViewBindings.findChildViewById(rootView, id);
+      if (btnEarlyStop == null) {
+        break missingId;
+      }
+
       id = R.id.btnStart;
       Button btnStart = ViewBindings.findChildViewById(rootView, id);
       if (btnStart == null) {
@@ -176,12 +181,6 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.spinnerDifficulty;
-      Spinner spinnerDifficulty = ViewBindings.findChildViewById(rootView, id);
-      if (spinnerDifficulty == null) {
-        break missingId;
-      }
-
       id = R.id.switchFakeController;
       Switch switchFakeController = ViewBindings.findChildViewById(rootView, id);
       if (switchFakeController == null) {
@@ -213,9 +212,8 @@ public final class ActivityMainBinding implements ViewBinding {
       }
 
       return new ActivityMainBinding((ConstraintLayout) rootView, btnBallCountDown, btnBallCountUp,
-          btnCatch, btnStart, controlLayout, debugControllerLayout, fieldView, headerLayout,
-          joystickView, spinnerDifficulty, switchFakeController, tvBallCount, tvDebug, tvPhase,
-          tvScore);
+          btnCatch, btnEarlyStop, btnStart, controlLayout, debugControllerLayout, fieldView,
+          headerLayout, joystickView, switchFakeController, tvBallCount, tvDebug, tvPhase, tvScore);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

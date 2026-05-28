@@ -225,6 +225,109 @@
                     android:importantForAccessibility="no"
                     app:tint="#555555" />
             </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginHorizontal="16dp"
+                android:background="#2A2A2A"
+                android:importantForAccessibility="no" />
+
+            <!-- 타격 튜토리얼 다시보기 -->
+            <LinearLayout
+                android:id="@+id/itemResetBattingTutorial"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="60dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:contentDescription="타격 튜토리얼 다시보기"
+                android:importantForAccessibility="yes">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/baseline_info_24"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
+                    app:tint="#5CF387" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="타격 튜토리얼 다시보기"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:fontFamily="sans-serif"
+                    android:importantForAccessibility="no" />
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:rotation="180"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
+                    app:tint="#555555" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginHorizontal="16dp"
+                android:background="#2A2A2A"
+                android:importantForAccessibility="no" />
+
+            <!-- 수비 튜토리얼 다시보기 -->
+            <LinearLayout
+                android:id="@+id/itemResetDefenseTutorial"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="60dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:contentDescription="수비 튜토리얼 다시보기"
+                android:importantForAccessibility="yes">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/baseline_info_24"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
+                    app:tint="#38BDF8" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="수비 튜토리얼 다시보기"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:fontFamily="sans-serif"
+                    android:importantForAccessibility="no" />
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:rotation="180"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
+                    app:tint="#555555" />
+            </LinearLayout>
+
         </LinearLayout>
 
         <!-- ── 기타 섹션 ── -->

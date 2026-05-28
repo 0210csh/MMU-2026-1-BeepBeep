@@ -26,13 +26,10 @@ public final class ActivityHomeBinding implements ViewBinding {
   public final ImageButton btnSetting;
 
   @NonNull
-  public final CardView cardBatting;
-
-  @NonNull
-  public final CardView cardDefense;
-
-  @NonNull
   public final CardView cardMyRecord;
+
+  @NonNull
+  public final CardView cardTraining;
 
   @NonNull
   public final LinearLayout contentHome;
@@ -59,16 +56,15 @@ public final class ActivityHomeBinding implements ViewBinding {
   public final LinearLayout navTraining;
 
   private ActivityHomeBinding(@NonNull ConstraintLayout rootView, @NonNull ImageButton btnSetting,
-      @NonNull CardView cardBatting, @NonNull CardView cardDefense, @NonNull CardView cardMyRecord,
+      @NonNull CardView cardMyRecord, @NonNull CardView cardTraining,
       @NonNull LinearLayout contentHome, @NonNull FrameLayout fragmentContainer,
       @NonNull LinearLayout layoutBottomNav, @NonNull LinearLayout layoutHeader,
       @NonNull ConstraintLayout mainLayout, @NonNull LinearLayout navHome,
       @NonNull LinearLayout navRecord, @NonNull LinearLayout navTraining) {
     this.rootView = rootView;
     this.btnSetting = btnSetting;
-    this.cardBatting = cardBatting;
-    this.cardDefense = cardDefense;
     this.cardMyRecord = cardMyRecord;
+    this.cardTraining = cardTraining;
     this.contentHome = contentHome;
     this.fragmentContainer = fragmentContainer;
     this.layoutBottomNav = layoutBottomNav;
@@ -112,21 +108,15 @@ public final class ActivityHomeBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.cardBatting;
-      CardView cardBatting = ViewBindings.findChildViewById(rootView, id);
-      if (cardBatting == null) {
-        break missingId;
-      }
-
-      id = R.id.cardDefense;
-      CardView cardDefense = ViewBindings.findChildViewById(rootView, id);
-      if (cardDefense == null) {
-        break missingId;
-      }
-
       id = R.id.cardMyRecord;
       CardView cardMyRecord = ViewBindings.findChildViewById(rootView, id);
       if (cardMyRecord == null) {
+        break missingId;
+      }
+
+      id = R.id.cardTraining;
+      CardView cardTraining = ViewBindings.findChildViewById(rootView, id);
+      if (cardTraining == null) {
         break missingId;
       }
 
@@ -174,9 +164,9 @@ public final class ActivityHomeBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ActivityHomeBinding((ConstraintLayout) rootView, btnSetting, cardBatting,
-          cardDefense, cardMyRecord, contentHome, fragmentContainer, layoutBottomNav, layoutHeader,
-          mainLayout, navHome, navRecord, navTraining);
+      return new ActivityHomeBinding((ConstraintLayout) rootView, btnSetting, cardMyRecord,
+          cardTraining, contentHome, fragmentContainer, layoutBottomNav, layoutHeader, mainLayout,
+          navHome, navRecord, navTraining);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

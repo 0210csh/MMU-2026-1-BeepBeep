@@ -71,13 +71,13 @@
         app:layout_constraintTop_toBottomOf="@id/layoutHeader"
         app:layout_constraintBottom_toTopOf="@id/layoutBottomNav">
 
-        <!-- 타격 훈련 카드 -->
+        <!-- 훈련 선택 카드 -->
         <androidx.cardview.widget.CardView
-            android:id="@+id/cardBatting"
+            android:id="@+id/cardTraining"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:contentDescription="타격 훈련 탭으로 이동"
+            android:contentDescription="훈련 선택 화면으로 이동"
             android:clickable="true"
             android:focusable="true"
             app:cardBackgroundColor="#1B4332"
@@ -95,7 +95,7 @@
                     android:layout_height="60dp"
                     android:background="@drawable/bg_circle_green_vivid"
                     android:padding="15dp"
-                    android:src="@drawable/ic_baseball"
+                    android:src="@drawable/training"
                     android:importantForAccessibility="no"
                     app:tint="#0A0A0A" />
                 <LinearLayout
@@ -107,7 +107,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="타격 훈련"
+                        android:text="훈련 선택"
                         android:textColor="#FFFFFF"
                         android:textSize="22sp"
                         android:textStyle="bold"
@@ -115,60 +115,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Batting"
+                        android:text="Training"
                         android:textColor="#5CF387"
-                        android:textSize="14sp"
-                        android:importantForAccessibility="no" />
-                </LinearLayout>
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- 수비 훈련 카드 -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardDefense"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:contentDescription="수비 훈련 탭으로 이동"
-            android:focusable="true"
-            android:clickable="true"
-            app:cardBackgroundColor="#075985"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="4dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:padding="20dp"
-                android:minHeight="88dp"
-                android:importantForAccessibility="no">
-                <ImageView
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:background="@drawable/bg_circle_blue_vivid"
-                    android:padding="15dp"
-                    android:src="@drawable/ic_shield"
-                    android:importantForAccessibility="no"
-                    app:tint="#0A0A0A" />
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="20dp"
-                    android:orientation="vertical"
-                    android:importantForAccessibility="no">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="수비 훈련"
-                        android:textColor="#FFFFFF"
-                        android:textSize="22sp"
-                        android:textStyle="bold"
-                        android:importantForAccessibility="no" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Defense"
-                        android:textColor="#7DD3FC"
                         android:textSize="14sp"
                         android:importantForAccessibility="no" />
                 </LinearLayout>
@@ -180,7 +128,7 @@
             android:id="@+id/cardMyRecord"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:contentDescription="내 기록 탭으로 이동"
+            android:contentDescription="내 기록 화면으로 이동"
             android:focusable="true"
             android:clickable="true"
             app:cardBackgroundColor="#92400E"
@@ -238,7 +186,6 @@
         android:paddingTop="10dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- ✅ 홈 아이콘 하얀색으로 변경 -->
         <LinearLayout
             android:id="@+id/navHome"
             android:layout_width="0dp"

@@ -63,7 +63,7 @@
             android:screenOrientation="userLandscape" />
         <activity
             android:name="com.beepbeep.defense.batting.SwingTestActivity"
-            android:screenOrientation="userLandscape" />
+            android:screenOrientation="portrait" />
         <activity android:name="com.beepbeep.defense.hardware.BleTestActivity" />
 
         <service

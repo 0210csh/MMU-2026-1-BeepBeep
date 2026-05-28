@@ -36,6 +36,12 @@ public final class SettingBinding implements ViewBinding {
   public final LinearLayout itemLogout;
 
   @NonNull
+  public final LinearLayout itemResetBattingTutorial;
+
+  @NonNull
+  public final LinearLayout itemResetDefenseTutorial;
+
+  @NonNull
   public final LinearLayout itemResetRecord;
 
   @NonNull
@@ -44,13 +50,17 @@ public final class SettingBinding implements ViewBinding {
   private SettingBinding(@NonNull ScrollView rootView, @NonNull ImageButton btnBack,
       @NonNull LinearLayout itemChangeName, @NonNull LinearLayout itemChangePw,
       @NonNull LinearLayout itemDeleteAccount, @NonNull LinearLayout itemLogout,
-      @NonNull LinearLayout itemResetRecord, @NonNull LinearLayout llSettingHeader) {
+      @NonNull LinearLayout itemResetBattingTutorial,
+      @NonNull LinearLayout itemResetDefenseTutorial, @NonNull LinearLayout itemResetRecord,
+      @NonNull LinearLayout llSettingHeader) {
     this.rootView = rootView;
     this.btnBack = btnBack;
     this.itemChangeName = itemChangeName;
     this.itemChangePw = itemChangePw;
     this.itemDeleteAccount = itemDeleteAccount;
     this.itemLogout = itemLogout;
+    this.itemResetBattingTutorial = itemResetBattingTutorial;
+    this.itemResetDefenseTutorial = itemResetDefenseTutorial;
     this.itemResetRecord = itemResetRecord;
     this.llSettingHeader = llSettingHeader;
   }
@@ -112,6 +122,18 @@ public final class SettingBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.itemResetBattingTutorial;
+      LinearLayout itemResetBattingTutorial = ViewBindings.findChildViewById(rootView, id);
+      if (itemResetBattingTutorial == null) {
+        break missingId;
+      }
+
+      id = R.id.itemResetDefenseTutorial;
+      LinearLayout itemResetDefenseTutorial = ViewBindings.findChildViewById(rootView, id);
+      if (itemResetDefenseTutorial == null) {
+        break missingId;
+      }
+
       id = R.id.itemResetRecord;
       LinearLayout itemResetRecord = ViewBindings.findChildViewById(rootView, id);
       if (itemResetRecord == null) {
@@ -125,7 +147,8 @@ public final class SettingBinding implements ViewBinding {
       }
 
       return new SettingBinding((ScrollView) rootView, btnBack, itemChangeName, itemChangePw,
-          itemDeleteAccount, itemLogout, itemResetRecord, llSettingHeader);
+          itemDeleteAccount, itemLogout, itemResetBattingTutorial, itemResetDefenseTutorial,
+          itemResetRecord, llSettingHeader);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

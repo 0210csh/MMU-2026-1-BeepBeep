@@ -37,7 +37,7 @@ class SwingTutorialManager(
         private const val PREF_NAME             = "TutorialPrefs"
         private const val KEY_BATTING_DONE      = "batting_tutorial_done"
         private const val TAG                   = "Tutorial"
-        private const val TUTORIAL_SPEECH_RATE  = 2.0f   // 설명 TTS 재생 속도
+        private const val TUTORIAL_SPEECH_RATE  = 1.0f   // 설명 TTS 재생 속도
     }
 
     var isRunning = false
@@ -120,7 +120,7 @@ class SwingTutorialManager(
     private suspend fun runStep1() {
         currentStep = 1
         Log.d(TAG, "1단계 시작")
-        ttsManager.speakAndWait("타격 훈련 튜토리얼을 시작합니다.", java.util.Locale.KOREAN, speechRate = TUTORIAL_SPEECH_RATE)
+        ttsManager.speakAndWait("타격 훈련 튜토리얼을 시작합니다. 튜토리얼은 기록에 반영되지 않습니다.", java.util.Locale.KOREAN, speechRate = TUTORIAL_SPEECH_RATE)
         delay(300)
         ttsManager.speakAndWait(
             "휴대폰을 카메라 방향이 이마쪽으로 가도록 모자에 장착하고, 배트를 손으로 쥐세요.",
@@ -177,7 +177,7 @@ class SwingTutorialManager(
         )
         delay(300)
         ttsManager.speakAndWait(
-            "목표 각도는 수평보다 약 27도 아래입니다.",
+            "목표 각도는 수평보다 약 27도 아래입니다. 허용오차는 플러스 마이너스 5도입니다.",
             java.util.Locale.KOREAN, speechRate = TUTORIAL_SPEECH_RATE
         )
         delay(300)
@@ -228,7 +228,7 @@ class SwingTutorialManager(
         delay(500)
         ttsManager.speakAndWait("다섯 번째 단계입니다. 주루를 선택하는 방법을 알려드립니다.", java.util.Locale.KOREAN, speechRate = TUTORIAL_SPEECH_RATE)
         delay(300)
-        ttsManager.speakAndWait("기존에 돌았던 방향 반대 방향으로 몸을 돌려 제자리에 서주세요.", java.util.Locale.KOREAN, speechRate = TUTORIAL_SPEECH_RATE)
+        ttsManager.speakAndWait("기존에 돌았던 방향 반대 방향으로 90도 몸을 돌려 제자리에 서주세요.", java.util.Locale.KOREAN, speechRate = TUTORIAL_SPEECH_RATE)
         delay(500)
         ttsManager.speakAndWait(
             "삐 소리가 들리게 되면 소리가 나는 방향의 버튼을 누르는 것으로 베이스가 선택됩니다.",
@@ -241,7 +241,7 @@ class SwingTutorialManager(
         )
         delay(500)
         repeat(targetPitchCount) { index ->
-            ttsManager.speak("${index + 1}번 주루 시작.")
+            ttsManager.speak("${index + 1}번째 주루 시작.")
             delay(800)
             withContext(Dispatchers.Main) { onStartBaseBeep() }
             step5Deferred = CompletableDeferred()
@@ -305,7 +305,12 @@ class SwingTutorialManager(
         }
 
         ttsManager.speakAndWait(
-            "튜토리얼이 완료되었습니다. 이제 투구 횟수를 조절한 후 훈련을 시작하시면 됩니다.",
+            "튜토리얼이 완료되었습니다. 튜토리얼을 다시 보려면 설정에서 타격 튜토리얼 다시듣기 버튼을 누르고 확인 버튼을 누른 뒤, 타격 훈련으로 다시 입장하세요. 실제 타격 훈련 도중 뒤로가기나 강제 종료하거나 베이스 선택을 하지 않으면 조기 종료로 판단하여 해당 진행중이던 기록이 저장되니 주의하세요. 조기 종료는 훈련 도중 양쪽 버튼을 같이 누르면 투구 횟수와 상관없이 훈련이 종료됩니다.",
+            java.util.Locale.KOREAN, speechRate = TUTORIAL_SPEECH_RATE
+        )
+        delay(300)
+        ttsManager.speakAndWait(
+            "지금부터는 실제 훈련으로 훈련 결과가 기록됩니다. 이제 투구 횟수를 조절한 후 훈련을 시작하시면 됩니다.",
             java.util.Locale.KOREAN, speechRate = TUTORIAL_SPEECH_RATE
         )
         delay(500)

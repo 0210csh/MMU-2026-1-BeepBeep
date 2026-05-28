@@ -8,10 +8,6 @@
         "source": "com.beepbeep.defense.app-main-44:/layout/activity_record.xml"
     },
     {
-        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_signup.xml",
-        "source": "com.beepbeep.defense.app-main-44:/layout/activity_signup.xml"
-    },
-    {
         "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/setting.xml",
         "source": "com.beepbeep.defense.app-main-44:/layout/setting.xml"
     },
@@ -24,19 +20,31 @@
         "source": "com.beepbeep.defense.app-main-44:/layout/activity_login.xml"
     },
     {
-        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_main.xml",
-        "source": "com.beepbeep.defense.app-main-44:/layout/activity_main.xml"
-    },
-    {
-        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_swing_test.xml",
-        "source": "com.beepbeep.defense.app-main-44:/layout/activity_swing_test.xml"
-    },
-    {
         "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_home.xml",
         "source": "com.beepbeep.defense.app-main-44:/layout/activity_home.xml"
     },
     {
         "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_ble_test.xml",
         "source": "com.beepbeep.defense.app-main-44:/layout/activity_ble_test.xml"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_signup.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_signup.xml"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_main.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_main_simple.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_main_simple.xml"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_swing_test.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_swing_test.xml"
+    },
+    {
+        "merged": "com.beepbeep.defense.app-mergeDebugResources-41:/layout/activity_swing_simple.xml",
+        "source": "com.beepbeep.defense.app-main-44:/layout/activity_swing_simple.xml"
     }
 ]
