@@ -190,6 +190,7 @@ class SwingTestActivity : AppCompatActivity() {
 
     internal lateinit var bleManager: BleManager
     @Volatile internal var bleConnected    = false
+    private var lastBatteryLevel: Int = -1
     internal var bleGraphBaseMs:      Long    = 0L
     internal var bleGraphPacketCount: Long    = 0L
     internal var bleGraphStarted:     Boolean = false
@@ -289,6 +290,8 @@ class SwingTestActivity : AppCompatActivity() {
         }
 
         override fun onBatteryLevel(level: Int) {
+            if (lastBatteryLevel != -1 && level >= lastBatteryLevel && level - lastBatteryLevel < 3) return
+            lastBatteryLevel = level
             if (bleConnected) this@SwingTestActivity.updateSimpleBleStatus(connected = true, battery = level)
             if (isAdmin) {
                 tvBatteryLevel?.text = "배터리 ${level}%"
@@ -514,6 +517,7 @@ class SwingTestActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────
     override fun onResume() {
         super.onResume()
+        findViewById<View>(android.R.id.content).importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         initAudioTrack()
         rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
         rotationSensor?.let { sensorManager.registerListener(headTracker, it, SensorManager.SENSOR_DELAY_GAME) }
@@ -529,6 +533,7 @@ class SwingTestActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        findViewById<View>(android.R.id.content).importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
         audioManager.unregisterAudioDeviceCallback(btAudioCallback)
         sensorManager.unregisterListener(headTracker)
         bleManager.stopScan()

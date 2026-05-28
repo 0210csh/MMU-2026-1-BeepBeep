@@ -472,6 +472,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        findViewById<android.view.View>(android.R.id.content).importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         registerOrientationSensor()
         inputManager.registerInputDeviceListener(inputDeviceListener, null)
         if (isAdmin) {
@@ -489,6 +490,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        findViewById<android.view.View>(android.R.id.content).importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_YES
         sensorManager.unregisterListener(orientationListener)
         inputManager.unregisterInputDeviceListener(inputDeviceListener)
     }

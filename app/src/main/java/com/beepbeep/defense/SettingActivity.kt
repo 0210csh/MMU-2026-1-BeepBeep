@@ -125,20 +125,6 @@ class SettingActivity : AppCompatActivity() {
                 .show()
         }
 
-        // 훈련 기록 초기화
-        findViewById<LinearLayout>(R.id.itemResetRecord).setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle("훈련 기록 초기화")
-                .setMessage("모든 훈련 기록이 삭제됩니다. 계속하시겠습니까?")
-                .setPositiveButton("초기화") { _, _ ->
-                    getSharedPreferences("TrainingStats_$userId", MODE_PRIVATE)
-                        .edit().clear().apply()
-                    Toast.makeText(this, "훈련 기록이 초기화되었습니다", Toast.LENGTH_SHORT).show()
-                }
-                .setNegativeButton("취소", null)
-                .show()
-        }
-
         // 로그아웃
         findViewById<LinearLayout>(R.id.itemLogout).setOnClickListener {
             AlertDialog.Builder(this)

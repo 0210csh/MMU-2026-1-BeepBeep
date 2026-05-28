@@ -24,7 +24,7 @@ class BallParabolaView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     // ── 데이터 ──────────────────────────────────────────────
-    private var pitcherDist      = 18.44f
+    private var pitcherDist      = 6.53f
     private var pitcherH         = 1.5f
     private var contactH         = 1.0f
     private var batH             = 1.0f

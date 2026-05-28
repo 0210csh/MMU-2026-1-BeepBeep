@@ -376,26 +376,27 @@ class GameEngine(private val context: Context) {
             gameScope.launch {
                 delay(500L)
                 withContext(Dispatchers.Main) {
-                    speakSessionSummary()   // 메인 스레드 호출 → runOnUiThread 동기 실행 → 다이얼로그 즉시 표시
+                    speakSessionSummary(earlyStop = true)   // 메인 스레드 호출 → runOnUiThread 동기 실행 → 다이얼로그 즉시 표시
                     resetToIdle(sessionDone = true)
                 }
             }
         } else {
             // silent 모드이거나 대기 중 → 즉시 처리
-            speakSessionSummary(silent)
+            speakSessionSummary(silent, earlyStop = true)
             resetToIdle(sessionDone = true)
         }
     }
 
     fun isSessionComplete() = sessionActive && attempts >= targetBallCount
 
-    private fun speakSessionSummary(silent: Boolean = false) {
+    private fun speakSessionSummary(silent: Boolean = false, earlyStop: Boolean = false) {
         val avgMs      = if (catchTimes.isNotEmpty()) catchTimes.average().toLong() else null
         val bestMs     = catchTimes.minOrNull()
         val worstMs    = catchTimes.maxOrNull()
         val successRate = if (targetBallCount > 0) score.toFloat() / targetBallCount * 100f else 0f
 
-        val sb = StringBuilder("훈련 종료. 총 ${targetBallCount}회 중 ${score}회 성공.")
+        val prefix = if (earlyStop) "조기 종료." else "훈련 종료."
+        val sb = StringBuilder("$prefix 총 ${targetBallCount}회 중 ${score}회 성공.")
         sb.append(" 성공률 ${"%.0f".format(successRate)}퍼센트.")
         if (avgMs  != null) sb.append(" 평균 ${msToKoreanTime(avgMs)}.")
         if (bestMs != null) sb.append(" 최단 시간 ${msToKoreanTime(bestMs)}.")

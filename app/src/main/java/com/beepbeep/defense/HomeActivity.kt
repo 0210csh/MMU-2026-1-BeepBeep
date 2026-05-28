@@ -2,6 +2,7 @@ package com.beepbeep.defense
 
 import android.content.Intent
 import android.os.Bundle
+import com.google.firebase.firestore.FirebaseFirestore
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -79,6 +80,13 @@ class HomeActivity : AppCompatActivity() {
         }
 
         updateBottomNavSelection("home")
+
+        val userId = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
+        FirebaseFirestore.getInstance().collection("admins").document(userId).get()
+            .addOnSuccessListener { adminDoc ->
+                getSharedPreferences("AdminCache", MODE_PRIVATE)
+                    .edit().putBoolean("isAdmin", adminDoc.exists()).apply()
+            }
     }
 
     fun replaceFragment(fragment: Fragment) {
