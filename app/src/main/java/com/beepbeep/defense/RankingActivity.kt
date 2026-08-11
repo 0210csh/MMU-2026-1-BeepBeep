@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -17,7 +18,6 @@ import com.google.firebase.firestore.AggregateSource
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import java.util.Calendar
 import java.util.Locale
 
 class RankingActivity : AppCompatActivity() {
@@ -28,8 +28,15 @@ class RankingActivity : AppCompatActivity() {
 
     private var currentCategory = "batting" // "batting" | "defense"
 
+    // 조회 중인 분기 (기본값: 이번 분기). 이전/다음 버튼으로 이동.
+    private var displayedYear = 0
+    private var displayedQuarterNum = 0
+
     private lateinit var btnCategoryBatting: TextView
     private lateinit var btnCategoryDefense: TextView
+    private lateinit var btnPrevQuarter: TextView
+    private lateinit var btnNextQuarter: TextView
+    private lateinit var tvQuarterLabel: TextView
     private lateinit var tvMyRank: TextView
     private lateinit var llMyBreakdown: LinearLayout
     private lateinit var tvMinSampleNotice: TextView
@@ -58,8 +65,15 @@ class RankingActivity : AppCompatActivity() {
             }
         }
 
+        val (y, q) = RankingUpdater.currentQuarterParts()
+        displayedYear = y
+        displayedQuarterNum = q
+
         btnCategoryBatting = findViewById(R.id.btnCategoryBatting)
         btnCategoryDefense = findViewById(R.id.btnCategoryDefense)
+        btnPrevQuarter      = findViewById(R.id.btnPrevQuarter)
+        btnNextQuarter      = findViewById(R.id.btnNextQuarter)
+        tvQuarterLabel      = findViewById(R.id.tvQuarterLabel)
         tvMyRank           = findViewById(R.id.tvMyRank)
         llMyBreakdown      = findViewById(R.id.llMyBreakdown)
         tvMinSampleNotice  = findViewById(R.id.tvMinSampleNotice)
@@ -67,6 +81,12 @@ class RankingActivity : AppCompatActivity() {
 
         btnCategoryBatting.setOnClickListener { switchCategory("batting") }
         btnCategoryDefense.setOnClickListener { switchCategory("defense") }
+        btnPrevQuarter.setOnClickListener { goToQuarter(RankingUpdater.prevQuarter(displayedYear, displayedQuarterNum)) }
+        btnNextQuarter.setOnClickListener {
+            if (!isDisplayingCurrentQuarter()) {
+                goToQuarter(RankingUpdater.nextQuarter(displayedYear, displayedQuarterNum))
+            }
+        }
 
         setupNavigation()
         switchCategory("batting")
@@ -81,6 +101,15 @@ class RankingActivity : AppCompatActivity() {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
+    private fun isDisplayingCurrentQuarter(): Boolean =
+        RankingUpdater.quarterOf(displayedYear, displayedQuarterNum) == RankingUpdater.currentQuarter()
+
+    private fun goToQuarter(target: Pair<Int, Int>) {
+        displayedYear = target.first
+        displayedQuarterNum = target.second
+        loadRanking(currentCategory)
+    }
+
     private fun switchCategory(category: String) {
         currentCategory = category
         val battingActive = category == "batting"
@@ -91,41 +120,42 @@ class RankingActivity : AppCompatActivity() {
         loadRanking(category)
     }
 
-    private fun currentQuarter(): String {
-        val cal = Calendar.getInstance()
-        val year = cal.get(Calendar.YEAR)
-        val quarter = cal.get(Calendar.MONTH) / 3 + 1
-        return "${year}Q$quarter"
-    }
-
-    private fun collectionFor(category: String) =
-        if (category == "batting") "rankings_batting" else "rankings_defense"
-
-    private fun sampleCountOf(category: String, doc: com.google.firebase.firestore.DocumentSnapshot): Long =
+    private fun sampleCountOf(category: String, doc: DocumentSnapshot): Long =
         if (category == "batting") doc.getLong("totalPitches") ?: 0L else doc.getLong("attemptCount") ?: 0L
+
+    private fun updateQuarterUi() {
+        val isCurrent = isDisplayingCurrentQuarter()
+        tvQuarterLabel.text = "${displayedYear}년 ${displayedQuarterNum}분기" + if (isCurrent) " (진행중)" else ""
+        btnNextQuarter.alpha = if (isCurrent) 0.3f else 1f
+    }
 
     private fun loadRanking(category: String) {
         val userId   = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
         val userName = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("name", "") ?: ""
-        val quarter = currentQuarter()
-        val collectionName = collectionFor(category)
+        val quarter = RankingUpdater.quarterOf(displayedYear, displayedQuarterNum)
+        val isCurrent = isDisplayingCurrentQuarter()
+        updateQuarterUi()
 
-        // 이 화면에 들어올 때마다 이번 분기 훈련기록을 원본에서 다시 집계해 덮어쓴다.
-        // 세션 종료 훅이 놓친 과거 기록(예: 랭킹 기능 도입 이전 기록)까지 소급 반영하기 위함.
-        val onSynced = {
-            loadMyRank(category, collectionName, userId, quarter)
-            loadTopList(category, collectionName, quarter)
+        fun proceed() {
+            loadMyRank(category, quarter, userId, isCurrent)
+            loadTopList(category, quarter)
         }
-        if (category == "batting") {
-            RankingUpdater.syncBattingFromHistory(userId, userName, onSynced)
+
+        if (isCurrent) {
+            // 이번 분기를 보고 있을 때만: 세션 종료 훅이 놓친 과거 기록까지 원본에서
+            // 다시 집계해 덮어쓴다(소급 반영 + 자가 치유). 지난 분기는 고정 보존이라 재계산 안 함.
+            if (category == "batting") {
+                RankingUpdater.syncBattingFromHistory(userId, userName) { proceed() }
+            } else {
+                RankingUpdater.syncDefenseFromHistory(userId, userName) { proceed() }
+            }
         } else {
-            RankingUpdater.syncDefenseFromHistory(userId, userName, onSynced)
+            proceed()
         }
     }
 
-    private fun loadTopList(category: String, collectionName: String, quarter: String) {
-        db.collection(collectionName)
-            .whereEqualTo("quarter", quarter)
+    private fun loadTopList(category: String, quarter: String) {
+        db.collection(RankingUpdater.entriesPath(category, quarter))
             .orderBy("score", Query.Direction.DESCENDING)
             .limit(100)
             .get()
@@ -133,55 +163,63 @@ class RankingActivity : AppCompatActivity() {
                 val qualified = docs.documents.filter { sampleCountOf(category, it) >= RankingUpdater.MIN_SAMPLE }
                 renderList(category, qualified.take(50))
             }
-            .addOnFailureListener { renderList(category, emptyList()) }
+            .addOnFailureListener { e ->
+                Log.e("RankingActivity", "순위 목록 조회 실패: ${e.message}", e)
+                renderList(category, emptyList())
+            }
     }
 
-    private fun loadMyRank(category: String, collectionName: String, userId: String, quarter: String) {
+    private fun loadMyRank(category: String, quarter: String, userId: String, isCurrent: Boolean) {
         if (userId == "anonymous") {
             tvMyRank.text = "로그인이 필요합니다"
             tvMinSampleNotice.visibility = View.GONE
             llMyBreakdown.removeAllViews()
             return
         }
-        db.collection(collectionName).document(userId).get()
+        val path = RankingUpdater.entriesPath(category, quarter)
+        db.collection(path).document(userId).get()
             .addOnSuccessListener { myDoc ->
-                val sameQuarter = myDoc.exists() && myDoc.getString("quarter") == quarter
-                val mySample = if (sameQuarter) sampleCountOf(category, myDoc) else 0L
+                val mySample = if (myDoc.exists()) sampleCountOf(category, myDoc) else 0L
                 llMyBreakdown.removeAllViews()
 
-                if (!sameQuarter || mySample < RankingUpdater.MIN_SAMPLE) {
-                    tvMyRank.text = "아직 랭킹에 반영되지 않았습니다"
-                    tvMinSampleNotice.visibility = View.VISIBLE
+                if (!myDoc.exists() || mySample < RankingUpdater.MIN_SAMPLE) {
+                    tvMyRank.text = if (isCurrent) "아직 랭킹에 반영되지 않았습니다" else "이 분기 기록이 없습니다"
+                    tvMinSampleNotice.visibility = if (isCurrent) View.VISIBLE else View.GONE
                     return@addOnSuccessListener
                 }
                 tvMinSampleNotice.visibility = View.GONE
                 val myScore = myDoc.getDouble("score") ?: 0.0
 
-                db.collection(collectionName)
-                    .whereEqualTo("quarter", quarter)
+                db.collection(path)
                     .whereGreaterThan("score", myScore)
                     .count().get(AggregateSource.SERVER)
                     .addOnSuccessListener { agg ->
                         val rank = agg.count + 1
-                        tvMyRank.text = "내 순위: ${rank}위 · 점수 ${"%.1f".format(myScore)}점"
-                        tvMyRank.contentDescription = "내 순위 ${rank}위, 점수 ${"%.1f".format(myScore)}점"
+                        val categoryLabel = if (category == "batting") "타격" else "수비"
+                        if (isCurrent) {
+                            tvMyRank.text = "내 순위: ${rank}위 · 점수 ${"%.1f".format(myScore)}점"
+                            speak("$categoryLabel 랭킹, $rank 위 입니다.")
+                        } else {
+                            tvMyRank.text = "${displayedYear}년 ${displayedQuarterNum}분기 내 순위: ${rank}위 · 점수 ${"%.1f".format(myScore)}점"
+                            speak("${displayedYear}년 ${displayedQuarterNum}분기 $categoryLabel 랭킹, 전체 중 $rank 위였습니다.")
+                        }
+                        tvMyRank.contentDescription = tvMyRank.text
                         addBreakdown(category, myDoc)
-                        speak(
-                            "${if (category == "batting") "타격" else "수비"} 랭킹, $rank 위 입니다."
-                        )
                     }
-                    .addOnFailureListener {
+                    .addOnFailureListener { e ->
+                        Log.e("RankingActivity", "내 순위 계산 실패: ${e.message}", e)
                         tvMyRank.text = "내 점수: ${"%.1f".format(myScore)}점"
                         addBreakdown(category, myDoc)
                     }
             }
-            .addOnFailureListener {
-                tvMyRank.text = "아직 랭킹에 반영되지 않았습니다"
-                tvMinSampleNotice.visibility = View.VISIBLE
+            .addOnFailureListener { e ->
+                Log.e("RankingActivity", "내 기록 조회 실패: ${e.message}", e)
+                tvMyRank.text = if (isCurrent) "아직 랭킹에 반영되지 않았습니다" else "이 분기 기록이 없습니다"
+                tvMinSampleNotice.visibility = if (isCurrent) View.VISIBLE else View.GONE
             }
     }
 
-    private fun addBreakdown(category: String, doc: com.google.firebase.firestore.DocumentSnapshot) {
+    private fun addBreakdown(category: String, doc: DocumentSnapshot) {
         val lines = if (category == "batting") {
             val totalPitches = doc.getLong("totalPitches") ?: 0L
             val hitCount      = doc.getLong("hitCount") ?: 0L
@@ -228,7 +266,8 @@ class RankingActivity : AppCompatActivity() {
         llRankingList.removeAllViews()
         if (docs.isEmpty()) {
             llRankingList.addView(TextView(this).apply {
-                text = "이번 분기 아직 랭킹에 오른 사용자가 없습니다"
+                text = if (isDisplayingCurrentQuarter()) "이번 분기 아직 랭킹에 오른 사용자가 없습니다"
+                       else "이 분기 기록이 없습니다"
                 textSize = 15f
                 setTextColor(0xFF888888.toInt())
                 setPadding(4, 8, 4, 8)

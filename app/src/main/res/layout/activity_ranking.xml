@@ -109,13 +109,59 @@
                     android:contentDescription="수비 랭킹 보기" />
             </LinearLayout>
 
+            <!-- 분기 이동 (지난 시즌 조회) -->
+            <LinearLayout
+                android:id="@+id/llQuarterNav"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/llCategoryToggle"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btnPrevQuarter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="10dp"
+                    android:text="◀"
+                    android:textColor="#5CF387"
+                    android:textSize="20sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="이전 분기" />
+
+                <TextView
+                    android:id="@+id/tvQuarterLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text=""
+                    android:textColor="#FFFFFF"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnNextQuarter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="10dp"
+                    android:text="▶"
+                    android:textColor="#5CF387"
+                    android:textSize="20sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="다음 분기" />
+            </LinearLayout>
+
             <!-- 내 순위 고정 카드 -->
             <LinearLayout
                 android:id="@+id/llMyRank"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/llCategoryToggle"
-                android:layout_marginTop="16dp"
+                android:layout_below="@id/llQuarterNav"
+                android:layout_marginTop="10dp"
                 android:orientation="vertical"
                 android:background="#231A33"
                 android:padding="16dp"
