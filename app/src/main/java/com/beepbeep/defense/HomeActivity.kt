@@ -3,6 +3,7 @@ package com.beepbeep.defense
 import android.content.Intent
 import android.os.Bundle
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -50,6 +51,8 @@ class HomeActivity : AppCompatActivity() {
         val navHome     = findViewById<LinearLayout>(R.id.navHome)
         val navTraining = findViewById<LinearLayout>(R.id.navTraining)
         val navRecord   = findViewById<LinearLayout>(R.id.navRecord)
+        val navRanking  = findViewById<LinearLayout>(R.id.navRanking)
+        val navReservation = findViewById<LinearLayout>(R.id.navReservation)
 
         // ── 훈련 선택 카드 ──
         cardTraining?.setOnClickListener {
@@ -75,6 +78,14 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, RecordActivity::class.java))
         }
 
+        navRanking.setOnClickListener {
+            startActivity(Intent(this, RankingActivity::class.java))
+        }
+
+        navReservation.setOnClickListener {
+            startActivity(Intent(this, ReservationActivity::class.java))
+        }
+
         btnSetting.setOnClickListener {
             startActivity(Intent(this, SettingActivity::class.java))
         }
@@ -87,6 +98,21 @@ class HomeActivity : AppCompatActivity() {
                 getSharedPreferences("AdminCache", MODE_PRIVATE)
                     .edit().putBoolean("isAdmin", adminDoc.exists()).apply()
             }
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 200)
+        }
+        registerFcmToken(userId)
+    }
+
+    private fun registerFcmToken(userId: String) {
+        if (userId == "anonymous") return
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            FirebaseFirestore.getInstance().collection("users").document(userId)
+                .set(mapOf("fcmToken" to token), com.google.firebase.firestore.SetOptions.merge())
+        }
     }
 
     fun replaceFragment(fragment: Fragment) {
@@ -102,15 +128,18 @@ class HomeActivity : AppCompatActivity() {
         val navHome     = findViewById<LinearLayout>(R.id.navHome)
         val navTraining = findViewById<LinearLayout>(R.id.navTraining)
         val navRecord   = findViewById<LinearLayout>(R.id.navRecord)
+        val navRanking  = findViewById<LinearLayout>(R.id.navRanking)
 
         navHome.alpha     = 0.5f
         navTraining.alpha = 0.5f
         navRecord.alpha   = 0.5f
+        navRanking.alpha  = 0.5f
 
         when (currentTab) {
             "home"     -> navHome.alpha     = 1.0f
             "training" -> navTraining.alpha = 1.0f
             "record"   -> navRecord.alpha   = 1.0f
+            "ranking"  -> navRanking.alpha  = 1.0f
         }
     }
 }

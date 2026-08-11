@@ -12,8 +12,10 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.beepbeep.defense.databinding.ActivityTrainingBinding
+import com.google.firebase.firestore.AggregateSource
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import java.util.Calendar
 
 class TrainingActivity : AppCompatActivity() {
 
@@ -38,12 +40,63 @@ class TrainingActivity : AppCompatActivity() {
         }, 1500)
 
         loadRecentRecords()
+        loadRankingPreview()
         setupClickListeners()
     }
 
     override fun onResume() {
         super.onResume()
         loadRecentRecords()
+        loadRankingPreview()
+    }
+
+    // ── 랭킹 미니 프리뷰 ──
+    private fun currentQuarter(): String {
+        val cal = Calendar.getInstance()
+        val year = cal.get(Calendar.YEAR)
+        val quarter = cal.get(Calendar.MONTH) / 3 + 1
+        return "${year}Q$quarter"
+    }
+
+    private fun loadRankingPreview() {
+        val userId = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
+        binding.tvRankingPreview.setOnClickListener {
+            startActivity(Intent(this, RankingActivity::class.java))
+        }
+        if (userId == "anonymous") {
+            binding.tvRankingPreview.text = "로그인 후 랭킹을 확인할 수 있어요"
+            return
+        }
+        val quarter = currentQuarter()
+        fetchRankLabel("rankings_batting", userId, quarter, "totalPitches") { battingLabel ->
+            fetchRankLabel("rankings_defense", userId, quarter, "attemptCount") { defenseLabel ->
+                val text = "타격 랭킹 $battingLabel · 수비 랭킹 $defenseLabel"
+                binding.tvRankingPreview.text = text
+                binding.tvRankingPreview.contentDescription = "$text. 랭킹 화면으로 이동"
+            }
+        }
+    }
+
+    private fun fetchRankLabel(
+        collection: String, userId: String, quarter: String, sampleField: String,
+        onResult: (String) -> Unit
+    ) {
+        db.collection(collection).document(userId).get()
+            .addOnSuccessListener { doc ->
+                val sameQuarter = doc.exists() && doc.getString("quarter") == quarter
+                val sample = if (sameQuarter) doc.getLong(sampleField) ?: 0L else 0L
+                if (!sameQuarter || sample < RankingUpdater.MIN_SAMPLE) {
+                    onResult("미반영"); return@addOnSuccessListener
+                }
+                val myScore = doc.getDouble("score") ?: 0.0
+                db.collection(collection)
+                    .whereEqualTo("quarter", quarter)
+                    .whereGreaterThan("score", myScore)
+                    .count().get(AggregateSource.SERVER)
+                    .addOnSuccessListener { agg -> onResult("${agg.count + 1}위") }
+                    .addOnFailureListener { onResult("-") }
+            }
+            .addOnFailureListener { onResult("-") }
     }
 
     private fun loadRecentRecords() {
@@ -374,6 +427,12 @@ class TrainingActivity : AppCompatActivity() {
         }
         binding.navRecord.setOnClickListener {
             startActivity(Intent(this, RecordActivity::class.java))
+        }
+        binding.navRanking.setOnClickListener {
+            startActivity(Intent(this, RankingActivity::class.java))
+        }
+        binding.navReservation.setOnClickListener {
+            startActivity(Intent(this, ReservationActivity::class.java))
         }
     }
 }

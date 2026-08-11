@@ -3,6 +3,7 @@ package com.beepbeep.defense.batting
 import android.content.Context
 import android.util.Log
 import com.beepbeep.defense.PendingUploadManager
+import com.beepbeep.defense.RankingUpdater
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.*
@@ -74,13 +75,20 @@ internal fun SwingTestActivity.finishTraining() {
             "반응속도최대" to (reactionTimes.maxOrNull() ?: -1L)
         )
     )
-    val recordsSnapshot = perPitchRecords.toList()
+    val recordsSnapshot      = perPitchRecords.toList()
+    val rankingHitCount      = hitCount
+    val rankingPitchCount    = targetPitches
+    val rankingReactionTimes = reactionTimes.toList()
+    val rankingUserName      = getSharedPreferences("UserInfo", Context.MODE_PRIVATE).getString("name", "") ?: ""
     val sessionRef = db.collection("users").document(userId).collection("훈련기록").document(sessionId)
     sessionRef.set(sessionData)
         .addOnSuccessListener {
             recordsSnapshot.forEachIndexed { index, record ->
                 sessionRef.collection("투구별기록").document("${index + 1}번투구").set(record)
             }
+            RankingUpdater.updateBattingRanking(
+                userId, rankingUserName, rankingPitchCount, rankingHitCount, rankingReactionTimes
+            )
         }
         .addOnFailureListener { e ->
             Log.e("Firebase", "업로드 실패: ${e.message}")
@@ -180,13 +188,19 @@ internal fun SwingTestActivity.earlyFinishTraining(speakTts: Boolean, showSummar
                 "반응속도최대" to (reactionTimes.maxOrNull() ?: -1L)
             )
         )
-        val recordsSnapshot = perPitchRecords.toList()
+        val recordsSnapshot         = perPitchRecords.toList()
+        val rankingHitCount         = hitCount
+        val rankingReactionTimes    = reactionTimes.toList()
+        val rankingUserNameEarlyFin = getSharedPreferences("UserInfo", Context.MODE_PRIVATE).getString("name", "") ?: ""
         val sessionRef = db.collection("users").document(userId).collection("훈련기록").document(sessionId)
         sessionRef.set(sessionData)
             .addOnSuccessListener {
                 recordsSnapshot.forEachIndexed { index, record ->
                     sessionRef.collection("투구별기록").document("${index + 1}번투구").set(record)
                 }
+                RankingUpdater.updateBattingRanking(
+                    userId, rankingUserNameEarlyFin, actualPitches, rankingHitCount, rankingReactionTimes
+                )
             }
             .addOnFailureListener { e ->
                 Log.e("Firebase", "조기종료 업로드 실패: ${e.message}")

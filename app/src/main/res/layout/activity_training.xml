@@ -192,10 +192,30 @@
                 android:textStyle="bold"
                 android:importantForAccessibility="no" />
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/tvRankingPreview"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/tv_label_recent"
+                android:layout_marginTop="12dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="10dp"
+                android:background="#231A33"
+                android:text="랭킹 불러오는 중..."
+                android:textColor="#A78BFA"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:drawableStart="@drawable/ic_ranking"
+                android:drawableTint="#A78BFA"
+                android:drawablePadding="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="랭킹 화면으로 이동" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/tvRankingPreview"
                 android:layout_marginTop="25dp"
                 android:orientation="vertical"
                 android:paddingBottom="40dp"
@@ -396,6 +416,62 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="내 기록"
+                android:textColor="#FBBF24"
+                android:textSize="12sp"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navRanking"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true"
+            android:importantForAccessibility="yes"
+            android:contentDescription="랭킹 화면으로 이동">
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="35dp"
+                android:background="@drawable/bg_nav_purple"
+                android:padding="8dp"
+                android:src="@drawable/ic_ranking"
+                android:importantForAccessibility="no"
+                app:tint="#FFFFFF" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="랭킹"
+                android:textColor="#A78BFA"
+                android:textSize="12sp"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navReservation"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true"
+            android:importantForAccessibility="yes"
+            android:contentDescription="예약 화면으로 이동">
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="35dp"
+                android:background="@drawable/bg_nav_yellow_vivid"
+                android:padding="8dp"
+                android:src="@drawable/ic_calendar"
+                android:importantForAccessibility="no"
+                app:tint="#FFFFFF" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="예약"
                 android:textColor="#FBBF24"
                 android:textSize="12sp"
                 android:importantForAccessibility="no" />

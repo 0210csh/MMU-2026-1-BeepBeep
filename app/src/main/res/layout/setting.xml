@@ -278,6 +278,133 @@
 
         </LinearLayout>
 
+        <!-- ── 랭킹 섹션 ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="랭킹"
+            android:textColor="#5CF387"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="8dp"
+            android:layout_marginStart="4dp"
+            android:accessibilityHeading="true" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#1A1A1A"
+            android:layout_marginBottom="20dp">
+
+            <!-- 가중치 설정 (TTS 안내, 다이얼로그 없음) -->
+            <LinearLayout
+                android:id="@+id/itemWeightInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="60dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                android:contentDescription="가중치 설정. 눌러서 랭킹 점수 계산 방식을 음성으로 듣기"
+                android:importantForAccessibility="yes">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_ranking"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
+                    app:tint="#A78BFA" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="가중치 설정"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:fontFamily="sans-serif"
+                    android:importantForAccessibility="no" />
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/baseline_speaker_phone_24"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
+                    app:tint="#555555" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ── 알림 섹션 ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="알림"
+            android:textColor="#5CF387"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="8dp"
+            android:layout_marginStart="4dp"
+            android:accessibilityHeading="true" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#1A1A1A"
+            android:layout_marginBottom="20dp">
+
+            <!-- 알림 받기 -->
+            <LinearLayout
+                android:id="@+id/itemNotificationToggle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="60dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:importantForAccessibility="yes"
+                android:contentDescription="알림 받기">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/baseline_speaker_phone_24"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
+                    app:tint="#5CF387" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="알림 받기"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:fontFamily="sans-serif"
+                    android:importantForAccessibility="no" />
+
+                <Switch
+                    android:id="@+id/switchNotification"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:contentDescription="알림 받기 켜기 또는 끄기"
+                    android:importantForAccessibility="yes" />
+            </LinearLayout>
+        </LinearLayout>
+
         <!-- ── 기타 섹션 ── -->
         <TextView
             android:layout_width="wrap_content"

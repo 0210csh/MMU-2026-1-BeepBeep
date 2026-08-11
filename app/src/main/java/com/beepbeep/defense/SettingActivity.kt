@@ -2,21 +2,43 @@ package com.beepbeep.defense
 
 import android.content.Intent
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Switch
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import java.util.Locale
 
 class SettingActivity : AppCompatActivity() {
 
     private val db = FirebaseFirestore.getInstance()
 
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
+
+    private fun speak(text: String) {
+        if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        tts?.stop(); tts?.shutdown()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.setting)
+
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts?.language = Locale.KOREAN
+                ttsReady = true
+            }
+        }
 
         findViewById<LinearLayout>(R.id.ll_setting_header).let { header ->
             header.postDelayed({
@@ -123,6 +145,29 @@ class SettingActivity : AppCompatActivity() {
                 }
                 .setNegativeButton("취소", null)
                 .show()
+        }
+
+        // 가중치 설정 — 다이얼로그 없이 TTS로만 안내
+        findViewById<LinearLayout>(R.id.itemWeightInfo).setOnClickListener {
+            speak(
+                "타격 점수는 타율 60퍼센트, 주루 선택 반응속도 40퍼센트를 합산해서 계산됩니다. " +
+                "수비 점수는 성공률 60퍼센트, 반응속도 40퍼센트를 합산해서 계산됩니다."
+            )
+        }
+
+        // 알림 받기 — Firestore users/{id}.notificationsEnabled 제어
+        val switchNotification = findViewById<Switch>(R.id.switchNotification)
+        if (userId.isNotEmpty()) {
+            db.collection("users").document(userId).get()
+                .addOnSuccessListener { doc ->
+                    switchNotification.isChecked = doc.getBoolean("notificationsEnabled") ?: true
+                }
+        }
+        switchNotification.setOnCheckedChangeListener { _, isChecked ->
+            if (userId.isNotEmpty()) {
+                db.collection("users").document(userId)
+                    .set(mapOf("notificationsEnabled" to isChecked), SetOptions.merge())
+            }
         }
 
         // 로그아웃

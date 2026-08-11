@@ -88,6 +88,12 @@ class RecordActivity : AppCompatActivity() {
             startActivity(Intent(this, TrainingActivity::class.java))
         }
         binding.navRecord.setOnClickListener { }
+        binding.navRanking.setOnClickListener {
+            startActivity(Intent(this, RankingActivity::class.java))
+        }
+        binding.navReservation.setOnClickListener {
+            startActivity(Intent(this, ReservationActivity::class.java))
+        }
     }
 
     private fun setupClickListeners() {

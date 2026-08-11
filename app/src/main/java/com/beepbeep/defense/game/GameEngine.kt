@@ -3,6 +3,7 @@ package com.beepbeep.defense.game
 import android.content.Context
 import android.speech.tts.TextToSpeech
 import com.beepbeep.defense.PendingUploadManager
+import com.beepbeep.defense.RankingUpdater
 import com.beepbeep.defense.audio.SpatialAudioEngine
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -433,6 +434,8 @@ class GameEngine(private val context: Context) {
     ) {
         val userId = context.getSharedPreferences("UserInfo", Context.MODE_PRIVATE)
             .getString("id", "anonymous") ?: "anonymous"
+        val userName = context.getSharedPreferences("UserInfo", Context.MODE_PRIVATE)
+            .getString("name", "") ?: ""
 
         val db            = com.google.firebase.firestore.FirebaseFirestore.getInstance()
         val sessionMillis = System.currentTimeMillis()
@@ -451,8 +454,11 @@ class GameEngine(private val context: Context) {
             )
         )
 
-        // resetToIdle()이 비동기 콜백보다 먼저 perCatchRecords를 clear할 수 있으므로 미리 복사
-        val catchSnapshot = ArrayList(perCatchRecords)
+        // resetToIdle()이 비동기 콜백보다 먼저 perCatchRecords/score/catchTimes를 clear할 수 있으므로 미리 복사
+        val catchSnapshot        = ArrayList(perCatchRecords)
+        val successCountSnapshot = score
+        val attemptCountSnapshot = targetBallCount
+        val reactionSnapshot     = ArrayList(catchTimes)
 
         val sessionRef = db.collection("users")
             .document(userId)
@@ -467,6 +473,9 @@ class GameEngine(private val context: Context) {
                         .document("${index + 1}번포구")
                         .set(record)
                 }
+                RankingUpdater.updateDefenseRanking(
+                    userId, userName, attemptCountSnapshot, successCountSnapshot, reactionSnapshot
+                )
             }
             .addOnFailureListener { e ->
                 android.util.Log.e("Firebase", "업로드 실패: ${e.message}")
