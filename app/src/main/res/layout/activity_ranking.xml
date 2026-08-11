@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0A0A">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/layoutBottomNav"
+        android:padding="20dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- 헤더 -->
+            <LinearLayout
+                android:id="@+id/ll_ranking_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:contentDescription="랭킹 화면"
+                android:importantForAccessibility="yes"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="랭 "
+                    android:textColor="#FFFFFF"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-black"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="킹"
+                    android:textColor="#A78BFA"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-black"
+                    android:importantForAccessibility="no" />
+
+                <ImageButton
+                    android:id="@+id/btnSetting"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/settings"
+                    android:background="@drawable/circle_green"
+                    app:tint="@android:color/white"
+                    android:contentDescription="설정"
+                    android:importantForAccessibility="yes" />
+            </LinearLayout>
+
+            <!-- 타격/수비 전환 -->
+            <LinearLayout
+                android:id="@+id/llCategoryToggle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/ll_ranking_header"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal"
+                android:background="#1A1A1A">
+
+                <TextView
+                    android:id="@+id/btnCategoryBatting"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minHeight="52dp"
+                    android:gravity="center"
+                    android:text="타격 랭킹"
+                    android:textColor="#0A0A0A"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:background="#5CF387"
+                    android:drawableStart="@drawable/ic_baseball"
+                    android:drawableTint="#0A0A0A"
+                    android:drawablePadding="8dp"
+                    android:paddingHorizontal="12dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="타격 랭킹 보기" />
+
+                <TextView
+                    android:id="@+id/btnCategoryDefense"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minHeight="52dp"
+                    android:gravity="center"
+                    android:text="수비 랭킹"
+                    android:textColor="#AAAAAA"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:background="#1A1A1A"
+                    android:drawableStart="@drawable/ic_shield"
+                    android:drawableTint="#AAAAAA"
+                    android:drawablePadding="8dp"
+                    android:paddingHorizontal="12dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="수비 랭킹 보기" />
+            </LinearLayout>
+
+            <!-- 분기 이동 (지난 시즌 조회) -->
+            <LinearLayout
+                android:id="@+id/llQuarterNav"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/llCategoryToggle"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btnPrevQuarter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="10dp"
+                    android:text="◀"
+                    android:textColor="#5CF387"
+                    android:textSize="20sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="이전 분기" />
+
+                <TextView
+                    android:id="@+id/tvQuarterLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text=""
+                    android:textColor="#FFFFFF"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnNextQuarter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="10dp"
+                    android:text="▶"
+                    android:textColor="#5CF387"
+                    android:textSize="20sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="다음 분기" />
+            </LinearLayout>
+
+            <!-- 내 순위 고정 카드 -->
+            <LinearLayout
+                android:id="@+id/llMyRank"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/llQuarterNav"
+                android:layout_marginTop="10dp"
+                android:orientation="vertical"
+                android:background="#231A33"
+                android:padding="16dp"
+                android:focusable="true"
+                android:importantForAccessibility="yes">
+
+                <TextView
+                    android:id="@+id/tvMyRank"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="내 순위를 불러오는 중..."
+                    android:textColor="#FFFFFF"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:drawableStart="@drawable/ic_ranking"
+                    android:drawableTint="#A78BFA"
+                    android:drawablePadding="10dp"
+                    android:importantForAccessibility="no" />
+
+                <LinearLayout
+                    android:id="@+id/llMyBreakdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="vertical"
+                    android:importantForAccessibility="no" />
+            </LinearLayout>
+
+            <!-- 최소 표본 미달 안내 -->
+            <TextView
+                android:id="@+id/tvMinSampleNotice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/llMyRank"
+                android:layout_marginTop="10dp"
+                android:background="#1A1A1A"
+                android:padding="14dp"
+                android:text="이번 분기 20구(회) 이상 훈련하면 랭킹에 반영됩니다"
+                android:textColor="#AAAAAA"
+                android:textSize="14sp"
+                android:visibility="gone"
+                android:importantForAccessibility="yes" />
+
+            <!-- 상위 랭킹 리스트 -->
+            <TextView
+                android:id="@+id/tvListLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/tvMinSampleNotice"
+                android:layout_marginTop="24dp"
+                android:text="전체 순위"
+                android:textColor="#FF8C00"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:importantForAccessibility="no" />
+
+            <LinearLayout
+                android:id="@+id/llRankingList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/tvListLabel"
+                android:layout_marginTop="10dp"
+                android:orientation="vertical"
+                android:paddingBottom="40dp"
+                android:importantForAccessibility="no" />
+
+        </RelativeLayout>
+    </ScrollView>
+
+    <!-- 하단 네비게이션 -->
+    <LinearLayout
+        android:id="@+id/layoutBottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="80dp"
+        android:layout_alignParentBottom="true"
+        android:background="#0D0D0D"
+        android:orientation="horizontal"
+        android:paddingTop="10dp"
+        android:elevation="10dp">
+
+        <LinearLayout
+            android:id="@+id/navHome"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="홈 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_red" android:backgroundTint="#441111"
+                android:padding="8dp" android:src="@drawable/ic_home"
+                android:importantForAccessibility="no" app:tint="#FFFFFF" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="홈" android:textColor="#FF6B6B" android:textSize="12sp"
+                android:textStyle="bold" android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navTraining"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="훈련 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_green_dark"
+                android:padding="8dp" android:src="@drawable/training"
+                android:importantForAccessibility="no" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="훈련" android:textColor="#5CF387" android:textSize="12sp"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navRecord"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="내 기록 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_yellow_vivid"
+                android:padding="8dp" android:src="@drawable/baseline_person_24"
+                android:importantForAccessibility="no" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="내 기록" android:textColor="#FBBF24" android:textSize="12sp"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navRanking"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="랭킹 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_purple"
+                android:padding="8dp" android:src="@drawable/ic_ranking"
+                android:importantForAccessibility="no" app:tint="#FFFFFF" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="랭킹" android:textColor="#A78BFA" android:textSize="12sp"
+                android:textStyle="bold" android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navReservation"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="예약 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_yellow_vivid"
+                android:padding="8dp" android:src="@drawable/ic_calendar"
+                android:importantForAccessibility="no" app:tint="#FFFFFF" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="예약" android:textColor="#FBBF24" android:textSize="12sp"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+    </LinearLayout>
+</RelativeLayout>

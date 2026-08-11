@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0A0A">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/layoutBottomNav"
+        android:padding="20dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- 헤더 -->
+            <LinearLayout
+                android:id="@+id/ll_reservation_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:contentDescription="예약 화면"
+                android:importantForAccessibility="yes"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="예 "
+                    android:textColor="#FFFFFF"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-black"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="약"
+                    android:textColor="#FBBF24"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-black"
+                    android:importantForAccessibility="no" />
+
+                <ImageButton
+                    android:id="@+id/btnSetting"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/settings"
+                    android:background="@drawable/circle_green"
+                    app:tint="@android:color/white"
+                    android:contentDescription="설정"
+                    android:importantForAccessibility="yes" />
+            </LinearLayout>
+
+            <!-- ══════════════ Panel: 캘린더 ══════════════ -->
+            <LinearLayout
+                android:id="@+id/panelCalendar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/ll_reservation_header"
+                android:layout_marginTop="20dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView android:id="@+id/btnPrevMonth"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:padding="10dp"
+                        android:text="◀" android:textSize="22sp" android:textColor="#5CF387"
+                        android:background="@android:color/transparent"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="이전 달" />
+
+                    <TextView android:id="@+id/tvMonthLabel"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="center"
+                        android:text="" android:textColor="#FFFFFF"
+                        android:textSize="20sp" android:textStyle="bold" />
+
+                    <TextView android:id="@+id/btnNextMonth"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:padding="10dp"
+                        android:text="▶" android:textSize="22sp" android:textColor="#5CF387"
+                        android:background="@android:color/transparent"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="다음 달" />
+                </LinearLayout>
+
+                <com.beepbeep.defense.reservation.MonthCalendarView
+                    android:id="@+id/monthCalendarView"
+                    android:layout_width="match_parent"
+                    android:layout_height="320dp"
+                    android:layout_marginTop="8dp"
+                    android:importantForAccessibility="yes"
+                    android:contentDescription="월간 캘린더. 날짜를 눌러 그 날의 모집 현황을 확인하세요." />
+
+                <TextView android:id="@+id/tvSelectedDateLabel"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="날짜를 선택해주세요"
+                    android:textColor="#FF8C00" android:textSize="20sp" android:textStyle="bold" />
+
+                <TextView android:id="@+id/btnCreateSession"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="#1B4332"
+                    android:padding="16dp"
+                    android:text="이 날짜에 새 모집 만들기"
+                    android:textColor="#5CF387" android:textSize="16sp" android:textStyle="bold"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    android:clickable="true" android:focusable="true" />
+
+                <LinearLayout android:id="@+id/llDaySessions"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="vertical"
+                    android:paddingBottom="20dp" />
+            </LinearLayout>
+
+            <!-- ══════════════ Panel: 모집 생성 폼 ══════════════ -->
+            <LinearLayout
+                android:id="@+id/panelCreateForm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/ll_reservation_header"
+                android:layout_marginTop="20dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView android:id="@+id/tvFormDate"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="" android:textColor="#FFFFFF"
+                    android:textSize="22sp" android:textStyle="bold" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="시작 시간 (1시간 단위)" android:textColor="#FF8C00" android:textSize="16sp" android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView android:id="@+id/btnStartHourMinus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="−" android:textSize="28sp" android:textStyle="bold" android:textColor="#F87171"
+                        android:gravity="center" android:background="#3A1010"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="시작 시간 한 시간 감소" />
+                    <TextView android:id="@+id/tvStartHour"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="center"
+                        android:text="9시" android:textColor="#A78BFA" android:textSize="24sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btnStartHourPlus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="+" android:textSize="28sp" android:textStyle="bold" android:textColor="#5CF387"
+                        android:gravity="center" android:background="#0F2A1A"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="시작 시간 한 시간 증가" />
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="시작 분 (30분 단위)" android:textColor="#AAAAAA" android:textSize="14sp" />
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView android:id="@+id/btnStartMinuteMinus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="−" android:textSize="28sp" android:textStyle="bold" android:textColor="#F87171"
+                        android:gravity="center" android:background="#3A1010"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="시작 분 30분 감소" />
+                    <TextView android:id="@+id/tvStartMinute"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="center"
+                        android:text="0분" android:textColor="#A78BFA" android:textSize="24sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btnStartMinutePlus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="+" android:textSize="28sp" android:textStyle="bold" android:textColor="#5CF387"
+                        android:gravity="center" android:background="#0F2A1A"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="시작 분 30분 증가" />
+                </LinearLayout>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="종료 시간 (1시간 단위)" android:textColor="#FF8C00" android:textSize="16sp" android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView android:id="@+id/btnEndHourMinus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="−" android:textSize="28sp" android:textStyle="bold" android:textColor="#F87171"
+                        android:gravity="center" android:background="#3A1010"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="종료 시간 한 시간 감소" />
+                    <TextView android:id="@+id/tvEndHour"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="center"
+                        android:text="11시" android:textColor="#A78BFA" android:textSize="24sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btnEndHourPlus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="+" android:textSize="28sp" android:textStyle="bold" android:textColor="#5CF387"
+                        android:gravity="center" android:background="#0F2A1A"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="종료 시간 한 시간 증가" />
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="종료 분 (30분 단위)" android:textColor="#AAAAAA" android:textSize="14sp" />
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView android:id="@+id/btnEndMinuteMinus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="−" android:textSize="28sp" android:textStyle="bold" android:textColor="#F87171"
+                        android:gravity="center" android:background="#3A1010"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="종료 분 30분 감소" />
+                    <TextView android:id="@+id/tvEndMinute"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="center"
+                        android:text="0분" android:textColor="#A78BFA" android:textSize="24sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btnEndMinutePlus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="+" android:textSize="28sp" android:textStyle="bold" android:textColor="#5CF387"
+                        android:gravity="center" android:background="#0F2A1A"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="종료 분 30분 증가" />
+                </LinearLayout>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="지역" android:textColor="#FF8C00" android:textSize="16sp" android:textStyle="bold" />
+                <EditText android:id="@+id/etRegion"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="예) OO구장" android:textColorHint="#8FA8B8"
+                    android:textColor="#FFFFFF" android:textSize="18sp" android:textStyle="bold"
+                    android:background="@drawable/bg_input_blue"
+                    android:padding="18dp"
+                    android:inputType="text"
+                    android:contentDescription="지역 입력" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="시각장애 선수 최소 인원" android:textColor="#FF8C00" android:textSize="16sp" android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView android:id="@+id/btnMinBlindMinus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="−" android:textSize="28sp" android:textStyle="bold" android:textColor="#F87171"
+                        android:gravity="center" android:background="#3A1010"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="인원 감소" />
+                    <TextView android:id="@+id/tvMinBlindCount"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="center"
+                        android:text="1" android:textColor="#A78BFA" android:textSize="26sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btnMinBlindPlus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="+" android:textSize="28sp" android:textStyle="bold" android:textColor="#5CF387"
+                        android:gravity="center" android:background="#0F2A1A"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="인원 증가" />
+                </LinearLayout>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="스포터 최소 인원" android:textColor="#FF8C00" android:textSize="16sp" android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView android:id="@+id/btnMinSpotterMinus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="−" android:textSize="28sp" android:textStyle="bold" android:textColor="#F87171"
+                        android:gravity="center" android:background="#3A1010"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="인원 감소" />
+                    <TextView android:id="@+id/tvMinSpotterCount"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="center"
+                        android:text="1" android:textColor="#A78BFA" android:textSize="26sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/btnMinSpotterPlus"
+                        android:layout_width="56dp" android:layout_height="56dp"
+                        android:text="+" android:textSize="28sp" android:textStyle="bold" android:textColor="#5CF387"
+                        android:gravity="center" android:background="#0F2A1A"
+                        android:clickable="true" android:focusable="true"
+                        android:contentDescription="인원 증가" />
+                </LinearLayout>
+
+                <TextView android:id="@+id/btnSubmitCreate"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    android:background="#1B4332" android:padding="16dp"
+                    android:text="등록" android:textColor="#5CF387"
+                    android:textSize="18sp" android:textStyle="bold" android:gravity="center"
+                    android:clickable="true" android:focusable="true" />
+
+                <TextView android:id="@+id/btnCancelCreate"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:padding="16dp"
+                    android:text="취소" android:textColor="#AAAAAA"
+                    android:textSize="16sp" android:gravity="center"
+                    android:clickable="true" android:focusable="true"
+                    android:layout_marginBottom="40dp" />
+            </LinearLayout>
+
+            <!-- ══════════════ Panel: 세션 상세 ══════════════ -->
+            <LinearLayout
+                android:id="@+id/panelSessionDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/ll_reservation_header"
+                android:layout_marginTop="20dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView android:id="@+id/tvDetailInfo"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:background="@drawable/bg_input_blue" android:padding="18dp"
+                    android:text="" android:textColor="#FFFFFF" android:textSize="18sp" android:textStyle="bold"
+                    android:lineSpacingMultiplier="1.5"
+                    android:focusable="true" android:importantForAccessibility="yes" />
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="역할 선택" android:textColor="#FF8C00" android:textSize="18sp" android:textStyle="bold" />
+
+                <TextView android:id="@+id/btnRoleBlind"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_dark_rounded_input" android:padding="18dp"
+                    android:text="시각장애 선수" android:textColor="#FFFFFF" android:textSize="18sp" android:textStyle="bold"
+                    android:clickable="true" android:focusable="true"
+                    android:contentDescription="시각장애 선수로 신청" />
+
+                <TextView android:id="@+id/btnRoleSpotter"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_dark_rounded_input" android:padding="18dp"
+                    android:text="스포터" android:textColor="#FFFFFF" android:textSize="18sp" android:textStyle="bold"
+                    android:clickable="true" android:focusable="true" />
+
+                <TextView android:id="@+id/tvSpotterDesc"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:paddingHorizontal="6dp"
+                    android:text="스포터: 투수·포수처럼 시각장애 선수가 하기 어려운 역할을 맡아 경기를 돕고, 원한다면 시각장애 선수처럼 안대를 쓰고 타격을 직접 체험해볼 수도 있는 역할입니다."
+                    android:textColor="#AAAAAA" android:textSize="14sp" android:lineSpacingMultiplier="1.3"
+                    android:focusable="true" android:importantForAccessibility="yes" />
+
+                <TextView android:id="@+id/btnApply"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:background="#1B4332" android:padding="16dp"
+                    android:text="신청하기" android:textColor="#5CF387"
+                    android:textSize="18sp" android:textStyle="bold" android:gravity="center"
+                    android:clickable="true" android:focusable="true" />
+
+                <TextView android:id="@+id/btnConfirmMatch"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="#0D2233" android:padding="16dp"
+                    android:text="확정하기 (주최자)" android:textColor="#38BDF8"
+                    android:textSize="16sp" android:textStyle="bold" android:gravity="center"
+                    android:visibility="gone"
+                    android:clickable="true" android:focusable="true" />
+
+                <TextView android:id="@+id/btnBackFromDetail"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:padding="16dp"
+                    android:text="뒤로" android:textColor="#AAAAAA"
+                    android:textSize="16sp" android:gravity="center"
+                    android:clickable="true" android:focusable="true"
+                    android:layout_marginBottom="40dp" />
+            </LinearLayout>
+
+        </RelativeLayout>
+    </ScrollView>
+
+    <!-- 하단 네비게이션 -->
+    <LinearLayout
+        android:id="@+id/layoutBottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="80dp"
+        android:layout_alignParentBottom="true"
+        android:background="#0D0D0D"
+        android:orientation="horizontal"
+        android:paddingTop="10dp"
+        android:elevation="10dp">
+
+        <LinearLayout
+            android:id="@+id/navHome"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="홈 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_red" android:backgroundTint="#441111"
+                android:padding="8dp" android:src="@drawable/ic_home"
+                android:importantForAccessibility="no" app:tint="#FFFFFF" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="홈" android:textColor="#FF6B6B" android:textSize="12sp"
+                android:textStyle="bold" android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navTraining"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="훈련 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_green_dark"
+                android:padding="8dp" android:src="@drawable/training"
+                android:importantForAccessibility="no" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="훈련" android:textColor="#5CF387" android:textSize="12sp"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navRecord"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="내 기록 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_yellow_vivid"
+                android:padding="8dp" android:src="@drawable/baseline_person_24"
+                android:importantForAccessibility="no" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="내 기록" android:textColor="#FBBF24" android:textSize="12sp"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navRanking"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="랭킹 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_purple"
+                android:padding="8dp" android:src="@drawable/ic_ranking"
+                android:importantForAccessibility="no" app:tint="#FFFFFF" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="랭킹" android:textColor="#A78BFA" android:textSize="12sp"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navReservation"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:gravity="center"
+            android:orientation="vertical" android:clickable="true"
+            android:focusable="true" android:contentDescription="예약 화면으로 이동">
+            <ImageView android:layout_width="40dp" android:layout_height="35dp"
+                android:background="@drawable/bg_nav_yellow_vivid"
+                android:padding="8dp" android:src="@drawable/ic_calendar"
+                android:importantForAccessibility="no" app:tint="#FFFFFF" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="예약" android:textColor="#FBBF24" android:textSize="12sp"
+                android:textStyle="bold" android:importantForAccessibility="no" />
+        </LinearLayout>
+
+    </LinearLayout>
+</RelativeLayout>

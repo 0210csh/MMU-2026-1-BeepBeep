@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/simpleRootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0A0A">
+
+    <!-- 연결 상태 텍스트 -->
+    <TextView
+        android:id="@+id/tvSimpleBleStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="배트 미연결"
+        android:textColor="#F87171"
+        android:textSize="64sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:fontFamily="sans-serif-black"
+        android:importantForAccessibility="yes"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/tvSimpleBleIcon"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <!-- 연결 상태 아이콘 -->
+    <TextView
+        android:id="@+id/tvSimpleBleIcon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="●"
+        android:textSize="48sp"
+        android:textColor="#F87171"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/tvSimpleBleStatus"
+        app:layout_constraintBottom_toTopOf="@id/tvSimpleBattery"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp" />
+
+    <!-- 배터리 잔량 -->
+    <TextView
+        android:id="@+id/tvSimpleBattery"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#FFFFFF"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:fontFamily="sans-serif-black"
+        android:importantForAccessibility="no"
+        app:layout_constraintTop_toBottomOf="@id/tvSimpleBleIcon"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="24dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

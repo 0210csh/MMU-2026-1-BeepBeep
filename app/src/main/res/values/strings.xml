@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">BEEP BALL</string>
+    <string name="action_settings">Settings</string>
+
+    <string-array name="difficulty_levels">
+        <item>쉬움</item>
+        <item>보통</item>
+        <item>어려움</item>
+    </string-array>
+
+    <!-- ✅ 팀원 코드 추가: 공 개수 선택 배열 -->
+    <string-array name="ball_counts">
+        <item>3회</item>
+        <item>5회</item>
+        <item>10회</item>
+        <item>15회</item>
+        <item>20회</item>
+    </string-array>
+</resources>
