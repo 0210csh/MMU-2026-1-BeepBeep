@@ -13,10 +13,10 @@ import java.util.Date
  */
 object RankingUpdater {
 
-    private const val BATTING_MIN_MS = 300.0
-    private const val BATTING_MAX_MS = 2000.0
-    private const val DEFENSE_MIN_MS = 500.0
-    private const val DEFENSE_MAX_MS = 3000.0
+    const val BATTING_MIN_MS = 300.0
+    const val BATTING_MAX_MS = 2000.0
+    const val DEFENSE_MIN_MS = 5000.0
+    const val DEFENSE_MAX_MS = 40000.0
 
     /** 최소 표본(20) 이상인지 여부 — 랭킹 리스트/순위 계산 포함 조건 */
     const val MIN_SAMPLE = 20

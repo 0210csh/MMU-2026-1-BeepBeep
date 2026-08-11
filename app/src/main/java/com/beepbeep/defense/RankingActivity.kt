@@ -131,12 +131,31 @@ class RankingActivity : AppCompatActivity() {
 
     private fun loadRanking(category: String) {
         val userId  = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("id", "anonymous") ?: "anonymous"
+        val userName = getSharedPreferences("UserInfo", MODE_PRIVATE).getString("name", "") ?: ""
         val quarter = RankingUpdater.quarterOf(displayedYear, displayedQuarterNum)
         val isCurrent = isDisplayingCurrentQuarter()
         updateQuarterUi()
 
-        loadMyRank(category, quarter, userId, isCurrent)
-        loadTopList(category, quarter)
+        if (isCurrent) {
+            if (category == "batting") {
+                RankingUpdater.syncBattingFromHistory(userId, userName) {
+                    runOnUiThread {
+                        loadMyRank(category, quarter, userId, isCurrent)
+                        loadTopList(category, quarter)
+                    }
+                }
+            } else {
+                RankingUpdater.syncDefenseFromHistory(userId, userName) {
+                    runOnUiThread {
+                        loadMyRank(category, quarter, userId, isCurrent)
+                        loadTopList(category, quarter)
+                    }
+                }
+            }
+        } else {
+            loadMyRank(category, quarter, userId, isCurrent)
+            loadTopList(category, quarter)
+        }
     }
 
     private fun loadTopList(category: String, quarter: String) {
@@ -173,10 +192,11 @@ class RankingActivity : AppCompatActivity() {
                     return@addOnSuccessListener
                 }
                 tvMinSampleNotice.visibility = View.GONE
-                val myScore = myDoc.getDouble("score") ?: 0.0
+                val myScore = calcScore(category, myDoc)
+                val myScoreDb = myDoc.getDouble("score") ?: 0.0
 
                 db.collection(path)
-                    .whereGreaterThan("score", myScore)
+                    .whereGreaterThan("score", myScoreDb)
                     .count().get(AggregateSource.SERVER)
                     .addOnSuccessListener { agg ->
                         val rank = agg.count + 1
@@ -205,15 +225,18 @@ class RankingActivity : AppCompatActivity() {
     }
 
     private fun addBreakdown(category: String, doc: DocumentSnapshot) {
-        val lines = if (category == "batting") {
+        val lines: List<String>
+        val score: Double
+        if (category == "batting") {
             val totalPitches = doc.getLong("totalPitches") ?: 0L
             val hitCount      = doc.getLong("hitCount") ?: 0L
             val reactionSum   = doc.getLong("reactionSumMs") ?: 0L
             val reactionCnt   = doc.getLong("reactionSampleCount") ?: 0L
             val avg           = if (totalPitches > 0) hitCount.toDouble() / totalPitches * 100.0 else 0.0
             val avgReaction   = if (reactionCnt > 0) reactionSum.toDouble() / reactionCnt else null
-            val reactScore    = reactionScore(avgReaction, 300.0, 2000.0)
-            listOf(
+            val reactScore    = reactionScore(avgReaction, RankingUpdater.BATTING_MIN_MS, RankingUpdater.BATTING_MAX_MS)
+            score = (avg * 0.6 + reactScore * 0.4).coerceIn(0.0, 100.0)
+            lines = listOf(
                 "타율 ${"%.0f".format(avg)}%  × 60%  =  ${"%.1f".format(avg * 0.6)}점",
                 "반응속도 ${"%.0f".format(reactScore)}점  × 40%  =  ${"%.1f".format(reactScore * 0.4)}점"
             )
@@ -224,13 +247,13 @@ class RankingActivity : AppCompatActivity() {
             val reactionCnt  = doc.getLong("reactionSampleCount") ?: 0L
             val rate         = if (attempts > 0) successes.toDouble() / attempts * 100.0 else 0.0
             val avgReaction  = if (reactionCnt > 0) reactionSum.toDouble() / reactionCnt else null
-            val reactScore   = reactionScore(avgReaction, 500.0, 3000.0)
-            listOf(
+            val reactScore   = reactionScore(avgReaction, RankingUpdater.DEFENSE_MIN_MS, RankingUpdater.DEFENSE_MAX_MS)
+            score = (rate * 0.6 + reactScore * 0.4).coerceIn(0.0, 100.0)
+            lines = listOf(
                 "성공률 ${"%.0f".format(rate)}%  × 60%  =  ${"%.1f".format(rate * 0.6)}점",
                 "반응속도 ${"%.0f".format(reactScore)}점  × 40%  =  ${"%.1f".format(reactScore * 0.4)}점"
             )
         }
-        val score = doc.getDouble("score") ?: 0.0
         (lines + "최종 점수  ${"%.1f".format(score)}점").forEach { line ->
             llMyBreakdown.addView(TextView(this).apply {
                 text = line
@@ -245,6 +268,25 @@ class RankingActivity : AppCompatActivity() {
     private fun reactionScore(avgMs: Double?, minMs: Double, maxMs: Double): Double {
         if (avgMs == null) return 0.0
         return (((maxMs - avgMs) / (maxMs - minMs)) * 100.0).coerceIn(0.0, 100.0)
+    }
+
+    private fun calcScore(category: String, doc: DocumentSnapshot): Double {
+        val reactionSum = doc.getLong("reactionSumMs") ?: 0L
+        val reactionCnt = doc.getLong("reactionSampleCount") ?: 0L
+        val avgReaction = if (reactionCnt > 0) reactionSum.toDouble() / reactionCnt else null
+        return if (category == "batting") {
+            val totalPitches = doc.getLong("totalPitches") ?: 0L
+            val hitCount     = doc.getLong("hitCount") ?: 0L
+            val avg          = if (totalPitches > 0) hitCount.toDouble() / totalPitches * 100.0 else 0.0
+            val reactScore   = reactionScore(avgReaction, RankingUpdater.BATTING_MIN_MS, RankingUpdater.BATTING_MAX_MS)
+            (avg * 0.6 + reactScore * 0.4).coerceIn(0.0, 100.0)
+        } else {
+            val attempts  = doc.getLong("attemptCount") ?: 0L
+            val successes = doc.getLong("successCount") ?: 0L
+            val rate      = if (attempts > 0) successes.toDouble() / attempts * 100.0 else 0.0
+            val reactScore = reactionScore(avgReaction, RankingUpdater.DEFENSE_MIN_MS, RankingUpdater.DEFENSE_MAX_MS)
+            (rate * 0.6 + reactScore * 0.4).coerceIn(0.0, 100.0)
+        }
     }
 
     private fun renderList(category: String, docs: List<DocumentSnapshot>) {
@@ -262,7 +304,7 @@ class RankingActivity : AppCompatActivity() {
         docs.forEachIndexed { index, doc ->
             val rank = index + 1
             val name = doc.getString("name")?.takeIf { it.isNotBlank() } ?: "익명"
-            val score = doc.getDouble("score") ?: 0.0
+            val score = calcScore(category, doc)
             val scoreText = "%.1f".format(score)
 
             val row = LinearLayout(this).apply {
