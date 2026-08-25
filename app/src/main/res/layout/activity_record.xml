@@ -610,7 +610,7 @@
             android:orientation="vertical" android:clickable="true"
             android:focusable="true" android:contentDescription="홈 화면으로 이동">
             <ImageView android:layout_width="40dp" android:layout_height="35dp"
-                android:background="@drawable/bg_nav_red" android:backgroundTint="#441111"
+                android:background="@drawable/bg_nav_red"
                 android:padding="8dp" android:src="@drawable/ic_home"
                 android:importantForAccessibility="no" app:tint="#FFFFFF" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -630,6 +630,7 @@
                 android:importantForAccessibility="no" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="훈련" android:textColor="#5CF387" android:textSize="12sp"
+                android:textStyle="bold"
                 android:importantForAccessibility="no" />
         </LinearLayout>
 
@@ -640,7 +641,7 @@
             android:orientation="vertical" android:clickable="true"
             android:focusable="true" android:contentDescription="내 기록 화면으로 이동">
             <ImageView android:layout_width="40dp" android:layout_height="35dp"
-                android:background="@drawable/bg_nav_yellow_vivid"
+                android:background="@drawable/bg_nav_orange_vivid"
                 android:padding="8dp" android:src="@drawable/baseline_person_24"
                 android:importantForAccessibility="no" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -660,6 +661,7 @@
                 android:importantForAccessibility="no" app:tint="#FFFFFF" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="랭킹" android:textColor="#A78BFA" android:textSize="12sp"
+                android:textStyle="bold"
                 android:importantForAccessibility="no" />
         </LinearLayout>
 
@@ -675,6 +677,7 @@
                 android:importantForAccessibility="no" app:tint="#FFFFFF" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="예약" android:textColor="#FBBF24" android:textSize="12sp"
+                android:textStyle="bold"
                 android:importantForAccessibility="no" />
         </LinearLayout>
 

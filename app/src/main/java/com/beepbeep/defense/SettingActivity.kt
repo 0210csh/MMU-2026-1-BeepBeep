@@ -2,6 +2,8 @@ package com.beepbeep.defense
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -40,14 +42,8 @@ class SettingActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<LinearLayout>(R.id.ll_setting_header).let { header ->
-            header.postDelayed({
-                header.performAccessibilityAction(
-                    android.view.accessibility.AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS,
-                    null
-                )
-            }, 1500)
-        }
+        // ※ 헤더 강제 포커스 로직 제거함
+        // 토크백은 액티비티 진입 시 자동으로 상단부터 안내하므로 불필요
 
         val pref = getSharedPreferences("UserInfo", MODE_PRIVATE)
         val userId = pref.getString("id", "") ?: ""
@@ -56,6 +52,7 @@ class SettingActivity : AppCompatActivity() {
         findViewById<LinearLayout>(R.id.itemChangeName).setOnClickListener {
             val input = EditText(this)
             input.hint = "새 이름 입력"
+            input.contentDescription = "새 이름 입력"
             AlertDialog.Builder(this)
                 .setTitle("이름 변경")
                 .setView(input)
@@ -83,6 +80,7 @@ class SettingActivity : AppCompatActivity() {
         findViewById<LinearLayout>(R.id.itemChangePw).setOnClickListener {
             val input = EditText(this)
             input.hint = "새 비밀번호 입력"
+            input.contentDescription = "새 비밀번호 입력"
             input.inputType = android.text.InputType.TYPE_CLASS_TEXT or
                     android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
             AlertDialog.Builder(this)
@@ -147,15 +145,15 @@ class SettingActivity : AppCompatActivity() {
                 .show()
         }
 
-        // 가중치 설정 — 다이얼로그 없이 TTS로만 안내
+        // 가중치 설정 — 다이얼로그 없이 TTS로만 안내 (변경 없음)
         findViewById<LinearLayout>(R.id.itemWeightInfo).setOnClickListener {
             speak(
                 "타격 점수는 타율 60퍼센트, 주루 선택 반응속도 40퍼센트를 합산해서 계산됩니다. " +
-                "수비 점수는 성공률 60퍼센트, 반응속도 40퍼센트를 합산해서 계산됩니다."
+                        "수비 점수는 성공률 60퍼센트, 반응속도 40퍼센트를 합산해서 계산됩니다."
             )
         }
 
-        // 알림 받기 — Firestore users/{id}.notificationsEnabled 제어
+        // 알림 받기 — Firestore users/{id}.notificationsEnabled 제어 (변경 없음)
         val switchNotification = findViewById<Switch>(R.id.switchNotification)
         if (userId.isNotEmpty()) {
             db.collection("users").document(userId).get()
@@ -199,10 +197,13 @@ class SettingActivity : AppCompatActivity() {
                             getSharedPreferences("TrainingStats_$userId", MODE_PRIVATE)
                                 .edit().clear().apply()
                             Toast.makeText(this, "탈퇴되었습니다", Toast.LENGTH_SHORT).show()
-                            val intent = Intent(this, LoginActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                                    Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            startActivity(intent)
+                            // 토크백이 "탈퇴되었습니다" 메시지를 읽을 시간을 확보한 후 화면 전환
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                val intent = Intent(this, LoginActivity::class.java)
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                        Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                startActivity(intent)
+                            }, 2000)
                         }
                         .addOnFailureListener {
                             Toast.makeText(this, "탈퇴 실패", Toast.LENGTH_SHORT).show()

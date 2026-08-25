@@ -218,7 +218,7 @@
                 android:textSize="16sp"/>
         </LinearLayout>
 
-        <!-- 비밀번호 일치 여부 -->
+        <!-- 비밀번호 일치 여부: 실시간 알림용 liveRegion 추가 -->
         <TextView
             android:id="@+id/tv_pw_status"
             android:layout_width="wrap_content"
@@ -229,9 +229,10 @@
             android:text=""
             android:textColor="#5CF387"
             android:textSize="12sp"
-            android:visibility="gone"/>
+            android:visibility="gone"
+            android:accessibilityLiveRegion="polite"/>
 
-        <!-- 경고 메시지 -->
+        <!-- 경고 메시지: 즉시 알림용 liveRegion 추가 -->
         <LinearLayout
             android:id="@+id/ll_warning"
             android:layout_width="match_parent"
@@ -241,7 +242,8 @@
             android:backgroundTint="#2A1A0A"
             android:gravity="center_vertical"
             android:padding="12dp"
-            android:visibility="gone">
+            android:visibility="gone"
+            android:accessibilityLiveRegion="assertive">
 
             <ImageView
                 android:layout_width="20dp"
@@ -270,7 +272,7 @@
             android:layout_marginBottom="15dp"
             android:backgroundTint="#5CF387"
             android:text="회원가입 완료"
-            android:contentDescription="회원가입 완료 버튼"
+            android:contentDescription="회원가입 완료"
             android:textColor="#000000"
             android:textSize="22sp"
             android:textStyle="bold"

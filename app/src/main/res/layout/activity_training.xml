@@ -192,6 +192,7 @@
                 android:textStyle="bold"
                 android:importantForAccessibility="no" />
 
+            <!-- ✅ liveRegion 추가: 랭킹 데이터가 늦게 채워져도 토크백이 자동 안내 -->
             <TextView
                 android:id="@+id/tvRankingPreview"
                 android:layout_width="match_parent"
@@ -210,7 +211,8 @@
                 android:drawablePadding="8dp"
                 android:clickable="true"
                 android:focusable="true"
-                android:contentDescription="랭킹 화면으로 이동" />
+                android:contentDescription="랭킹 화면으로 이동"
+                android:accessibilityLiveRegion="polite" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -240,7 +242,7 @@
                         android:textStyle="bold"
                         android:importantForAccessibility="no" />
 
-                    <!-- 요약 행 -->
+                    <!-- 요약 행: liveRegion 추가 -->
                     <TextView
                         android:id="@+id/tv_bat_summary"
                         android:layout_width="match_parent"
@@ -255,7 +257,8 @@
                         android:background="#1A2A1A"
                         android:lineSpacingMultiplier="1.4"
                         android:focusable="true"
-                        android:importantForAccessibility="yes" />
+                        android:importantForAccessibility="yes"
+                        android:accessibilityLiveRegion="polite" />
 
                     <!-- 투구별 카드 컨테이너 -->
                     <LinearLayout
@@ -293,7 +296,7 @@
                         android:textStyle="bold"
                         android:importantForAccessibility="no" />
 
-                    <!-- 요약 행 -->
+                    <!-- 요약 행: liveRegion 추가 -->
                     <TextView
                         android:id="@+id/tv_def_summary"
                         android:layout_width="match_parent"
@@ -308,7 +311,8 @@
                         android:background="#0D1E2A"
                         android:lineSpacingMultiplier="1.4"
                         android:focusable="true"
-                        android:importantForAccessibility="yes" />
+                        android:importantForAccessibility="yes"
+                        android:accessibilityLiveRegion="polite" />
 
                     <!-- 회차별 카드 컨테이너 -->
                     <LinearLayout
@@ -325,6 +329,7 @@
         </RelativeLayout>
     </ScrollView>
 
+    <!-- ✅ 하단 네비게이션: 홈 화면과 동일한 drawable + alpha 방식으로 통일 -->
     <LinearLayout
         android:id="@+id/layoutBottomNav"
         android:layout_width="match_parent"
@@ -352,7 +357,6 @@
                 android:layout_width="40dp"
                 android:layout_height="35dp"
                 android:background="@drawable/bg_nav_red"
-                android:backgroundTint="#441111"
                 android:padding="8dp"
                 android:src="@drawable/ic_home"
                 android:importantForAccessibility="no"
@@ -389,6 +393,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="훈련"
+                android:textStyle="bold"
                 android:textColor="#5CF387"
                 android:textSize="12sp"
                 android:importantForAccessibility="no" />
@@ -408,7 +413,7 @@
             <ImageView
                 android:layout_width="40dp"
                 android:layout_height="35dp"
-                android:background="@drawable/bg_nav_orange_dark"
+                android:background="@drawable/bg_nav_orange_vivid"
                 android:padding="8dp"
                 android:src="@drawable/baseline_person_24"
                 android:importantForAccessibility="no" />
@@ -416,6 +421,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="내 기록"
+                android:textStyle="bold"
                 android:textColor="#FBBF24"
                 android:textSize="12sp"
                 android:importantForAccessibility="no" />
@@ -444,6 +450,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="랭킹"
+                android:textStyle="bold"
                 android:textColor="#A78BFA"
                 android:textSize="12sp"
                 android:importantForAccessibility="no" />
@@ -472,6 +479,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="예약"
+                android:textStyle="bold"
                 android:textColor="#FBBF24"
                 android:textSize="12sp"
                 android:importantForAccessibility="no" />

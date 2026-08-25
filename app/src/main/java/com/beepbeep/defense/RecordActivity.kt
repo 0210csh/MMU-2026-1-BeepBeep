@@ -39,10 +39,11 @@ class RecordActivity : AppCompatActivity() {
             insets
         }
 
-        binding.root.postDelayed({
-            binding.llRecordHeader.performAccessibilityAction(
-                android.view.accessibility.AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
-        }, 1500)
+        // ※ 헤더 강제 포커스 로직 제거함
+        // 토크백은 액티비티 진입 시 자동으로 상단부터 안내하므로 불필요
+
+        // 하단 네비게이션: 다른 화면과 동일한 alpha 방식으로 통일
+        updateBottomNavSelection()
 
         tts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
@@ -59,6 +60,15 @@ class RecordActivity : AppCompatActivity() {
         loadDefenseStatsFromFirebase(userId)
         setupNavigation()
         setupClickListeners()
+    }
+
+    // ── 하단 네비게이션 밝기 통일 (다른 화면과 동일한 alpha 로직) ──
+    private fun updateBottomNavSelection() {
+        binding.navHome.alpha        = 0.5f
+        binding.navTraining.alpha    = 0.5f
+        binding.navRecord.alpha      = 1.0f   // 현재 화면 = 내 기록
+        binding.navRanking.alpha     = 0.5f
+        binding.navReservation.alpha = 0.5f
     }
 
     override fun onResume() {

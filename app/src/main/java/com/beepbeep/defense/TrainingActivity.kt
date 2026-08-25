@@ -34,14 +34,24 @@ class TrainingActivity : AppCompatActivity() {
             insets
         }
 
-        binding.root.postDelayed({
-            binding.llTrainingHeader.performAccessibilityAction(
-                android.view.accessibility.AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
-        }, 1500)
+        // ※ 헤더 강제 포커스 로직 제거함
+        // 토크백은 액티비티 진입 시 자동으로 상단부터 안내하므로 불필요
+
+        // 하단 네비게이션: 홈 화면과 동일한 alpha 방식으로 통일
+        updateBottomNavSelection()
 
         loadRecentRecords()
         loadRankingPreview()
         setupClickListeners()
+    }
+
+    // ── 하단 네비게이션 밝기 통일 (홈 화면과 동일한 alpha 로직) ──
+    private fun updateBottomNavSelection() {
+        binding.navHome.alpha        = 0.5f
+        binding.navTraining.alpha    = 1.0f   // 현재 화면 = 훈련 선택
+        binding.navRecord.alpha      = 0.5f
+        binding.navRanking.alpha     = 0.5f
+        binding.navReservation.alpha = 0.5f
     }
 
     override fun onResume() {

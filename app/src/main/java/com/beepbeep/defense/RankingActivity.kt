@@ -53,10 +53,11 @@ class RankingActivity : AppCompatActivity() {
             insets
         }
 
-        findViewById<View>(R.id.ll_ranking_header).postDelayed({
-            findViewById<View>(R.id.ll_ranking_header).performAccessibilityAction(
-                android.view.accessibility.AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
-        }, 1500)
+        // ※ 헤더 강제 포커스 로직 제거함
+        // 토크백은 액티비티 진입 시 자동으로 상단부터 안내하므로 불필요
+
+        // 하단 네비게이션: 다른 화면과 동일한 alpha 방식으로 통일
+        updateBottomNavSelection()
 
         tts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
@@ -90,6 +91,15 @@ class RankingActivity : AppCompatActivity() {
 
         setupNavigation()
         switchCategory("batting")
+    }
+
+    // ── 하단 네비게이션 밝기 통일 (다른 화면과 동일한 alpha 로직) ──
+    private fun updateBottomNavSelection() {
+        findViewById<LinearLayout>(R.id.navHome).alpha        = 0.5f
+        findViewById<LinearLayout>(R.id.navTraining).alpha    = 0.5f
+        findViewById<LinearLayout>(R.id.navRecord).alpha      = 0.5f
+        findViewById<LinearLayout>(R.id.navRanking).alpha     = 1.0f   // 현재 화면 = 랭킹
+        findViewById<LinearLayout>(R.id.navReservation).alpha = 0.5f
     }
 
     override fun onDestroy() {
@@ -294,7 +304,7 @@ class RankingActivity : AppCompatActivity() {
         if (docs.isEmpty()) {
             llRankingList.addView(TextView(this).apply {
                 text = if (isDisplayingCurrentQuarter()) "이번 분기 아직 랭킹에 오른 사용자가 없습니다"
-                       else "이 분기 기록이 없습니다"
+                else "이 분기 기록이 없습니다"
                 textSize = 15f
                 setTextColor(0xFF888888.toInt())
                 setPadding(4, 8, 4, 8)

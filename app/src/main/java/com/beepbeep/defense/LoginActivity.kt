@@ -2,6 +2,8 @@ package com.beepbeep.defense
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -27,14 +29,8 @@ class LoginActivity : AppCompatActivity() {
             return
         }
 
-        findViewById<android.widget.LinearLayout>(R.id.ll_login_header).let { header ->
-            header.postDelayed({
-                header.performAccessibilityAction(
-                    android.view.accessibility.AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS,
-                    null
-                )
-            }, 1500)
-        }
+        // ※ 헤더 강제 포커스 로직 제거함
+        // 토크백은 액티비티 진입 시 자동으로 상단부터 안내하므로 불필요
 
         val etId = findViewById<EditText>(R.id.et_login_id)
         val etPw = findViewById<EditText>(R.id.et_login_pw)
@@ -69,15 +65,21 @@ class LoginActivity : AppCompatActivity() {
                                     getSharedPreferences("AdminCache", MODE_PRIVATE)
                                         .edit().putBoolean("isAdmin", adminDoc.exists()).apply()
                                     Toast.makeText(this, "로그인 성공!", Toast.LENGTH_SHORT).show()
-                                    startActivity(Intent(this, HomeActivity::class.java))
-                                    finish()
+                                    // 토크백이 "로그인 성공!" 메시지를 읽을 시간을 확보한 후 화면 전환
+                                    Handler(Looper.getMainLooper()).postDelayed({
+                                        startActivity(Intent(this, HomeActivity::class.java))
+                                        finish()
+                                    }, 2000)
                                 }
                                 .addOnFailureListener {
                                     getSharedPreferences("AdminCache", MODE_PRIVATE)
                                         .edit().putBoolean("isAdmin", false).apply()
                                     Toast.makeText(this, "로그인 성공!", Toast.LENGTH_SHORT).show()
-                                    startActivity(Intent(this, HomeActivity::class.java))
-                                    finish()
+                                    // 동일하게 딜레이 적용
+                                    Handler(Looper.getMainLooper()).postDelayed({
+                                        startActivity(Intent(this, HomeActivity::class.java))
+                                        finish()
+                                    }, 2000)
                                 }
                         } else {
                             Toast.makeText(this, "비밀번호가 틀렸습니다", Toast.LENGTH_SHORT).show()
@@ -112,6 +114,7 @@ class LoginActivity : AppCompatActivity() {
     private fun showFindId() {
         val input = EditText(this)
         input.hint = "가입한 이름을 입력하세요"
+        input.contentDescription = "가입한 이름 입력"
 
         AlertDialog.Builder(this)
             .setTitle("아이디 찾기")
@@ -150,6 +153,7 @@ class LoginActivity : AppCompatActivity() {
     private fun showFindPw() {
         val input = EditText(this)
         input.hint = "가입한 아이디를 입력하세요"
+        input.contentDescription = "가입한 아이디 입력"
 
         AlertDialog.Builder(this)
             .setTitle("비밀번호 찾기")

@@ -100,10 +100,11 @@ class ReservationActivity : AppCompatActivity() {
             insets
         }
 
-        findViewById<View>(R.id.ll_reservation_header).postDelayed({
-            findViewById<View>(R.id.ll_reservation_header).performAccessibilityAction(
-                android.view.accessibility.AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
-        }, 1500)
+        // ※ 헤더 강제 포커스 로직 제거함
+        // 토크백은 액티비티 진입 시 자동으로 상단부터 안내하므로 불필요
+
+        // 하단 네비게이션: 다른 화면과 동일한 alpha 방식으로 통일
+        updateBottomNavSelection()
 
         ttsManager = ReservationTtsManager(this)
         ttsManager.init()
@@ -115,6 +116,15 @@ class ReservationActivity : AppCompatActivity() {
         setupDetailPanel()
 
         refreshMonth()
+    }
+
+    // ── 하단 네비게이션 밝기 통일 (다른 화면과 동일한 alpha 로직) ──
+    private fun updateBottomNavSelection() {
+        findViewById<LinearLayout>(R.id.navHome).alpha        = 0.5f
+        findViewById<LinearLayout>(R.id.navTraining).alpha    = 0.5f
+        findViewById<LinearLayout>(R.id.navRecord).alpha      = 0.5f
+        findViewById<LinearLayout>(R.id.navRanking).alpha     = 0.5f
+        findViewById<LinearLayout>(R.id.navReservation).alpha = 1.0f   // 현재 화면 = 예약
     }
 
     override fun onDestroy() {
@@ -174,7 +184,7 @@ class ReservationActivity : AppCompatActivity() {
             btnCreateSession.visibility = View.VISIBLE
             loadDaySessions(y, m, d)
             val desc = if (statuses.isEmpty()) "${m}월 ${d}일. 등록된 모집이 없습니다."
-                       else "${m}월 ${d}일. 모집 ${statuses.size}건 있습니다."
+            else "${m}월 ${d}일. 모집 ${statuses.size}건 있습니다."
             ttsManager.speak(desc)
         }
         btnCreateSession.setOnClickListener { openCreateForm() }

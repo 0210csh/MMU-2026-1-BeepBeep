@@ -36,17 +36,13 @@ class HomeActivity : AppCompatActivity() {
             insets
         }
 
-        mainLayout.post {
-            mainLayout.postDelayed({
-                layoutHeader.performAccessibilityAction(
-                    android.view.accessibility.AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS,
-                    null
-                )
-            }, 1500)
-        }
+        // ※ 헤더 강제 포커스 로직 제거함
+        // 토크백은 액티비티 진입 시 자동으로 상단부터 안내하므로 불필요
 
-        val cardTraining = findViewById<CardView>(R.id.cardTraining)
-        val cardMyRecord = findViewById<CardView>(R.id.cardMyRecord)
+        val cardTraining   = findViewById<CardView>(R.id.cardTraining)
+        val cardMyRecord   = findViewById<CardView>(R.id.cardMyRecord)
+        val cardRanking    = findViewById<CardView>(R.id.cardRanking)
+        val cardReservation = findViewById<CardView>(R.id.cardReservation)
 
         val navHome     = findViewById<LinearLayout>(R.id.navHome)
         val navTraining = findViewById<LinearLayout>(R.id.navTraining)
@@ -62,6 +58,16 @@ class HomeActivity : AppCompatActivity() {
         // ── 내 기록 카드 ──
         cardMyRecord?.setOnClickListener {
             startActivity(Intent(this, RecordActivity::class.java))
+        }
+
+        // ── 랭킹 카드 ──
+        cardRanking?.setOnClickListener {
+            startActivity(Intent(this, RankingActivity::class.java))
+        }
+
+        // ── 예약 카드 ──
+        cardReservation?.setOnClickListener {
+            startActivity(Intent(this, ReservationActivity::class.java))
         }
 
         navHome.setOnClickListener {
@@ -125,21 +131,25 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun updateBottomNavSelection(currentTab: String) {
-        val navHome     = findViewById<LinearLayout>(R.id.navHome)
-        val navTraining = findViewById<LinearLayout>(R.id.navTraining)
-        val navRecord   = findViewById<LinearLayout>(R.id.navRecord)
-        val navRanking  = findViewById<LinearLayout>(R.id.navRanking)
+        val navHome        = findViewById<LinearLayout>(R.id.navHome)
+        val navTraining    = findViewById<LinearLayout>(R.id.navTraining)
+        val navRecord      = findViewById<LinearLayout>(R.id.navRecord)
+        val navRanking     = findViewById<LinearLayout>(R.id.navRanking)
+        val navReservation = findViewById<LinearLayout>(R.id.navReservation)
 
-        navHome.alpha     = 0.5f
-        navTraining.alpha = 0.5f
-        navRecord.alpha   = 0.5f
-        navRanking.alpha  = 0.5f
+        navHome.alpha        = 0.5f
+        navTraining.alpha    = 0.5f
+        navRecord.alpha      = 0.5f
+        navRanking.alpha     = 0.5f
+        navReservation.alpha = 0.5f
 
         when (currentTab) {
             "home"     -> navHome.alpha     = 1.0f
             "training" -> navTraining.alpha = 1.0f
             "record"   -> navRecord.alpha   = 1.0f
             "ranking"  -> navRanking.alpha  = 1.0f
+            // "reservation"은 새 액티비티로 바로 이동하니 홈 화면에 남아있을 일이 없어서
+            // 별도 case 없이도 괜찮아요 (다른 화면 눌러도 마찬가지 패턴)
         }
     }
 }
