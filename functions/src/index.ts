@@ -9,7 +9,7 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 
-const SESSIONS = "training_sessions";
+const SESSIONS = "match_sessions";
 const APPLICANTS = "신청자";
 const USERS = "users";
 

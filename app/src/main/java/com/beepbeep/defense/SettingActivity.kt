@@ -11,6 +11,9 @@ import android.widget.Switch
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.google.firebase.auth.EmailAuthProvider
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import java.util.Locale
@@ -76,29 +79,61 @@ class SettingActivity : AppCompatActivity() {
                 .show()
         }
 
-        // 비밀번호 변경
+        // 비밀번호 변경 (Firebase Authentication) — 현재 비밀번호로 재인증 후 변경
         findViewById<LinearLayout>(R.id.itemChangePw).setOnClickListener {
-            val input = EditText(this)
-            input.hint = "새 비밀번호 입력"
-            input.contentDescription = "새 비밀번호 입력"
-            input.inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                    android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            val inputCurrent = EditText(this).apply {
+                hint = "현재 비밀번호"
+                contentDescription = "현재 비밀번호 입력"
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                        android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            }
+            val inputNew = EditText(this).apply {
+                hint = "새 비밀번호 입력"
+                contentDescription = "새 비밀번호 입력"
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                        android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            }
+            val container = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(48, 8, 48, 8)
+                addView(inputCurrent)
+                addView(inputNew)
+            }
+
             AlertDialog.Builder(this)
                 .setTitle("비밀번호 변경")
-                .setView(input)
+                .setView(container)
                 .setPositiveButton("변경") { _, _ ->
-                    val newPw = input.text.toString().trim()
-                    if (newPw.isEmpty()) {
+                    val currentPw = inputCurrent.text.toString().trim()
+                    val newPw = inputNew.text.toString().trim()
+                    if (currentPw.isEmpty() || newPw.isEmpty()) {
                         Toast.makeText(this, "비밀번호를 입력해주세요", Toast.LENGTH_SHORT).show()
                         return@setPositiveButton
                     }
-                    db.collection("users").document(userId)
-                        .update("pw", newPw)
+                    if (!SignupActivity.isValidPassword(newPw)) {
+                        Toast.makeText(this, "비밀번호는 8~32자, 영문/숫자/특수문자 중 2가지 이상을 조합해주세요", Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
+                    val user = FirebaseAuth.getInstance().currentUser
+                    val email = user?.email
+                    if (user == null || email == null) {
+                        Toast.makeText(this, "다시 로그인 후 시도해주세요", Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
+                    user.reauthenticate(EmailAuthProvider.getCredential(email, currentPw))
                         .addOnSuccessListener {
-                            Toast.makeText(this, "비밀번호가 변경되었습니다", Toast.LENGTH_SHORT).show()
+                            user.updatePassword(newPw)
+                                .addOnSuccessListener {
+                                    Toast.makeText(this, "비밀번호가 변경되었습니다", Toast.LENGTH_SHORT).show()
+                                }
+                                .addOnFailureListener { e ->
+                                    val msg = if (e is FirebaseAuthWeakPasswordException)
+                                        "비밀번호는 6자 이상이어야 합니다" else "변경 실패"
+                                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                                }
                         }
                         .addOnFailureListener {
-                            Toast.makeText(this, "변경 실패", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "현재 비밀번호가 올바르지 않습니다", Toast.LENGTH_SHORT).show()
                         }
                 }
                 .setNegativeButton("취소", null)
@@ -193,6 +228,7 @@ class SettingActivity : AppCompatActivity() {
                     db.collection("users").document(userId)
                         .delete()
                         .addOnSuccessListener {
+                            FirebaseAuth.getInstance().currentUser?.delete()
                             pref.edit().clear().apply()
                             getSharedPreferences("TrainingStats_$userId", MODE_PRIVATE)
                                 .edit().clear().apply()

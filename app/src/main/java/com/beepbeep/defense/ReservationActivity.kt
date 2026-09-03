@@ -30,7 +30,7 @@ import java.util.Locale
 class ReservationActivity : AppCompatActivity() {
 
     companion object {
-        private const val COL = "training_sessions"
+        private const val COL = "match_sessions"
         private const val ROLE_BLIND   = "시각장애선수"
         private const val ROLE_SPOTTER = "스포터"
     }

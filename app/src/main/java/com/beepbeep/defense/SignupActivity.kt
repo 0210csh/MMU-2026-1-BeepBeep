@@ -6,14 +6,34 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Patterns
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.firestore.FirebaseFirestore
 
 class SignupActivity : AppCompatActivity() {
 
     private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
+
+    companion object {
+        // 네이버 가입 규칙 기준: 아이디 영문 소문자·숫자·-·_ 5~20자
+        private val ID_REGEX = Regex("^[a-z0-9_-]{5,20}$")
+
+        // 네이버 가입 규칙 기준: 비밀번호 8~32자, 영문/숫자/특수문자 중 2종류 이상 조합
+        fun isValidPassword(pw: String): Boolean {
+            if (pw.length !in 8..32) return false
+            var categories = 0
+            if (pw.any { it.isLetter() }) categories++
+            if (pw.any { it.isDigit() }) categories++
+            if (pw.any { !it.isLetterOrDigit() }) categories++
+            return categories >= 2
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,6 +44,7 @@ class SignupActivity : AppCompatActivity() {
 
         val etName = findViewById<EditText>(R.id.et_name)
         val etId = findViewById<EditText>(R.id.et_id)
+        val etEmail = findViewById<EditText>(R.id.et_email)
         val etPw = findViewById<EditText>(R.id.et_pw)
         val etPwConfirm = findViewById<EditText>(R.id.et_pw_confirm)
         val btnSignup = findViewById<Button>(R.id.btn_signup)
@@ -60,15 +81,34 @@ class SignupActivity : AppCompatActivity() {
         btnSignup.setOnClickListener {
             val name = etName.text.toString().trim()
             val id = etId.text.toString().trim()
+            val email = etEmail.text.toString().trim()
             val pw = etPw.text.toString().trim()
             val pwConfirm = etPwConfirm.text.toString().trim()
 
             // 빈칸 검사
-            if (name.isEmpty() || id.isEmpty() || pw.isEmpty()) {
+            if (name.isEmpty() || id.isEmpty() || email.isEmpty() || pw.isEmpty()) {
                 llWarning.visibility = View.VISIBLE
                 return@setOnClickListener
             }
             llWarning.visibility = View.GONE
+
+            // 아이디 형식 검사
+            if (!ID_REGEX.matches(id)) {
+                Toast.makeText(this, "아이디는 영문 소문자·숫자·-·_ 를 사용해 5~20자로 입력해주세요", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // 이메일 형식 검사
+            if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                Toast.makeText(this, "올바른 이메일 형식이 아닙니다", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // 비밀번호 형식 검사
+            if (!isValidPassword(pw)) {
+                Toast.makeText(this, "비밀번호는 8~32자, 영문/숫자/특수문자 중 2가지 이상을 조합해주세요", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
             // 비밀번호 확인
             if (pw != pwConfirm) {
@@ -76,27 +116,53 @@ class SignupActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Firebase에 저장할 데이터
-            val userMap = hashMapOf<String, Any>(
-                "name" to name,
-                "id" to id,
-                "pw" to pw
-            )
+            btnSignup.isEnabled = false
 
-            // Firebase 저장
-            db.collection("users").document(id)
-                .set(userMap)
-                .addOnSuccessListener {
-                    Toast.makeText(this, "회원가입을 축하합니다!", Toast.LENGTH_SHORT).show()
-                    // 토크백이 Toast 메시지를 읽을 시간을 확보한 후 화면 전환
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        val intent = Intent(this, LoginActivity::class.java)
-                        startActivity(intent)
-                        finish()
-                    }, 2000)
+            // 아이디 중복 확인 (Firebase Auth의 중복 검사는 이메일 기준이라 아이디는 직접 확인해야 함)
+            db.collection("users").document(id).get()
+                .addOnSuccessListener { existing ->
+                    if (existing.exists()) {
+                        btnSignup.isEnabled = true
+                        Toast.makeText(this, "이미 사용 중인 아이디입니다", Toast.LENGTH_SHORT).show()
+                        return@addOnSuccessListener
+                    }
+
+                    auth.createUserWithEmailAndPassword(email, pw)
+                        .addOnSuccessListener {
+                            val userMap = hashMapOf<String, Any>(
+                                "name" to name,
+                                "id" to id,
+                                "email" to email
+                            )
+                            db.collection("users").document(id)
+                                .set(userMap)
+                                .addOnSuccessListener {
+                                    Toast.makeText(this, "회원가입을 축하합니다!", Toast.LENGTH_SHORT).show()
+                                    // 토크백이 Toast 메시지를 읽을 시간을 확보한 후 화면 전환
+                                    Handler(Looper.getMainLooper()).postDelayed({
+                                        val intent = Intent(this, LoginActivity::class.java)
+                                        startActivity(intent)
+                                        finish()
+                                    }, 2000)
+                                }
+                                .addOnFailureListener { e ->
+                                    btnSignup.isEnabled = true
+                                    Toast.makeText(this, "가입 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                        .addOnFailureListener { e ->
+                            btnSignup.isEnabled = true
+                            val msg = when (e) {
+                                is FirebaseAuthUserCollisionException -> "이미 가입된 이메일입니다"
+                                is FirebaseAuthWeakPasswordException -> "비밀번호는 6자 이상이어야 합니다"
+                                else -> "가입 실패, 다시 시도해주세요"
+                            }
+                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                        }
                 }
-                .addOnFailureListener { e ->
-                    Toast.makeText(this, "가입 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+                .addOnFailureListener {
+                    btnSignup.isEnabled = true
+                    Toast.makeText(this, "네트워크 오류로 실패했습니다. 다시 시도해주세요", Toast.LENGTH_SHORT).show()
                 }
         }
 
