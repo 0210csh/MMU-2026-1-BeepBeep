@@ -42,6 +42,8 @@ class SignupActivity : AppCompatActivity() {
         // ※ 헤더 강제 포커스 로직 제거함
         // 토크백은 액티비티 진입 시 자동으로 상단부터 안내하므로 불필요
 
+        val scrollView = findViewById<ScrollView>(R.id.scrollView_signup)
+
         val etName = findViewById<EditText>(R.id.et_name)
         val etId = findViewById<EditText>(R.id.et_id)
         val etEmail = findViewById<EditText>(R.id.et_email)
@@ -51,6 +53,40 @@ class SignupActivity : AppCompatActivity() {
         val tvLogin = findViewById<TextView>(R.id.tv_login)
         val llWarning = findViewById<LinearLayout>(R.id.ll_warning)
         val tvPwStatus = findViewById<TextView>(R.id.tv_pw_status)
+
+        // ── ScrollView 기준 정확한 세로 위치를 계산하는 함수 ──
+        // view.top은 "바로 위 부모" 기준이라, 여러 겹 중첩된 레이아웃에서는
+        // scrollView까지 부모를 하나씩 거슬러 올라가며 top 값을 누적해야
+        // 진짜 스크롤 위치를 구할 수 있음
+        fun getRelativeTop(view: View): Int {
+            var offset = 0
+            var current: View = view
+            while (current !== scrollView) {
+                offset += current.top
+                val parent = current.parent
+                if (parent !is View) break
+                current = parent
+            }
+            return offset
+        }
+
+        // ── 입력창에 포커스가 갈 때 키보드에 가려지지 않도록 자동 스크롤 ──
+        fun setupScrollOnFocus(editText: EditText) {
+            editText.setOnFocusChangeListener { view, hasFocus ->
+                if (hasFocus) {
+                    scrollView.postDelayed({
+                        // 입력창이 화면 중간쯤(키보드 위)에 오도록 약간의 여유를 뺌
+                        val targetY = getRelativeTop(view) - 150
+                        scrollView.smoothScrollTo(0, targetY.coerceAtLeast(0))
+                    }, 300)
+                }
+            }
+        }
+        setupScrollOnFocus(etName)
+        setupScrollOnFocus(etId)
+        setupScrollOnFocus(etEmail)
+        setupScrollOnFocus(etPw)
+        setupScrollOnFocus(etPwConfirm)
 
         // 비밀번호 일치 여부를 실시간으로 확인하는 TextWatcher
         val pwCheckWatcher = object : TextWatcher {
