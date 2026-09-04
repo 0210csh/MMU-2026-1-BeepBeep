@@ -267,8 +267,8 @@ class ReservationActivity : AppCompatActivity() {
     private fun buildSessionRow(doc: DocumentSnapshot): View {
         val status = doc.getString("상태") ?: "모집중"
         val region = doc.getString("지역") ?: ""
-        val start  = doc.getLong("시작시간") ?: 0L
-        val end    = doc.getLong("종료시간") ?: 0L
+        val start  = doc.getTimestamp("시작시간")?.toDate()?.time ?: 0L
+        val end    = doc.getTimestamp("종료시간")?.toDate()?.time ?: 0L
         val roleMap = doc.get("역할정원") as? Map<*, *>
         val blindMap = roleMap?.get(ROLE_BLIND) as? Map<*, *>
         val spotterMap = roleMap?.get(ROLE_SPOTTER) as? Map<*, *>
@@ -384,11 +384,11 @@ class ReservationActivity : AppCompatActivity() {
         ttsManager.speak("${endMinute}분")
     }
 
-    private fun timeToMillis(hour: Int, minute: Int): Long {
+    private fun timeToTimestamp(hour: Int, minute: Int): Timestamp {
         val c = Calendar.getInstance()
         c.set(selectedYear, selectedMonth - 1, selectedDay, hour, minute, 0)
         c.set(Calendar.MILLISECOND, 0)
-        return c.timeInMillis
+        return Timestamp(c.time)
     }
 
     private fun submitCreateForm() {
@@ -397,9 +397,9 @@ class ReservationActivity : AppCompatActivity() {
             Toast.makeText(this, "지역을 입력해주세요", Toast.LENGTH_SHORT).show()
             return
         }
-        val startTimeMillis = timeToMillis(startHour, startMinute)
-        val endTimeMillis = timeToMillis(endHour, endMinute)
-        if (endTimeMillis <= startTimeMillis) {
+        val startTimestamp = timeToTimestamp(startHour, startMinute)
+        val endTimestamp = timeToTimestamp(endHour, endMinute)
+        if (endTimestamp.seconds <= startTimestamp.seconds) {
             Toast.makeText(this, "종료 시간이 시작 시간보다 뒤여야 합니다", Toast.LENGTH_SHORT).show()
             return
         }
@@ -409,8 +409,8 @@ class ReservationActivity : AppCompatActivity() {
             return
         }
 
-        val summary = "${selectedMonth}월 ${selectedDay}일 ${formatTime(startTimeMillis)}부터 " +
-                "${formatTime(endTimeMillis)}까지, $region 에서 모집을 시작합니다. " +
+        val summary = "${selectedMonth}월 ${selectedDay}일 ${formatTime(startTimestamp.toDate().time)}부터 " +
+                "${formatTime(endTimestamp.toDate().time)}까지, $region 에서 모집을 시작합니다. " +
                 "시각장애 선수 최소 ${minBlind}명, 스포터 최소 ${minSpotter}명입니다."
 
         scope.launch {
@@ -420,8 +420,8 @@ class ReservationActivity : AppCompatActivity() {
                 "생성자ID" to userId,
                 "생성일시" to Timestamp.now(),
                 "날짜" to dateKey(selectedYear, selectedMonth, selectedDay),
-                "시작시간" to startTimeMillis,
-                "종료시간" to endTimeMillis,
+                "시작시간" to startTimestamp,
+                "종료시간" to endTimestamp,
                 "지역" to region,
                 "상태" to "모집중",
                 "시작알림전송여부" to false,
@@ -507,8 +507,8 @@ class ReservationActivity : AppCompatActivity() {
         val dateStr = doc.getString("날짜") ?: ""
         val status  = doc.getString("상태") ?: "모집중"
         val region  = doc.getString("지역") ?: ""
-        val start   = doc.getLong("시작시간") ?: 0L
-        val end     = doc.getLong("종료시간") ?: 0L
+        val start   = doc.getTimestamp("시작시간")?.toDate()?.time ?: 0L
+        val end     = doc.getTimestamp("종료시간")?.toDate()?.time ?: 0L
         val creatorId = doc.getString("생성자ID") ?: ""
         val roleMap = doc.get("역할정원") as? Map<*, *>
         val blindMap = roleMap?.get(ROLE_BLIND) as? Map<*, *>
@@ -545,7 +545,7 @@ class ReservationActivity : AppCompatActivity() {
         }
         val doc = currentSessionDoc ?: return
         val dateStr = doc.getString("날짜") ?: ""
-        val start   = doc.getLong("시작시간") ?: 0L
+        val start   = doc.getTimestamp("시작시간")?.toDate()?.time ?: 0L
         val region  = doc.getString("지역") ?: ""
         val summary = "$dateStr ${formatTime(start)}, $region, ${role}로 신청하시겠습니까?"
 
