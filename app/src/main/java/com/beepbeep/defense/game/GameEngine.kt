@@ -465,14 +465,17 @@ class GameEngine(private val context: Context) {
             .collection("수비훈련기록")
             .document(sessionId)
 
-        sessionRef.set(sessionData)
+        val batch = db.batch()
+        batch.set(sessionRef, sessionData)
+        catchSnapshot.forEachIndexed { index, record ->
+            batch.set(
+                sessionRef.collection("포구별기록").document("${index + 1}번포구"),
+                record
+            )
+        }
+        batch.commit()
             .addOnSuccessListener {
                 android.util.Log.d("Firebase", "수비 훈련 기록 업로드 성공")
-                catchSnapshot.forEachIndexed { index, record ->
-                    sessionRef.collection("포구별기록")
-                        .document("${index + 1}번포구")
-                        .set(record)
-                }
                 RankingUpdater.updateDefenseRanking(
                     userId, userName, attemptCountSnapshot, successCountSnapshot, reactionSnapshot
                 )

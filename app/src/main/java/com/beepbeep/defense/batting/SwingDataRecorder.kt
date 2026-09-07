@@ -81,11 +81,13 @@ internal fun SwingTestActivity.finishTraining() {
     val rankingReactionTimes = reactionTimes.toList()
     val rankingUserName      = getSharedPreferences("UserInfo", Context.MODE_PRIVATE).getString("name", "") ?: ""
     val sessionRef = db.collection("users").document(userId).collection("훈련기록").document(sessionId)
-    sessionRef.set(sessionData)
+    val batch = db.batch()
+    batch.set(sessionRef, sessionData)
+    recordsSnapshot.forEachIndexed { index, record ->
+        batch.set(sessionRef.collection("투구별기록").document("${index + 1}번투구"), record)
+    }
+    batch.commit()
         .addOnSuccessListener {
-            recordsSnapshot.forEachIndexed { index, record ->
-                sessionRef.collection("투구별기록").document("${index + 1}번투구").set(record)
-            }
             RankingUpdater.updateBattingRanking(
                 userId, rankingUserName, rankingPitchCount, rankingHitCount, rankingReactionTimes
             )
@@ -197,11 +199,13 @@ internal fun SwingTestActivity.earlyFinishTraining(speakTts: Boolean, showSummar
         val rankingReactionTimes    = reactionTimes.toList()
         val rankingUserNameEarlyFin = getSharedPreferences("UserInfo", Context.MODE_PRIVATE).getString("name", "") ?: ""
         val sessionRef = db.collection("users").document(userId).collection("훈련기록").document(sessionId)
-        sessionRef.set(sessionData)
+        val batch = db.batch()
+        batch.set(sessionRef, sessionData)
+        recordsSnapshot.forEachIndexed { index, record ->
+            batch.set(sessionRef.collection("투구별기록").document("${index + 1}번투구"), record)
+        }
+        batch.commit()
             .addOnSuccessListener {
-                recordsSnapshot.forEachIndexed { index, record ->
-                    sessionRef.collection("투구별기록").document("${index + 1}번투구").set(record)
-                }
                 RankingUpdater.updateBattingRanking(
                     userId, rankingUserNameEarlyFin, actualPitches, rankingHitCount, rankingReactionTimes
                 )
